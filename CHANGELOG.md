@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.5](https://github.com/JonDotsoy/flags/compare/v1.0.4...v1.0.5) (2023-08-27)
+
+
+### Miscellaneous Chores
+
+* release 1.0.5 ([f3ac735](https://github.com/JonDotsoy/flags/commit/f3ac735db0a869cd97ea2061a7fded56a83d00a4))
+
 ## [1.0.4](https://github.com/JonDotsoy/flags/compare/v1.0.3...v1.0.4) (2023-08-27)
 
 
