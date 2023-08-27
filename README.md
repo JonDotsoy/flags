@@ -6,14 +6,16 @@ A Javascript arguments processor.
 
 ```ts
 interface Options {
-  name: string;
   version: boolean;
+  name: string;
   help: boolean;
 }
 
-const options = flag<Options>(args, {}, {});
+const { name, version } = flags<Options>(["--name=foo", "-v"], {}, [
+  [withFlag("--name"), stringFlag("name")],
+  [withFlag("--version", "-v"), booleanFlag("version")],
+]);
 
-console.log(options.version);
-console.log(options.name);
-console.log(options.help);
+expect(name).is.equal("foo");
+expect(version).is.true;
 ```
