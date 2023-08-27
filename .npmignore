@@ -1,0 +1,7 @@
+.*
+*.tgz
+*.ts
+!*.js.map
+!*.d.ts
+*.spec.*
+tsconfig.json
