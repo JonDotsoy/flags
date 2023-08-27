@@ -2,7 +2,7 @@
   "name": "@jondotsoy/flags",
   "version": "1.0.1",
   "description": "A Javascript arguments processor",
-  "main": "index.js",
+  "main": "flags.js",
   "scripts": {
     "test": "vitest",
     "build": "tsc"
