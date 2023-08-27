@@ -32,13 +32,16 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 20
+          cache: npm
+          token: ${{ secrets.NPM_TOKEN }}
       - run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
       - run: npm install
       - run: npm run build
-      - run: git add -f *.js *.d.ts *.js.map
-      - run: |
-          git commit -n -m "chore: release ${{ needs.release-please.outputs.tag_name }}"
-      - run: git tag build-${{ needs.release-please.outputs.tag_name }}
-      - run: git push origin build-${{ needs.release-please.outputs.tag_name }}
+      - run: npm publish
+      # - run: git add -f *.js *.d.ts *.js.map
+      # - run: |
+      #     git commit -n -m "chore: release ${{ needs.release-please.outputs.tag_name }}"
+      # - run: git tag build-${{ needs.release-please.outputs.tag_name }}
+      # - run: git push origin build-${{ needs.release-please.outputs.tag_name }}
