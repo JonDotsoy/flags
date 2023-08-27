@@ -33,13 +33,14 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          token: ${{ secrets.NPM_TOKEN }}
       - run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
       - run: npm install
       - run: npm run build
       - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       # - run: git add -f *.js *.d.ts *.js.map
       # - run: |
       #     git commit -n -m "chore: release ${{ needs.release-please.outputs.tag_name }}"
