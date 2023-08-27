@@ -1,0 +1,17 @@
+{
+  "name": "flags",
+  "version": "1.0.0",
+  "description": "A Javascript arguments processor",
+  "main": "index.js",
+  "scripts": {
+    "test": "vitest"
+  },
+  "keywords": [],
+  "author": "Jonathan Delgado <hi@jon.soy> (https://jon.soy)",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.5.6",
+    "typescript": "^5.2.2",
+    "vitest": "^0.34.3"
+  }
+}
