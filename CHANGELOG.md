@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/JonDotsoy/flags/compare/v1.0.5...v1.1.0) (2023-08-29)
+
+
+### Features
+
+* add functions and reject if not match command ([87579d8](https://github.com/JonDotsoy/flags/commit/87579d8cbcf354078bb11b8e3fbb1d0907d51cfe))
+
 ## [1.0.5](https://github.com/JonDotsoy/flags/compare/v1.0.4...v1.0.5) (2023-08-27)
 
 
