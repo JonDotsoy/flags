@@ -5,7 +5,8 @@
   "main": "flags.js",
   "scripts": {
     "test": "vitest",
-    "build": "tsc"
+    "build": "tsc",
+    "clean": "tsc --build --clean"
   },
   "keywords": [],
   "author": "Jonathan Delgado <hi@jon.soy> (https://jon.soy)",

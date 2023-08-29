@@ -30,6 +30,15 @@ export const withFlag =
       }
     });
 
+export const withCommand =
+  <T>(command: string): FlagParserTest<T> => (arg, ctx) => {
+    if (arg === command) {
+      ctx.index += 1;
+      return true;
+    }
+    return false;
+  };
+
 export const booleanFlag =
   <T>(propName: keyof T): FlagParserHandler<T> => ({ flags }) =>
     Reflect.set(flags, propName, true);
@@ -41,8 +50,17 @@ export const stringFlag =
       Reflect.set(flags, propName, argValue);
     } else {
       Reflect.set(flags, propName, args.at(nextIndex));
-      ctx.nextIndex = +1;
+      ctx.nextIndex += 1;
     }
+  };
+
+export const withAnyFlag = <T>(): FlagParserTest<T> => () => true;
+
+export const restArgumentsAt =
+  <T>(propName: keyof T): FlagParserHandler<T> => (ctx) => {
+    const restArgs = ctx.args.slice(ctx.index, ctx.arg.length);
+    ctx.nextIndex = ctx.arg.length;
+    Reflect.set(ctx.flags, propName, restArgs);
   };
 
 export const flags = <T>(
@@ -65,10 +83,9 @@ export const flags = <T>(
       const test: FlagParserTest<T> = Array.isArray(o) ? o[0] : o.test;
       return test(ctx.arg, ctx);
     });
-    if (e) {
-      const handler = Array.isArray(e) ? e[1] : e.handler;
-      handler(ctx);
-    }
+    if (!e) throw new Error(`Unknown argument: ${arg}`);
+    const handler = Array.isArray(e) ? e[1] : e.handler;
+    handler(ctx);
     index = ctx.nextIndex;
   }
   return init;

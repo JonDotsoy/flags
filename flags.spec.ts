@@ -1,5 +1,13 @@
 import { expect, test } from "vitest";
-import { booleanFlag, flags, stringFlag, withFlag } from "./flags";
+import {
+  booleanFlag,
+  flags,
+  restArgumentsAt,
+  stringFlag,
+  withAnyFlag,
+  withCommand,
+  withFlag,
+} from "./flags";
 
 test("expect run flag function", () => {
   interface Options {
@@ -82,4 +90,40 @@ test(`expect name flag is "foo" and version flag is true with argument \`['--nam
 
   expect(name).is.equal("foo");
   expect(version).is.true;
+});
+
+test("expect reject if not match argument", () => {
+  const args = ["-V", "unknown"];
+
+  expect(() => {
+    flags<any>(args, {}, [
+      [withFlag("--verbose", "-V"), booleanFlag("verbose")],
+    ]);
+  }).throw(/unknown argument/i);
+});
+
+test("expect group rest of arguments on a property", () => {
+  const args = ["-V", "unknown", "unknown2"];
+  const options = flags<any>(args, {}, [
+    [withFlag("--verbose", "-V"), booleanFlag("verbose")],
+    [withAnyFlag(), restArgumentsAt("rest")],
+  ]);
+  expect(options.rest).deep.equal(["unknown", "unknown2"]);
+});
+
+test("expect match command", () => {
+  const args = ["-V", "say", "hello"];
+
+  type Options = {
+    verbose: boolean;
+    say: string[];
+  };
+
+  const options = flags<Options>(args, {}, [
+    [withFlag("-V", "--verbose"), booleanFlag("verbose")],
+    [withCommand("say"), restArgumentsAt("say")],
+  ]);
+
+  expect(options.verbose).to.be.true;
+  expect(options.say).deep.equal(["hello"]);
 });
