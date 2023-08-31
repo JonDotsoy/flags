@@ -58,8 +58,8 @@ export const withAnyFlag = <T>(): FlagParserTest<T> => () => true;
 
 export const restArgumentsAt =
   <T>(propName: keyof T): FlagParserHandler<T> => (ctx) => {
-    const restArgs = ctx.args.slice(ctx.index, ctx.arg.length);
-    ctx.nextIndex = ctx.arg.length;
+    const restArgs = ctx.args.slice(ctx.index, ctx.args.length);
+    ctx.nextIndex = ctx.args.length;
     Reflect.set(ctx.flags, propName, restArgs);
   };
 

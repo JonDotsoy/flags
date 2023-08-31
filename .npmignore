@@ -5,3 +5,4 @@
 !*.d.ts
 *.spec.*
 tsconfig.json
+!README.md

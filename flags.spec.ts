@@ -103,12 +103,51 @@ test("expect reject if not match argument", () => {
 });
 
 test("expect group rest of arguments on a property", () => {
-  const args = ["-V", "unknown", "unknown2"];
+  const args = [
+    "-V",
+    "unknown",
+    "unknown2",
+    "unknown3",
+    "unknown4",
+    "unknown5",
+  ];
   const options = flags<any>(args, {}, [
     [withFlag("--verbose", "-V"), booleanFlag("verbose")],
     [withAnyFlag(), restArgumentsAt("rest")],
   ]);
-  expect(options.rest).deep.equal(["unknown", "unknown2"]);
+  expect(options.rest).deep.equal([
+    "unknown",
+    "unknown2",
+    "unknown3",
+    "unknown4",
+    "unknown5",
+  ]);
+});
+
+test("expect group rest of arguments on a property", () => {
+  const args = [
+    "name",
+    "unknown",
+    "-V",
+    "unknown2",
+    "unknown3",
+    "unknown4",
+    "unknown5",
+  ];
+
+  const options = flags<any>(args, {}, [
+    [withFlag("--verbose", "-V"), booleanFlag("verbose")],
+    [withCommand("name"), restArgumentsAt("rest")],
+  ]);
+
+  expect(options.rest).deep.equal([
+    "unknown",
+    "-V",
+    "unknown2",
+    "unknown3",
+    "unknown4",
+    "unknown5",
+  ]);
 });
 
 test("expect match command", () => {
