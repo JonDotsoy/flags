@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/JonDotsoy/flags/compare/v1.1.0...v1.1.1) (2023-08-31)
+
+
+### Bug Fixes
+
+* upgrade function restArgumentsAt ([faacdb9](https://github.com/JonDotsoy/flags/commit/faacdb929647ce19d9bb26d5e886bddcceba1846))
+
 ## [1.1.0](https://github.com/JonDotsoy/flags/compare/v1.0.5...v1.1.0) (2023-08-29)
 
 
