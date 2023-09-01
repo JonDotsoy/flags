@@ -1,12 +1,15 @@
 import { expect, test } from "vitest";
 import {
-  booleanFlag,
+  any,
+  command,
+  describe,
+  flag,
   flags,
+  getSpecs,
+  isBooleanAt,
+  isStringAt,
   restArgumentsAt,
-  stringFlag,
-  withAnyFlag,
-  withCommand,
-  withFlag,
+  Rule,
 } from "./flags";
 
 test("expect run flag function", () => {
@@ -39,7 +42,7 @@ test("expect version flag is true with argument `['--version']`", () => {
   }
 
   const { version } = flags<Options>(["--version"], {}, [
-    [withFlag("--version", "-v"), booleanFlag("version")],
+    [flag("--version", "-v"), isBooleanAt("version")],
   ]);
 
   expect(version).is.true;
@@ -54,8 +57,8 @@ test(`expect name flag is "foo" with argument \`['--name','foo']\``, () => {
 
   const { name } = flags<Options>(["--name", "foo"], {}, [
     [
-      withFlag("--name"),
-      stringFlag("name"),
+      flag("--name"),
+      isStringAt("name"),
     ],
   ]);
 
@@ -70,7 +73,7 @@ test(`expect name flag is "foo" with argument \`['--name=foo']\``, () => {
   }
 
   const { name } = flags<Options>(["--name=foo"], {}, [
-    [withFlag("--name"), stringFlag("name")],
+    [flag("--name"), isStringAt("name")],
   ]);
 
   expect(name).is.equal("foo");
@@ -84,8 +87,8 @@ test(`expect name flag is "foo" and version flag is true with argument \`['--nam
   }
 
   const { name, version } = flags<Options>(["--name=foo", "-v"], {}, [
-    [withFlag("--name"), stringFlag("name")],
-    [withFlag("--version", "-v"), booleanFlag("version")],
+    [flag("--name"), isStringAt("name")],
+    [flag("--version", "-v"), isBooleanAt("version")],
   ]);
 
   expect(name).is.equal("foo");
@@ -97,7 +100,7 @@ test("expect reject if not match argument", () => {
 
   expect(() => {
     flags<any>(args, {}, [
-      [withFlag("--verbose", "-V"), booleanFlag("verbose")],
+      [flag("--verbose", "-V"), isBooleanAt("verbose")],
     ]);
   }).throw(/unknown argument/i);
 });
@@ -112,8 +115,8 @@ test("expect group rest of arguments on a property", () => {
     "unknown5",
   ];
   const options = flags<any>(args, {}, [
-    [withFlag("--verbose", "-V"), booleanFlag("verbose")],
-    [withAnyFlag(), restArgumentsAt("rest")],
+    [flag("--verbose", "-V"), isBooleanAt("verbose")],
+    [any(), restArgumentsAt("rest")],
   ]);
   expect(options.rest).deep.equal([
     "unknown",
@@ -136,8 +139,8 @@ test("expect group rest of arguments on a property", () => {
   ];
 
   const options = flags<any>(args, {}, [
-    [withFlag("--verbose", "-V"), booleanFlag("verbose")],
-    [withCommand("name"), restArgumentsAt("rest")],
+    [flag("--verbose", "-V"), isBooleanAt("verbose")],
+    [command("name"), restArgumentsAt("rest")],
   ]);
 
   expect(options.rest).deep.equal([
@@ -159,10 +162,62 @@ test("expect match command", () => {
   };
 
   const options = flags<Options>(args, {}, [
-    [withFlag("-V", "--verbose"), booleanFlag("verbose")],
-    [withCommand("say"), restArgumentsAt("say")],
+    [flag("-V", "--verbose"), isBooleanAt("verbose")],
+    [command("say"), restArgumentsAt("say")],
   ]);
 
   expect(options.verbose).to.be.true;
   expect(options.say).deep.equal(["hello"]);
+});
+
+test.only("expect recover the specification", () => {
+  type Options = {
+    verbose: boolean;
+    say: string[];
+  };
+
+  const rules: Rule<Options>[] = [
+    [
+      describe(flag("-V", "--verbose"), { description: "" }),
+      isBooleanAt("verbose"),
+    ],
+    [flag("-t", "--times"), isBooleanAt("verbose")],
+    [flag("-sleep"), isStringAt("verbose")],
+    [command("say"), isBooleanAt("say")],
+  ];
+
+  expect(Array.from(getSpecs(rules))).toMatchInlineSnapshot(`
+    [
+      {
+        "category": "flag",
+        "description": undefined,
+        "names": [
+          "-V",
+          "--verbose",
+        ],
+      },
+      {
+        "category": "flag",
+        "description": undefined,
+        "names": [
+          "-t",
+          "--times",
+        ],
+      },
+      {
+        "category": "flag",
+        "description": undefined,
+        "names": [
+          "-sleep",
+        ],
+      },
+      {
+        "category": "command",
+        "description": undefined,
+        "names": [
+          "say",
+        ],
+      },
+    ]
+  `);
 });

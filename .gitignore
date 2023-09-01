@@ -3,5 +3,7 @@ node_modules
 *.js
 *.js.map
 *.d.ts
+*.tgz
 !.npmignore
 !.npmrc
+!.nvmrc
