@@ -2,15 +2,18 @@ import { expect, test } from "vitest";
 import {
   any,
   command,
+  consoleDraw,
   describe,
   flag,
   flags,
   getSpecs,
   isBooleanAt,
   isStringAt,
+  makeHelmMessage,
   restArgumentsAt,
   Rule,
 } from "./flags";
+import { inspect } from "util";
 
 test("expect run flag function", () => {
   interface Options {
@@ -170,7 +173,7 @@ test("expect match command", () => {
   expect(options.say).deep.equal(["hello"]);
 });
 
-test.only("expect recover the specification", () => {
+test("expect recover the specification", () => {
   type Options = {
     verbose: boolean;
     say: string[];
@@ -219,5 +222,36 @@ test.only("expect recover the specification", () => {
         ],
       },
     ]
+  `);
+});
+
+test("expect make a helm message", () => {
+  const rules: Rule<any>[] = [
+    [
+      describe(flag("-V", "--verbose"), {
+        description: "Print more information",
+      }),
+      isBooleanAt("verbose"),
+    ],
+    [flag("-t", "--times"), isBooleanAt("verbose")],
+    [flag("-sleep"), isStringAt("verbose")],
+    [command("say"), isBooleanAt("say")],
+  ];
+
+  const helmMessage = makeHelmMessage("cli", rules, ["foo", "baz -V taz"]);
+
+  expect(helmMessage).toMatchInlineSnapshot(`
+    "Usage: cli foo
+           cli baz -V taz
+
+    flag:
+        -V,             Print more information
+        --verbose
+        -t, --times
+        -sleep
+
+    command:
+        say
+    "
   `);
 });

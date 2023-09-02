@@ -1,3 +1,125 @@
+export namespace consoleDraw {
+  export const EOL = "\n";
+
+  export const raw = (lines: string[], options?: { endLine?: boolean }) => {
+    const endLine = options?.endLine ?? false;
+    return `${lines.join(EOL)}${endLine ? EOL : ""}`;
+  };
+
+  export const box = (
+    body: string,
+    options?: { maxWidth?: number; space?: string },
+  ) => {
+    const maxWidth: number = options?.maxWidth ?? Infinity;
+    const space = options?.space ?? " ";
+    const lines: string[] = [];
+
+    const chunks = body.split(space);
+    let line = chunks.at(0) ?? "";
+
+    for (const chunk of chunks.slice(1)) {
+      const nextLine = `${line}${space}${chunk}`;
+      if (nextLine.length < maxWidth) {
+        line = nextLine;
+      } else {
+        lines.push(line);
+        line = `${chunk}`;
+      }
+    }
+
+    lines.push(line);
+
+    return lines;
+  };
+
+  export const grid = (
+    rows: string[][],
+    initColsOptions?: { flex?: boolean }[],
+    options?: { gap?: number; marginStart?: number },
+  ) => {
+    const lines: string[] = [];
+    const maxWidth = 80;
+    const space = " ";
+    const gap = options?.gap ?? 3;
+    const marginStart = options?.marginStart ?? 0;
+
+    const sizeCols: number[] = [];
+
+    rows.forEach((cols) =>
+      cols.forEach((cel, indexCol) => {
+        const i = indexCol;
+        sizeCols[i] = Math.max(sizeCols[i] ?? 0, cel.length);
+      })
+    );
+
+    const widthCols = sizeCols.length;
+
+    const colsOptions = sizeCols
+      .map((size, index) => {
+        const colOption = initColsOptions?.at(index);
+        const flex = colOption?.flex ?? false;
+        return { size, flex, actualSize: size };
+      });
+
+    const gameFlexible = maxWidth - marginStart -
+      (gap * (colsOptions.length - 1)) -
+      colsOptions.reduce(
+        (a, colOption) => colOption.flex ? a : colOption.size,
+        0,
+      );
+
+    const countTotalFlexible = colsOptions.reduce(
+      (n, colOption) => colOption.flex ? n + 1 : n,
+      0,
+    );
+
+    colsOptions
+      .forEach((colOption, index, colsOptions) => {
+        if (colOption.flex) {
+          colOption.actualSize = gameFlexible / countTotalFlexible;
+        }
+      });
+
+    rows.forEach((colsRaw, rowIndex) => {
+      const cols = Array(widthCols).fill(null).map((_, index) =>
+        colsRaw[index] ?? ""
+      );
+      let heightRows = 0;
+      const colsLines: string[][] = [];
+
+      cols.forEach((cel, colIndex) => {
+        const colOption = colsOptions.at(colIndex)!;
+        const lines = box(cel, { maxWidth: colOption.actualSize });
+        heightRows = Math.max(heightRows, lines.length);
+        colsLines[colIndex] = lines;
+      });
+
+      Array(widthCols).fill(null).forEach((cel, colIndex) => {
+        const colOption = colsOptions.at(colIndex)!;
+        colsLines[colIndex] = [
+          ...colsLines[colIndex].map((e) => e.padEnd(colOption.actualSize)),
+          ...Array(heightRows - colsLines[colIndex].length).fill(
+            " ".repeat(colOption.actualSize),
+          ),
+        ];
+      });
+
+      // Add lines
+      const nextLines = Array(heightRows).fill(null).map((_, indexLine) =>
+        `${space.repeat(marginStart)}${
+          Array(sizeCols.length).fill(null).map((_, indexCol) => {
+            return colsLines[indexCol][indexLine];
+          }).join(space.repeat(gap))
+        }`.trimEnd()
+      );
+
+      lines.push(...nextLines);
+    });
+
+    return lines;
+  };
+}
+
 export interface Spec {
   names?: string[];
   category?: string;
@@ -106,6 +228,66 @@ export function* getSpecs(
     };
   }
 }
+
+export const makeHelmMessage = (
+  command: string,
+  rules: Rule<any>[],
+  samples?: string[],
+) => {
+  const byCategory: Record<string, Spec[]> = {};
+  const specNames = new Map<string[], string>();
+  const lengthPerCategory = new Map<string, number>();
+
+  for (const spec of getSpecs(rules)) {
+    if (spec.category) {
+      byCategory[spec.category] = [...byCategory[spec.category] ?? [], spec];
+      if (spec.names && !specNames.has(spec.names)) {
+        const namesLiteral = spec.names.join(", ");
+        specNames.set(spec.names, namesLiteral);
+        const currentLength = lengthPerCategory.get(spec.category) ?? 0;
+        if (namesLiteral.length > currentLength) {
+          lengthPerCategory.set(spec.category, namesLiteral.length);
+        }
+      }
+    }
+  }
+
+  const lines: string[] = [];
+
+  const w = (str: string | undefined, callbackfn: (str: string) => string) =>
+    str ? callbackfn(str) : undefined;
+
+  lines.push(
+    ...consoleDraw.grid(
+      [
+        ["Usage:", w(samples?.at(0), (e) => `${command} ${e}`) ?? command],
+        ...(samples?.slice(1).map((e) => ["", `${command} ${e}`]) ?? []),
+      ],
+      [{}, { flex: true }],
+      {
+        gap: 1,
+      },
+    ),
+  );
+  lines.push(``);
+
+  for (const [categoryName, specs] of Object.entries(byCategory)) {
+    lines.push(`${categoryName}:`);
+    const s: [string, string][] = [];
+    for (const spec of specs) {
+      if (spec.names) {
+        const name = specNames.get(spec.names)!;
+        s.push([name, spec.description ?? ""]);
+      }
+    }
+    lines.push(
+      ...consoleDraw.grid(s, [{}, { flex: true }], { marginStart: 4 }),
+    );
+    lines.push(``);
+  }
+
+  return consoleDraw.raw(lines);
+};
 
 export const flags = <T>(
   args: string[],
