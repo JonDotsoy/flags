@@ -12,6 +12,7 @@ import {
   makeHelmMessage,
   restArgumentsAt,
   Rule,
+  rule,
 } from "./flags";
 import { inspect } from "util";
 

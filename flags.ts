@@ -141,14 +141,16 @@ export interface Handler<T> {
   (ctx: Context<T>): void;
 }
 
-export type Rule<T> = [Test<T>, Handler<T>] | {
-  category?: string;
-  description?: string;
-  test: Test<T>;
-  handler: Handler<T>;
-};
+export type Rule<T> = [Test<T>, Handler<T>];
 
-export const rule = <T>(test: Test<T>, handler: Handler<T>) => [test, handler];
+export const rule = <T>(
+  test: Test<T>,
+  handler: Handler<T>,
+  ...specs: Spec[]
+): Rule<T> => [
+  describe(test, ...specs),
+  handler,
+];
 
 export const flag = <T>(...flags: string[]): Test<T> =>
   describe((arg, ctx: Context<T>) =>
@@ -221,8 +223,7 @@ export const describe = <D extends Test<any>>(
 export function* getSpecs(
   rules: Rule<any>[],
 ): Generator<{ description?: string; category?: string; names?: string[] }> {
-  for (const rule of rules) {
-    const test = Array.isArray(rule) ? rule[0] : rule.test;
+  for (const [test] of rules) {
     yield {
       names: test.names,
       category: test.category,
@@ -307,12 +308,11 @@ export const flags = <T>(
       index,
       nextIndex: index + 1,
     };
-    const e = parses.find((o) => {
-      const test: Test<T> = Array.isArray(o) ? o[0] : o.test;
+    const rule = parses.find(([test]) => {
       return test(ctx.arg, ctx);
     });
-    if (!e) throw new Error(`Unknown argument: ${arg}`);
-    const handler = Array.isArray(e) ? e[1] : e.handler;
+    if (!rule) throw new Error(`Unknown argument: ${arg}`);
+    const [, handler] = rule;
     handler(ctx);
     index = ctx.nextIndex;
   }
