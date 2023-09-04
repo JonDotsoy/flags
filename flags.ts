@@ -148,6 +148,8 @@ export type Rule<T> = [Test<T>, Handler<T>] | {
   handler: Handler<T>;
 };
 
+export const rule = <T>(test: Test<T>, handler: Handler<T>) => [test, handler];
+
 export const flag = <T>(...flags: string[]): Test<T> =>
   describe((arg, ctx: Context<T>) =>
     flags.some((flag) => {
