@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.0.0](https://github.com/JonDotsoy/flags/compare/v2.0.0...v3.0.0) (2023-09-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* describe the api
+
+### Documentation
+
+* describe the api ([6837c94](https://github.com/JonDotsoy/flags/commit/6837c94e669d46e062263d4ff29a583bdd020796))
+
 ## [2.0.0](https://github.com/JonDotsoy/flags/compare/v1.1.1...v2.0.0) (2023-09-02)
 
 
