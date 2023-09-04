@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.0.0](https://github.com/JonDotsoy/flags/compare/v1.1.1...v2.0.0) (2023-09-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* rename functions to declare flags and declare types
+
+### Features
+
+* add function to make a helm message ([04a3634](https://github.com/JonDotsoy/flags/commit/04a363466ccc011e037046c76ea009769eeed8a2))
+
+
+### Code Refactoring
+
+* rename functions to declare flags and declare types ([61b3bb4](https://github.com/JonDotsoy/flags/commit/61b3bb4b10396fe3d2d0e170f14b885994ce09ae))
+
 ## [1.1.1](https://github.com/JonDotsoy/flags/compare/v1.1.0...v1.1.1) (2023-08-31)
 
 
