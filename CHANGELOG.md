@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1](https://github.com/JonDotsoy/flags/compare/v2.0.0...v2.0.1) (2023-09-04)
+
+
+### Miscellaneous Chores
+
+* release 2.0.1 ([6eb0e0a](https://github.com/JonDotsoy/flags/commit/6eb0e0a82644aad9fd9cf14c6cfa49adde440daa))
+
 ## [2.0.0](https://github.com/JonDotsoy/flags/compare/v1.1.1...v2.0.0) (2023-09-02)
 
 
