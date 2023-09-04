@@ -9,15 +9,22 @@ interface Options {
   version: boolean;
   name: string;
   help: boolean;
+  run: string[];
+  test: string[];
 }
 
-const { name, version } = flags<Options>(["--name=foo", "-v"], {}, [
-  [flag("--name"), isStringAt("name")],
-  [flag("--version", "-v"), isBooleanAt("version")],
+const args = ["--name=foo", "-v", "run", "hello", "world"];
+
+const options = flags<Options>(args, {}, [
+  rule(flag("--name"), isStringAt("name")),
+  rule(flag("--version", "-v"), isBooleanAt("version")),
+  rule(command("run"), restArgumentsAt("run")),
+  rule(command("test"), restArgumentsAt("test")),
 ]);
 
-expect(name).is.equal("foo");
-expect(version).is.true;
+expect(options.name).is.equal("foo");
+expect(options.version).is.true;
+expect(options.run).is.deep.equal(["hello", "world"]);
 ```
 
 ## Documentation
