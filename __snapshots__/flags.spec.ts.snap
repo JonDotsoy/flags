@@ -1,0 +1,51 @@
+// Bun Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`expect make a helm message 1`] = `
+"Usage: cli foo
+       cli baz -V taz
+
+flag:
+    -V,             Print more information
+    --verbose
+    -t, --times
+    -sleep
+
+command:
+    say
+"
+`;
+
+exports[`expect recover the specification 1`] = `
+[
+  {
+    "category": "flag",
+    "description": undefined,
+    "names": [
+      "-V",
+      "--verbose",
+    ],
+  },
+  {
+    "category": "flag",
+    "description": undefined,
+    "names": [
+      "-t",
+      "--times",
+    ],
+  },
+  {
+    "category": "flag",
+    "description": undefined,
+    "names": [
+      "-sleep",
+    ],
+  },
+  {
+    "category": "command",
+    "description": undefined,
+    "names": [
+      "say",
+    ],
+  },
+]
+`;

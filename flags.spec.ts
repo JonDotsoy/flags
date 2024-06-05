@@ -11,7 +11,7 @@ import {
   isStringAt,
   makeHelmMessage,
   restArgumentsAt,
-  Rule,
+  type Rule,
   rule,
 } from "./flags";
 import { inspect } from "util";
@@ -35,7 +35,7 @@ test("expect version flag is undefined", () => {
 
   const { version } = flags<Options>([], {}, []);
 
-  expect(version).is.undefined;
+  expect(version).toBeUndefined();
 });
 
 test("expect version flag is true with argument `['--version']`", () => {
@@ -49,7 +49,7 @@ test("expect version flag is true with argument `['--version']`", () => {
     [flag("--version", "-v"), isBooleanAt("version")],
   ]);
 
-  expect(version).is.true;
+  expect(version).toBeTrue();
 });
 
 test(`expect name flag is "foo" with argument \`['--name','foo']\``, () => {
@@ -66,7 +66,7 @@ test(`expect name flag is "foo" with argument \`['--name','foo']\``, () => {
     ],
   ]);
 
-  expect(name).is.equal("foo");
+  expect(name).toEqual("foo");
 });
 
 test(`expect name flag is "foo" with argument \`['--name=foo']\``, () => {
@@ -80,7 +80,7 @@ test(`expect name flag is "foo" with argument \`['--name=foo']\``, () => {
     [flag("--name"), isStringAt("name")],
   ]);
 
-  expect(name).is.equal("foo");
+  expect(name).toEqual("foo");
 });
 
 test(`expect name flag is "foo" and version flag is true with argument \`['--name=foo','-v']\``, () => {
@@ -95,8 +95,8 @@ test(`expect name flag is "foo" and version flag is true with argument \`['--nam
     [flag("--version", "-v"), isBooleanAt("version")],
   ]);
 
-  expect(name).is.equal("foo");
-  expect(version).is.true;
+  expect(name).toEqual("foo");
+  expect(version).toBeTrue();
 });
 
 test("expect reject if not match argument", () => {
@@ -106,7 +106,7 @@ test("expect reject if not match argument", () => {
     flags<any>(args, {}, [
       [flag("--verbose", "-V"), isBooleanAt("verbose")],
     ]);
-  }).throw(/unknown argument/i);
+  }).toThrow(/unknown argument/i);
 });
 
 test("expect group rest of arguments on a property", () => {
@@ -122,7 +122,7 @@ test("expect group rest of arguments on a property", () => {
     [flag("--verbose", "-V"), isBooleanAt("verbose")],
     [any(), restArgumentsAt("rest")],
   ]);
-  expect(options.rest).deep.equal([
+  expect(options.rest).toEqual([
     "unknown",
     "unknown2",
     "unknown3",
@@ -147,7 +147,7 @@ test("expect group rest of arguments on a property", () => {
     [command("name"), restArgumentsAt("rest")],
   ]);
 
-  expect(options.rest).deep.equal([
+  expect(options.rest).toEqual([
     "unknown",
     "-V",
     "unknown2",
@@ -170,8 +170,8 @@ test("expect match command", () => {
     [command("say"), restArgumentsAt("say")],
   ]);
 
-  expect(options.verbose).to.be.true;
-  expect(options.say).deep.equal(["hello"]);
+  expect(options.verbose).toBeTrue();
+  expect(options.say).toEqual(["hello"]);
 });
 
 test("expect recover the specification", () => {
@@ -190,40 +190,7 @@ test("expect recover the specification", () => {
     [command("say"), isBooleanAt("say")],
   ];
 
-  expect(Array.from(getSpecs(rules))).toMatchInlineSnapshot(`
-    [
-      {
-        "category": "flag",
-        "description": undefined,
-        "names": [
-          "-V",
-          "--verbose",
-        ],
-      },
-      {
-        "category": "flag",
-        "description": undefined,
-        "names": [
-          "-t",
-          "--times",
-        ],
-      },
-      {
-        "category": "flag",
-        "description": undefined,
-        "names": [
-          "-sleep",
-        ],
-      },
-      {
-        "category": "command",
-        "description": undefined,
-        "names": [
-          "say",
-        ],
-      },
-    ]
-  `);
+  expect(Array.from(getSpecs(rules))).toMatchSnapshot();
 });
 
 test("expect make a helm message", () => {
@@ -241,18 +208,5 @@ test("expect make a helm message", () => {
 
   const helmMessage = makeHelmMessage("cli", rules, ["foo", "baz -V taz"]);
 
-  expect(helmMessage).toMatchInlineSnapshot(`
-    "Usage: cli foo
-           cli baz -V taz
-
-    flag:
-        -V,             Print more information
-        --verbose
-        -t, --times
-        -sleep
-
-    command:
-        say
-    "
-  `);
+  expect(helmMessage).toMatchSnapshot();
 });
