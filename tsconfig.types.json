@@ -6,6 +6,7 @@
     "moduleResolution": "Node",
     "verbatimModuleSyntax": false,
     "declaration": true,
+    "inlineSourceMap": true,
     "emitDeclarationOnly": true
   }
 }
