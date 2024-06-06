@@ -2,11 +2,13 @@
   "name": "@jondotsoy/flags",
   "version": "2.0.3",
   "description": "A Javascript arguments processor",
-  "main": "flags.js",
+  "main": "./lib/cjs/flags.js",
+  "module": "./lib/esm/flags.js",
+  "types": "./lib/types/flags.d.ts",
   "scripts": {
-    "test": "vitest",
-    "build": "tsc",
-    "clean": "tsc --build --clean",
+    "prepack": "make",
+    "test": "bun test",
+    "build": "make",
     "fmt": "prettier -w ."
   },
   "keywords": [],
@@ -14,11 +16,13 @@
   "license": "MIT",
   "devDependencies": {
     "@types/bun": "latest",
-    "@types/node": "^20.5.6",
     "prettier": "^3.3.1",
     "typescript": "^5.2.2"
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "files": [
+    "lib"
+  ]
 }
