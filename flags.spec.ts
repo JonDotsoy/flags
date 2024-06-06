@@ -60,10 +60,7 @@ test(`expect name flag is "foo" with argument \`['--name','foo']\``, () => {
   }
 
   const { name } = flags<Options>(["--name", "foo"], {}, [
-    [
-      flag("--name"),
-      isStringAt("name"),
-    ],
+    [flag("--name"), isStringAt("name")],
   ]);
 
   expect(name).toEqual("foo");
@@ -103,9 +100,7 @@ test("expect reject if not match argument", () => {
   const args = ["-V", "unknown"];
 
   expect(() => {
-    flags<any>(args, {}, [
-      [flag("--verbose", "-V"), isBooleanAt("verbose")],
-    ]);
+    flags<any>(args, {}, [[flag("--verbose", "-V"), isBooleanAt("verbose")]]);
   }).toThrow(/unknown argument/i);
 });
 
