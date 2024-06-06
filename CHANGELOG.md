@@ -1,5 +1,42 @@
 # Changelog
 
+## 2.0.3 (2024-06-06)
+
+
+### ⚠ BREAKING CHANGES
+
+* rename functions to declare flags and declare types
+
+### Features
+
+* add function to make a helm message ([04a3634](https://github.com/JonDotsoy/flags/commit/04a363466ccc011e037046c76ea009769eeed8a2))
+* add functions and reject if not match command ([87579d8](https://github.com/JonDotsoy/flags/commit/87579d8cbcf354078bb11b8e3fbb1d0907d51cfe))
+* add initial configuration ([d46556f](https://github.com/JonDotsoy/flags/commit/d46556f30d7c9d13752527c5bedd94f27af4e40f))
+* describe inicial definition ([690dc6f](https://github.com/JonDotsoy/flags/commit/690dc6f94702de784dd8a0b34051311ad52ca757))
+
+
+### Bug Fixes
+
+* rename function `makeHelpMessage` ([b8de80f](https://github.com/JonDotsoy/flags/commit/b8de80f23cc74cb452398a4fc32c4da2f792fd47))
+* upgrade function restArgumentsAt ([faacdb9](https://github.com/JonDotsoy/flags/commit/faacdb929647ce19d9bb26d5e886bddcceba1846))
+
+
+### Miscellaneous Chores
+
+* release 1.0.1 ([f0fef7f](https://github.com/JonDotsoy/flags/commit/f0fef7f9fe4c8ffbc63292428438e4d089d6771a))
+* release 1.0.2 ([5289d77](https://github.com/JonDotsoy/flags/commit/5289d771570ad285fca6842b3d659b95623006b8))
+* release 1.0.3 ([1755f5e](https://github.com/JonDotsoy/flags/commit/1755f5ef96d0747555ee1611317f4a37d2634114))
+* release 1.0.4 ([713e800](https://github.com/JonDotsoy/flags/commit/713e800eca5578efe2e1dba2469148a571dce7a0))
+* release 1.0.5 ([f3ac735](https://github.com/JonDotsoy/flags/commit/f3ac735db0a869cd97ea2061a7fded56a83d00a4))
+* release 2.0.1 ([6eb0e0a](https://github.com/JonDotsoy/flags/commit/6eb0e0a82644aad9fd9cf14c6cfa49adde440daa))
+* release 2.0.2 ([2081a64](https://github.com/JonDotsoy/flags/commit/2081a64009ed50b0bfb6317e084638f3279c857f))
+* release 2.0.3 ([6b0d788](https://github.com/JonDotsoy/flags/commit/6b0d78858d684cc54579fa12877f5171c38d47e5))
+
+
+### Code Refactoring
+
+* rename functions to declare flags and declare types ([61b3bb4](https://github.com/JonDotsoy/flags/commit/61b3bb4b10396fe3d2d0e170f14b885994ce09ae))
+
 ## [2.0.2](https://github.com/JonDotsoy/flags/compare/v2.0.1...v2.0.2) (2023-09-04)
 
 
