@@ -232,7 +232,7 @@ export function* getSpecs(
   }
 }
 
-export const makeHelmMessage = (
+export const makeHelpMessage = (
   command: string,
   rules: Rule<any>[],
   samples?: string[],

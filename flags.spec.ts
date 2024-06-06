@@ -9,7 +9,7 @@ import {
   getSpecs,
   isBooleanAt,
   isStringAt,
-  makeHelmMessage,
+  makeHelpMessage,
   restArgumentsAt,
   type Rule,
   rule,
@@ -206,7 +206,7 @@ test("expect make a helm message", () => {
     [command("say"), isBooleanAt("say")],
   ];
 
-  const helmMessage = makeHelmMessage("cli", rules, ["foo", "baz -V taz"]);
+  const helmMessage = makeHelpMessage("cli", rules, ["foo", "baz -V taz"]);
 
   expect(helmMessage).toMatchSnapshot();
 });
