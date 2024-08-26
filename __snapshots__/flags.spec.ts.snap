@@ -1,20 +1,5 @@
 // Bun Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`expect make a helm message 1`] = `
-"Usage: cli foo
-       cli baz -V taz
-
-flag:
-    -V,             Print more information
-    --verbose
-    -t, --times
-    -sleep
-
-command:
-    say
-"
-`;
-
 exports[`expect recover the specification 1`] = `
 [
   {
@@ -48,4 +33,18 @@ exports[`expect recover the specification 1`] = `
     ],
   },
 ]
+`;
+
+exports[`expect make a help message 1`] = `
+"Usage: cli foo                                                                  
+       cli baz -V taz                                                           
+
+flag:
+   -V, --verbose   Print more information                                       
+   -t, --times                                                                  
+   -sleep                                                                       
+
+command:
+   say                                                                          
+"
 `;
