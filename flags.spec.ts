@@ -2,7 +2,6 @@ import { expect, test } from "bun:test";
 import {
   any,
   command,
-  consoleDraw,
   describe,
   flag,
   flags,
@@ -188,7 +187,7 @@ test("expect recover the specification", () => {
   expect(Array.from(getSpecs(rules))).toMatchSnapshot();
 });
 
-test("expect make a helm message", () => {
+test("expect make a help message", () => {
   const rules: Rule<any>[] = [
     [
       describe(flag("-V", "--verbose"), {
