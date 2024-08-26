@@ -24,5 +24,9 @@
   },
   "files": [
     "lib"
-  ]
+  ],
+  "dependencies": {
+    "@jondotsoy/console-draw": "^0.1.0",
+    "@jondotsoy/style-text": "^0.9.1"
+  }
 }
