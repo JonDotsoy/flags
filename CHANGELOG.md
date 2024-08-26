@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.1.0](https://github.com/JonDotsoy/flags/compare/flags-v2.0.3...flags-v2.1.0) (2024-08-26)
+
+
+### Features
+
+* initialize componseSpace ([5350c41](https://github.com/JonDotsoy/flags/commit/5350c411e971b97283b50850e8b0db1fb37e7c2f))
+* remove console-draw implementation and related tests ([6e6c698](https://github.com/JonDotsoy/flags/commit/6e6c6984bc6827f57913009da7f3b67b36131049))
+* upgrade logic to `makeHelpMessage` function ([#15](https://github.com/JonDotsoy/flags/issues/15)) ([049cee5](https://github.com/JonDotsoy/flags/commit/049cee5f9b36550ecbcdad88e250a39b59edf018))
+
+
+### Performance Improvements
+
+* upgrade makeHelpMessage. ([11cdbab](https://github.com/JonDotsoy/flags/commit/11cdbabca958e8ca4f12c74a4afff275e220c8ba))
+
 ## 2.0.3 (2024-06-06)
 
 
