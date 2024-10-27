@@ -16,8 +16,8 @@
   "license": "MIT",
   "devDependencies": {
     "@types/bun": "latest",
-    "prettier": "^3.3.1",
-    "typescript": "^5.2.2"
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3"
   },
   "publishConfig": {
     "access": "public"
@@ -26,7 +26,6 @@
     "lib"
   ],
   "dependencies": {
-    "@jondotsoy/console-draw": "^0.1.0",
-    "@jondotsoy/style-text": "^0.9.1"
+    "@jondotsoy/console-draw": "^0.1.2"
   }
 }
