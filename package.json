@@ -11,7 +11,14 @@
     "build": "make",
     "fmt": "prettier -w ."
   },
-  "keywords": [],
+  "keywords": [
+    "arguments",
+    "args",
+    "cli",
+    "command",
+    "command-line-processor",
+    "command-line-parser"
+  ],
   "author": "Jonathan Delgado <hi@jon.soy> (https://jon.soy)",
   "license": "MIT",
   "devDependencies": {
