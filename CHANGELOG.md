@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/JonDotsoy/flags/compare/flags-v2.1.0...flags-v2.2.0) (2024-10-27)
+
+
+### Features
+
+* add `commandOption` function ([da93a37](https://github.com/JonDotsoy/flags/commit/da93a3730f44991f3f3329ab0c158bb991ad3274))
+
 ## [2.1.0](https://github.com/JonDotsoy/flags/compare/flags-v2.0.3...flags-v2.1.0) (2024-08-26)
 
 
