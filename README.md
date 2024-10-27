@@ -52,6 +52,14 @@ The `command` function provide a test function to match a exactly argument.
 const test = command("run");
 ```
 
+#### `commandOption`
+
+The `commandOption` function provide a test function to match a argument as a option.
+
+```ts
+const test = commandOption("filePath");
+```
+
 #### Describe a flag or command
 
 The `describe` function allow set a description or a category in your flag or

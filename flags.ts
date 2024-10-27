@@ -56,6 +56,17 @@ export const command = <T>(command: string): Test<T> =>
     { category: "command", names: [command] },
   );
 
+export const commandOption =
+  <T>(optionName: keyof T) =>
+  (arg: string, ctx: Context<T>): boolean => {
+    if (ctx.flags[optionName] === undefined) {
+      ctx.argValue = arg;
+      return true;
+    }
+
+    return false;
+  };
+
 export const isBooleanAt =
   <T>(propName: keyof T): Handler<T> =>
   ({ flags }) =>
