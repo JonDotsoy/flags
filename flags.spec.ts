@@ -11,9 +11,7 @@ import {
   makeHelpMessage,
   restArgumentsAt,
   type Rule,
-  rule,
 } from "./flags";
-import { inspect } from "util";
 
 test("expect run flag function", () => {
   interface Options {
