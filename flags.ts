@@ -56,6 +56,7 @@ export const command = <T>(command: string): Test<T> =>
     { category: "command", names: [command] },
   );
 
+/** @deprecated prefer {@link argument} */
 export const commandOption =
   <T>(optionName: keyof T) =>
   (arg: string, ctx: Context<T>): boolean => {
@@ -245,3 +246,22 @@ export const flags = <T>(
   }
   return init;
 };
+
+/**
+ * Catch the next argument.
+ *
+ * @example
+ * const options = flags(["foo"],{}, [rule(argument(), isStringAt("arg"))])
+ * options.arg // => "foo"
+ */
+export const argument = () => {
+  const uniqueInvocation = Symbol();
+  return (arg: string, ctx: Context<any>) => {
+    if (argument.visited.has(uniqueInvocation)) return false;
+    argument.visited.add(uniqueInvocation);
+    ctx.argValue = arg;
+    return true;
+  };
+};
+
+argument.visited = new Set<symbol>();
