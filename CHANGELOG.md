@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.3.0](https://github.com/JonDotsoy/flags/compare/flags-v2.2.0...flags-v2.3.0) (2025-01-05)
+
+
+### Features
+
+* **flags:** add support for catching arguments ([a2b2dad](https://github.com/JonDotsoy/flags/commit/a2b2dad775c7d257abb5a15c55fbf6f60ca34caa))
+* **flags:** add support for catching arguments ([#18](https://github.com/JonDotsoy/flags/issues/18)) ([6e63902](https://github.com/JonDotsoy/flags/commit/6e639027dd65d335db3cca920cde6291a45323cc))
+
 ## [2.2.0](https://github.com/JonDotsoy/flags/compare/flags-v2.1.0...flags-v2.2.0) (2024-10-27)
 
 

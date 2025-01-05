@@ -1,6 +1,6 @@
 {
   "name": "@jondotsoy/flags",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "A Javascript arguments processor",
   "main": "./lib/cjs/flags.js",
   "module": "./lib/esm/flags.js",
