@@ -71,6 +71,22 @@ const test = describe(flag("--title", "-t"), {
 });
 ```
 
+#### `argument`
+
+Catch the next argument.
+
+```ts
+const rules: Rule<any>[] = [
+  rule(argument(), isStringAt("firstArg")),
+  rule(argument(), isStringAt("secondArg")),
+];
+
+const options = flags(["foo", "taz"], {}, rules);
+
+options.firstArg; // => "foo"
+options.secondArg; // => "taz"
+```
+
 ### Handler
 
 The handler function provides a machine to describe a behavior with the next

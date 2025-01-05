@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import {
   any,
+  argument,
   command,
   describe,
   flag,
@@ -10,6 +11,7 @@ import {
   isStringAt,
   makeHelpMessage,
   restArgumentsAt,
+  rule,
   type Rule,
 } from "./flags";
 
@@ -201,4 +203,31 @@ test("expect make a help message", () => {
   const helmMessage = makeHelpMessage("cli", rules, ["foo", "baz -V taz"]);
 
   expect(helmMessage).toMatchSnapshot();
+});
+
+test("expect get the first argument", () => {
+  const rules: Rule<any>[] = [rule(argument(), isStringAt("firstArg"))];
+
+  const options = flags(["foo"], {}, rules);
+
+  expect(options.firstArg).toEqual("foo");
+});
+
+test("expect get the second argument", () => {
+  const rules: Rule<any>[] = [
+    rule(argument(), isStringAt("firstArg")),
+    rule(argument(), isStringAt("secondArg")),
+  ];
+
+  const options = flags(["foo", "taz"], {}, rules);
+
+  expect(options.secondArg).toEqual("taz");
+});
+
+test("expect throw error if more arguments than rules", () => {
+  const rules: Rule<any>[] = [rule(argument(), isStringAt("firstArg"))];
+
+  expect(() => {
+    flags(["foo", "taz"], {}, rules);
+  }).toThrow();
 });
