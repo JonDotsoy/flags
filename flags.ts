@@ -1,4 +1,5 @@
 import { render, componentModules } from "@jondotsoy/console-draw";
+import { UnknownArgumentError } from "./src/common/errors/unknown-argument.error.js";
 
 const h = componentModules.createElement.bind(componentModules);
 
@@ -239,7 +240,7 @@ export const flags = <T>(
     const rule = parses.find(([test]) => {
       return test(ctx.arg, ctx);
     });
-    if (!rule) throw new Error(`Unknown argument: ${arg}`);
+    if (!rule) throw new UnknownArgumentError(arg);
     const [, handler] = rule;
     handler(ctx);
     index = ctx.nextIndex;
