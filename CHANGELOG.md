@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.0](https://github.com/JonDotsoy/flags/compare/flags-v2.3.0...flags-v2.4.0) (2025-05-26)
+
+
+### Features
+
+* add custom error classes for flag operations ([#20](https://github.com/JonDotsoy/flags/issues/20)) ([22a1c22](https://github.com/JonDotsoy/flags/commit/22a1c22f46b7c4c12af9b112bb20ca9166544f22))
+
 ## [2.3.0](https://github.com/JonDotsoy/flags/compare/flags-v2.2.0...flags-v2.3.0) (2025-01-05)
 
 
