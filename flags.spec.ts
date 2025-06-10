@@ -16,6 +16,7 @@ import {
   rule,
   flagHandler,
   type Rule,
+  isArrayNumberAt,
 } from "./flags";
 
 test("expect run flag function", () => {
@@ -314,4 +315,17 @@ test("expect parse values with flagHandler", () => {
   expect(options.str).toBe("hello");
   expect(options.num).toBe(42);
   expect(options.arr).toEqual(["a", "b"]);
+});
+
+test("expect collect multiple numbers into a list with isArrayNumberAt", () => {
+  interface Options {
+    nums: number[];
+  }
+
+  const args = ["--nums", "1", "--nums", "2.5", "--nums", "-3"];
+  const options = flags<Options>(args, {}, [
+    rule(flag("--nums"), isArrayNumberAt("nums")),
+  ]);
+
+  expect(options.nums).toEqual([1, 2.5, -3]);
 });
