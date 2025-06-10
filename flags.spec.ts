@@ -9,9 +9,12 @@ import {
   getSpecs,
   isBooleanAt,
   isStringAt,
+  isArrayStringAt,
+  isNumberAt,
   makeHelpMessage,
   restArgumentsAt,
   rule,
+  flagHandler,
   type Rule,
 } from "./flags";
 
@@ -230,4 +233,85 @@ test("expect throw error if more arguments than rules", () => {
   expect(() => {
     flags(["foo", "taz"], {}, rules);
   }).toThrow();
+});
+
+test("expect collect multiple values into a list", () => {
+  interface Options {
+    items: string[];
+  }
+
+  const rules: Rule<Options>[] = [
+    rule(flag("--taz"), isArrayStringAt("items")),
+  ];
+
+  const args = ["--taz", "foo", "--taz", "buz"];
+  const options = flags<Options>(args, {}, rules);
+
+  expect(options.items).toEqual(["foo", "buz"]);
+});
+
+test("expect parse numbers with isNumberAt", () => {
+  interface Options {
+    num1: number;
+    num2: number;
+    num3: number;
+  }
+
+  const args = ["--num1", "1", "--num2", "1.24", "--num3", "foo"];
+  const options = flags<Options>(args, {}, [
+    [flag("--num1"), isNumberAt("num1")],
+    [flag("--num2"), isNumberAt("num2")],
+    [flag("--num3"), isNumberAt("num3")],
+  ]);
+
+  expect(options.num1).toBe(1);
+  expect(options.num2).toBeCloseTo(1.24);
+  expect(options.num3).toBeNaN();
+});
+
+test("expect parse values with flagHandler", () => {
+  interface Options {
+    bool: boolean;
+    str: string;
+    num: number;
+    arr: string[];
+  }
+
+  const args: string[] = [
+    "--bool",
+    "--str",
+    "hello",
+    "--num",
+    "42",
+    "--arr",
+    "a",
+    "--arr",
+    "b",
+  ];
+  const options = flags<Options>(args, {}, [
+    rule(
+      flag("--bool"),
+      flagHandler("bool", () => true, false),
+    ),
+    rule(
+      flag("--str"),
+      flagHandler("str", (_ctx, _, value) => value),
+    ),
+    rule(
+      flag("--num"),
+      flagHandler("num", (_ctx, _, value) => Number(value)),
+    ),
+    rule(
+      flag("--arr"),
+      flagHandler("arr", (_ctx, acc = [], value) => [
+        ...(Array.isArray(acc) ? acc : [acc]),
+        value,
+      ]),
+    ),
+  ]);
+
+  expect(options.bool).toBeTrue();
+  expect(options.str).toBe("hello");
+  expect(options.num).toBe(42);
+  expect(options.arr).toEqual(["a", "b"]);
 });
