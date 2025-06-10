@@ -114,7 +114,7 @@ const test = any();
 
 ### Handler Functions
 
-Handler functions describe what to do with a matched argument.
+Handler functions describe what to do with a matched argument. The following helpers are provided:
 
 #### `isStringAt`
 
@@ -122,6 +122,7 @@ Assigns the value of the argument (or its value after `=`) to the given property
 
 ```ts
 const handler = isStringAt("title");
+// --title foo  => { title: "foo" }
 ```
 
 #### `isBooleanAt`
@@ -129,7 +130,8 @@ const handler = isStringAt("title");
 Sets the given property to `true` if the flag is present.
 
 ```ts
-const handler = isBooleanAt("show-help");
+const handler = isBooleanAt("showHelp");
+// --showHelp  => { showHelp: true }
 ```
 
 #### `isNumberAt`
@@ -138,15 +140,115 @@ Parses the value as a number and assigns it to the given property.
 
 ```ts
 const handler = isNumberAt("count");
+// --count 5  => { count: 5 }
 ```
 
-#### `restArgumentsAt`
+#### `isArrayStringAt`
 
-Assigns all remaining arguments to the given property as an array.
+Accumulates all values for the flag as an array of strings.
 
 ```ts
-const handler = restArgumentsAt("args");
+const handler = isArrayStringAt("items");
+// --items foo --items bar  => { items: ["foo", "bar"] }
 ```
+
+#### `isArrayNumberAt`
+
+Accumulates all values for the flag as an array of numbers.
+
+```ts
+const handler = isArrayNumberAt("nums");
+// --nums 1 --nums 2  => { nums: [1, 2] }
+```
+
+### Custom Handler: `flagHandler`
+
+The `flagHandler` utility allows you to define custom logic for how a flag or argument updates your options object. This is useful for advanced scenarios, such as accumulating values, transforming input, or handling non-standard flag behaviors.
+
+#### Syntax
+
+```ts
+flagHandler(
+  propName: keyof T,
+  reducer: (ctx: Context<T>, accumulate: unknown, value: string | null) => unknown,
+  requireValue?: boolean
+): Handler<T>
+```
+
+- `propName`: The property of your options object to update.
+- `reducer`: A function that receives the parsing context, the current value (accumulate), and the new value (from the argument or flag). It should return the new value to assign.
+- `requireValue` (optional): If `true` (default), expects a value after the flag (e.g., `--foo bar`). If `false`, the flag is treated as a boolean (e.g., `--foo`).
+
+#### Example: Boolean, String, Number, and Array
+
+```ts
+interface Options {
+  bool: boolean;
+  str: string;
+  num: number;
+  arr: string[];
+}
+
+const args = [
+  "--bool",
+  "--str",
+  "hello",
+  "--num",
+  "42",
+  "--arr",
+  "a",
+  "--arr",
+  "b",
+];
+
+const options = flags<Options>(args, {}, [
+  rule(
+    flag("--bool"),
+    flagHandler("bool", () => true, false),
+  ),
+  rule(
+    flag("--str"),
+    flagHandler("str", (_ctx, _, value) => value),
+  ),
+  rule(
+    flag("--num"),
+    flagHandler("num", (_ctx, _, value) => Number(value)),
+  ),
+  rule(
+    flag("--arr"),
+    flagHandler("arr", (_ctx, acc = [], value) => [
+      ...(Array.isArray(acc) ? acc : [acc]),
+      value,
+    ]),
+  ),
+]);
+
+// Results:
+// options.bool === true
+// options.str === "hello"
+// options.num === 42
+// options.arr === ["a", "b"]
+```
+
+#### Example: Custom Accumulation
+
+You can use `flagHandler` to accumulate values or apply custom transformations:
+
+```ts
+const options = flags<{ count: number }>(["--count", "1", "--count", "2"], {}, [
+  rule(
+    flag("--count"),
+    flagHandler("count", (_ctx, acc = 0, value) => acc + Number(value)),
+  ),
+]);
+// options.count === 3
+```
+
+#### Notes
+
+- The `ctx` parameter provides full context of the parsing state, including all arguments, current index, and the flags object.
+- Use `requireValue: false` for boolean flags that do not take a value.
+- You can combine `flagHandler` with any test function (e.g., `flag`, `command`, etc.) for maximum flexibility.
 
 ### Utilities
 
