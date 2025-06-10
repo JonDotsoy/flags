@@ -95,12 +95,12 @@ export const flagHandler = <T>(
 ): Handler<T> => {
   return (ctx) => {
     const { flags, argValue, args, nextIndex } = ctx;
-    const notFlagEnabled = !argValue;
+    const isValueMissing = !argValue;
     const isRequireValueEnabled = requireValue ?? true;
 
     const currentFlagValue: any = Reflect.get(flags, propName);
 
-    if (notFlagEnabled && isRequireValueEnabled) {
+    if (isValueMissing && isRequireValueEnabled) {
       ctx.nextIndex += 1;
     }
 
