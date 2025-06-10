@@ -130,6 +130,12 @@ export const isArrayStringAt = <T>(propName: keyof T): Handler<T> =>
     value,
   ]);
 
+export const isArrayNumberAt = <T>(propName: keyof T): Handler<T> =>
+  flagHandler<T>(propName, (_ctx, accumulate = [], value) => [
+    ...(Array.isArray(accumulate) ? accumulate : [accumulate]),
+    Number(value),
+  ]);
+
 export const any =
   <T>(): Test<T> =>
   () =>
