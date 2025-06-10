@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.0](https://github.com/JonDotsoy/flags/compare/flags-v2.4.0...flags-v2.5.0) (2025-06-10)
+
+
+### Features
+
+* enhance flag handling with array and number parsing capabilities ([#24](https://github.com/JonDotsoy/flags/issues/24)) ([bbe6b5a](https://github.com/JonDotsoy/flags/commit/bbe6b5a8494fbca7fdf503e28bc734564c15e98c))
+
 ## [2.4.0](https://github.com/JonDotsoy/flags/compare/flags-v2.3.0...flags-v2.4.0) (2025-05-26)
 
 
