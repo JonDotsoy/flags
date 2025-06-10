@@ -70,33 +70,71 @@ export const commandOption =
     return false;
   };
 
+/**
+ * Creates a handler function for processing command-line flags and updating a property on the flags object.
+ *
+ * @template T - The type of the flags object.
+ * @param propName - The property name on the flags object to update.
+ * @param reducer - A function that receives the current context, the accumulated value, and the flag value (as a string or null),
+ *   and returns the next value to set for the property.
+ * @param requireValue - Optional. If `true` (default), the handler expects a value for the flag; if `false`, the flag is treated as a boolean.
+ * @returns A handler function that processes the flag and updates the specified property on the flags object.
+ *
+ * @remarks
+ * The handler uses the provided reducer to determine the next value for the property.
+ * If `requireValue` is enabled and no value is provided, the handler advances the argument index.
+ */
+export const flagHandler = <T>(
+  propName: keyof T,
+  reducer: (
+    ctx: Context<T>,
+    accumulate: unknown,
+    value: string | null,
+  ) => unknown,
+  requireValue?: boolean,
+): Handler<T> => {
+  return (ctx) => {
+    const { flags, argValue, args, nextIndex } = ctx;
+    const isValueMissing = !argValue;
+    const isRequireValueEnabled = requireValue ?? true;
+
+    const currentFlagValue: any = Reflect.get(flags, propName);
+
+    if (isValueMissing && isRequireValueEnabled) {
+      ctx.nextIndex += 1;
+    }
+
+    const value = isRequireValueEnabled
+      ? (argValue ?? args.at(nextIndex) ?? null)
+      : null;
+    const nextFlagValue = reducer(ctx, currentFlagValue, value);
+
+    Reflect.set(flags, propName, nextFlagValue);
+  };
+};
+
 export const isBooleanAt =
   <T>(propName: keyof T): Handler<T> =>
   ({ flags }) =>
     Reflect.set(flags, propName, true);
 
-export const isStringAt =
-  <T>(propName: keyof T): Handler<T> =>
-  (ctx) => {
-    const { flags, argValue, args, nextIndex } = ctx;
-    if (argValue) {
-      Reflect.set(flags, propName, argValue);
-    } else {
-      Reflect.set(flags, propName, args.at(nextIndex));
-      ctx.nextIndex += 1;
-    }
-  };
+export const isStringAt = <T>(propName: keyof T): Handler<T> =>
+  flagHandler<T>(propName, (_ctx, _, value) => value);
 
-export const isNumberAt =
-  <T>(propName: keyof T): Handler<T> =>
-  (ctx) => {
-    const { flags, argValue, args, nextIndex } = ctx;
-    const rawValue = argValue ?? args.at(nextIndex);
-    if (!argValue) {
-      ctx.nextIndex += 1;
-    }
-    Reflect.set(flags, propName, Number(rawValue));
-  };
+export const isNumberAt = <T>(propName: keyof T): Handler<T> =>
+  flagHandler<T>(propName, (_ctx, _, value) => Number(value));
+
+export const isArrayStringAt = <T>(propName: keyof T): Handler<T> =>
+  flagHandler<T>(propName, (_ctx, accumulate = [], value) => [
+    ...(Array.isArray(accumulate) ? accumulate : [accumulate]),
+    value,
+  ]);
+
+export const isArrayNumberAt = <T>(propName: keyof T): Handler<T> =>
+  flagHandler<T>(propName, (_ctx, accumulate = [], value) => [
+    ...(Array.isArray(accumulate) ? accumulate : [accumulate]),
+    Number(value),
+  ]);
 
 export const any =
   <T>(): Test<T> =>
