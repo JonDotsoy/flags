@@ -10,7 +10,7 @@ Welcome to the comprehensive documentation for `@jondotsoy/flags` - a powerful, 
 
 - **Rules**: Combinations of test functions and handlers that define how arguments are processed
 - **Test Functions**: Functions that determine if an argument matches a pattern (flags, commands, etc.)
-- **Handlers**: Functions that process matched arguments and update the options object
+- **Handlers**: Functions that process matched arguments and update the options object ([Built-in Handlers →](./flag_handlers/README.md))
 - **Type Safety**: Full TypeScript support with generic types for your CLI options
 
 ## Architecture
@@ -53,12 +53,14 @@ import {
 } from "@jondotsoy/flags";
 
 const rules = [
-  rule(flag("--verbose", "-v"), isBooleanAt("verbose")),
-  rule(flag("--output", "-o"), isStringAt("output")),
-  rule(flag("--port", "-p"), isNumberAt("port")),
-  rule(flag("--file", "-f"), isArrayStringAt("files")),
+  rule(flag("--verbose", "-v"), isBooleanAt("verbose")), // Boolean flag handler
+  rule(flag("--output", "-o"), isStringAt("output")), // String value handler
+  rule(flag("--port", "-p"), isNumberAt("port")), // Numeric value handler
+  rule(flag("--file", "-f"), isArrayStringAt("files")), // String array handler
 ];
 ```
+
+> 📋 **Handler Documentation**: For detailed documentation on all built-in handlers, see [Built-in Handlers →](./flag_handlers/README.md)
 
 ### 3. Parse Arguments
 
@@ -69,6 +71,58 @@ const options = flags<MyCliOptions>(
   rules,
 );
 ```
+
+## Built-in Handlers
+
+The library provides several built-in handlers for common CLI patterns:
+
+### Boolean Handlers
+
+- **[`isBooleanAt()`](./flag_handlers/isBooleanAt.md)** - Set property to `true` when flag is present
+  ```ts
+  rule(flag("--verbose", "-v"), isBooleanAt("verbose"));
+  // Usage: --verbose → { verbose: true }
+  ```
+
+### Value Handlers
+
+- **[`isStringAt()`](./flag_handlers/isStringAt.md)** - Capture string value after flag
+
+  ```ts
+  rule(flag("--output", "-o"), isStringAt("output"));
+  // Usage: --output file.txt → { output: "file.txt" }
+  ```
+
+- **[`isNumberAt()`](./flag_handlers/isNumberAt.md)** - Capture and convert numeric value
+  ```ts
+  rule(flag("--port", "-p"), isNumberAt("port"));
+  // Usage: --port 3000 → { port: 3000 }
+  ```
+
+### Array Handlers
+
+- **[`isArrayStringAt()`](./flag_handlers/isArrayStringAt.md)** - Accumulate multiple string values
+
+  ```ts
+  rule(flag("--include", "-I"), isArrayStringAt("include"));
+  // Usage: --include src/ --include lib/ → { include: ["src/", "lib/"] }
+  ```
+
+- **[`isArrayNumberAt()`](./flag_handlers/isArrayNumberAt.md)** - Accumulate multiple numeric values
+  ```ts
+  rule(flag("--port", "-p"), isArrayNumberAt("ports"));
+  // Usage: --port 3000 --port 3001 → { ports: [3000, 3001] }
+  ```
+
+### Special Handlers
+
+- **[`restArgumentsAt()`](./flag_handlers/restArgumentsAt.md)** - Capture remaining positional arguments
+  ```ts
+  rule(() => true, restArgumentsAt("files"));
+  // Usage: myapp file1.txt file2.txt → { files: ["file1.txt", "file2.txt"] }
+  ```
+
+> 📚 **Complete Handler Documentation**: For comprehensive examples, advanced patterns, and testing approaches, see [Built-in Handlers →](./flag_handlers/README.md)
 
 ## Advanced Examples
 
@@ -123,6 +177,8 @@ const rules = [
 // git-cli --verbose push origin main
 // git-cli clone https://github.com/user/repo.git my-project
 ```
+
+> 💡 **Handler Tip**: For simpler cases, you can use built-in handlers like [`isStringAt()`](./flag_handlers/isStringAt.md), [`isArrayStringAt()`](./flag_handlers/isArrayStringAt.md), and [`restArgumentsAt()`](./flag_handlers/restArgumentsAt.md) instead of custom handlers.
 
 ### Configuration-Based CLI
 
@@ -368,6 +424,14 @@ describe("CLI parsing", () => {
 });
 ```
 
+> 🧪 **Testing Handlers**: Each built-in handler has comprehensive test examples. See the individual handler documentation for testing patterns:
+>
+> - [Boolean Handler Tests](./flag_handlers/isBooleanAt.md#testing-boolean-flags)
+> - [String Handler Tests](./flag_handlers/isStringAt.md#testing-string-flags)
+> - [Number Handler Tests](./flag_handlers/isNumberAt.md#testing-number-flags)
+> - [Array Handler Tests](./flag_handlers/isArrayStringAt.md#testing-array-string-flags)
+> - [Rest Arguments Tests](./flag_handlers/restArgumentsAt.md#testing-rest-arguments)
+
 ### Integration Testing
 
 ```ts
@@ -443,10 +507,29 @@ rule(command("process"), (ctx) => {
 
 For detailed API documentation, see the [API References](./api_references/) directory:
 
+### Core Functions
+
 - [`rule()`](./api_references/rule.md) - Create parsing rules
+- [`flags()`](./api_references/README.md#flags) - Main parsing function
+
+### Test Functions
+
 - [`flag()`](./api_references/flag.md) - Match command-line flags
 - [`command()`](./api_references/command.md) - Match subcommands
 - [`argument()`](./api_references/argument.md) - Match positional arguments
+
+### Built-in Handlers
+
+- [`isBooleanAt()`](./flag_handlers/isBooleanAt.md) - Boolean flag handler
+- [`isStringAt()`](./flag_handlers/isStringAt.md) - String value handler
+- [`isNumberAt()`](./flag_handlers/isNumberAt.md) - Numeric value handler
+- [`isArrayStringAt()`](./flag_handlers/isArrayStringAt.md) - String array handler
+- [`isArrayNumberAt()`](./flag_handlers/isArrayNumberAt.md) - Number array handler
+- [`restArgumentsAt()`](./flag_handlers/restArgumentsAt.md) - Rest arguments handler
+- [**All Built-in Handlers →**](./flag_handlers/README.md) - Complete handler documentation
+
+### Advanced Features
+
 - [`flagHandler()`](./api_references/flag-handler.md) - Create custom handlers
 - [`makeHelpMessage()`](./api_references/make-help-message.md) - Generate help text
 - [Error Classes](./api_references/errors.md) - Error handling reference

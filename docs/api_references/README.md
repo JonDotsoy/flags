@@ -70,7 +70,9 @@ Handler functions process matched arguments and update the options object.
 
 ### Built-in Handlers
 
-#### [`isBooleanAt()`](./handlers.md#isbooleanat)
+> 📋 **Detailed Handler Documentation**: For comprehensive examples, advanced patterns, and testing approaches, see [**Built-in Handlers →**](../flag_handlers/README.md)
+
+#### [`isBooleanAt()`](../flag_handlers/isBooleanAt.md)
 
 Set a property to `true` when a flag is present.
 
@@ -78,7 +80,7 @@ Set a property to `true` when a flag is present.
 isBooleanAt<T>(propName: keyof T): Handler<T>
 ```
 
-#### [`isStringAt()`](./handlers.md#isstringat)
+#### [`isStringAt()`](../flag_handlers/isStringAt.md)
 
 Store a flag's string value in a property.
 
@@ -86,7 +88,7 @@ Store a flag's string value in a property.
 isStringAt<T>(propName: keyof T): Handler<T>
 ```
 
-#### [`isNumberAt()`](./handlers.md#isnumberat)
+#### [`isNumberAt()`](../flag_handlers/isNumberAt.md)
 
 Parse and store a flag's numeric value.
 
@@ -94,7 +96,7 @@ Parse and store a flag's numeric value.
 isNumberAt<T>(propName: keyof T): Handler<T>
 ```
 
-#### [`isArrayStringAt()`](./handlers.md#isarraystringat)
+#### [`isArrayStringAt()`](../flag_handlers/isArrayStringAt.md)
 
 Accumulate multiple string values in an array.
 
@@ -102,7 +104,7 @@ Accumulate multiple string values in an array.
 isArrayStringAt<T>(propName: keyof T): Handler<T>
 ```
 
-#### [`isArrayNumberAt()`](./handlers.md#isarraynumberat)
+#### [`isArrayNumberAt()`](../flag_handlers/isArrayNumberAt.md)
 
 Accumulate multiple numeric values in an array.
 
@@ -110,7 +112,7 @@ Accumulate multiple numeric values in an array.
 isArrayNumberAt<T>(propName: keyof T): Handler<T>
 ```
 
-#### [`restArgumentsAt()`](./handlers.md#restargumentsat)
+#### [`restArgumentsAt()`](../flag_handlers/restArgumentsAt.md)
 
 Capture all remaining arguments as an array.
 
