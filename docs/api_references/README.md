@@ -64,6 +64,24 @@ Add metadata (description, category) to test functions.
 describe<T>(test: Test<T>, ...specs: Spec[]): Test<T>
 ```
 
+## Utility Functions
+
+### [`getSpecs()`](./get-specs.md)
+
+Extract metadata from parsing rules for help generation and introspection.
+
+```ts
+getSpecs(rules: Rule<any>[]): Generator<Spec>
+```
+
+### [`makeHelpMessage()`](./make-help-message.md)
+
+Generate formatted help text for CLI applications.
+
+```ts
+makeHelpMessage(command: string, rules: Rule<any>[], samples?: string[]): string
+```
+
 ## Handler Functions
 
 Handler functions process matched arguments and update the options object.
