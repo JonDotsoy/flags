@@ -9,8 +9,18 @@ A powerful and type-safe JavaScript/TypeScript command-line arguments processor 
 - 🎯 **Multiple formats**: Support for `--flag=value`, `--flag value`, and `-f` syntax
 - 🔧 **Built-in handlers**: Boolean, string, number, and array handlers
 - 📚 **Commands**: Support for subcommands and positional arguments
-- 🆘 **Help generation**: Automatic help message generation
+- 🆘 **Help generation**: Automatic help message generation with beautiful formatting
+- 🔍 **Introspection**: Extract metadata from rules with `getSpecs()`
+- 📖 **Comprehensive docs**: Complete API reference and examples for all functions
 - ⚡ **Lightweight**: Minimal dependencies, zero runtime overhead
+
+## Recent Updates
+
+- ✨ **Complete API Documentation**: All functions now have comprehensive documentation with examples
+- 📋 **Enhanced Handler Docs**: Detailed documentation for all built-in handlers with advanced patterns
+- 🔍 **New Utility Functions**: `getSpecs()` for rule introspection and custom help generation
+- 📝 **Better Examples**: Real-world CLI patterns and advanced use cases
+- 🎯 **Improved Navigation**: Organized documentation structure with cross-references
 
 ## Installation
 
@@ -30,31 +40,95 @@ import {
   rule,
   flag,
   command,
+  describe,
   isBooleanAt,
   isStringAt,
+  isNumberAt,
   restArgumentsAt,
+  makeHelpMessage,
 } from "@jondotsoy/flags";
 
 interface Options {
-  version: boolean;
-  name: string;
-  help: boolean;
-  run: string[];
-  test: string[];
+  verbose?: boolean;
+  name?: string;
+  port: number;
+  help?: boolean;
+  command?: string;
+  args?: string[];
 }
 
-const args = ["--name=foo", "-v", "run", "hello", "world"];
+// Define rules with metadata for automatic help generation
+const rules = [
+  rule(
+    describe(flag("--verbose", "-v"), {
+      description: "Enable verbose output",
+      category: "Options",
+    }),
+    isBooleanAt("verbose"),
+  ),
 
-const options = flags<Options>(args, {}, [
-  rule(flag("--name"), isStringAt("name")),
-  rule(flag("--version", "-v"), isBooleanAt("version")),
-  rule(command("run"), restArgumentsAt("run")),
-  rule(command("test"), restArgumentsAt("test")),
-]);
+  rule(
+    describe(flag("--name", "-n"), {
+      description: "Set application name",
+      category: "Options",
+    }),
+    isStringAt("name"),
+  ),
 
-console.log(options.name); // "foo"
-console.log(options.version); // true
-console.log(options.run); // ["hello", "world"]
+  rule(
+    describe(flag("--port", "-p"), {
+      description: "Server port number",
+      category: "Server",
+    }),
+    isNumberAt("port"),
+  ),
+
+  rule(
+    describe(flag("--help", "-h"), {
+      description: "Show help message",
+      category: "Info",
+    }),
+    isBooleanAt("help"),
+  ),
+
+  rule(
+    describe(command("serve"), {
+      description: "Start the server",
+      category: "Commands",
+    }),
+    (ctx) => {
+      ctx.flags.command = "serve";
+      ctx.flags.args = ctx.args.slice(ctx.index + 1);
+      ctx.nextIndex = ctx.args.length;
+    },
+  ),
+];
+
+// Parse command line arguments
+const args = ["--name=myapp", "-v", "--port", "8080", "serve", "--watch"];
+
+try {
+  const options = flags<Options>(args, { port: 3000 }, rules);
+
+  // Handle help flag
+  if (options.help) {
+    console.log(
+      makeHelpMessage("mycli", rules, [
+        "serve --port 8080",
+        "--name myapp --verbose",
+        "--help",
+      ]),
+    );
+    process.exit(0);
+  }
+
+  console.log("Parsed options:", options);
+  // Output: { name: "myapp", verbose: true, port: 8080, command: "serve", args: ["--watch"] }
+} catch (error) {
+  console.error(`Error: ${error.message}`);
+  console.log(makeHelpMessage("mycli", rules));
+  process.exit(1);
+}
 ```
 
 ## Documentation
@@ -69,20 +143,36 @@ For comprehensive documentation, examples, and API reference:
 
 ### Quick Links
 
+#### Core API
+
 - [Complete API Reference](./docs/api_references/README.md) - All functions and types
 - [Core Functions](./docs/api_references/README.md#core-functions) - `flags()`, `rule()`
-- [Test Functions](./docs/api_references/README.md#test-functions) - `flag()`, `command()`, `argument()`
-- [Handler Functions](./docs/api_references/README.md#handler-functions) - `isBooleanAt()`, `isStringAt()`, etc.
-- [Built-in Handlers](./docs/flag_handlers/README.md) - Detailed documentation for all handlers
+- [Test Functions](./docs/api_references/README.md#test-functions) - Pattern matching functions
+  - [`flag()`](./docs/api_references/flag.md) - Match command-line flags
+  - [`command()`](./docs/api_references/command.md) - Match subcommands
+  - [`argument()`](./docs/api_references/argument.md) - Match positional arguments
+  - [`any()`](./docs/api_references/any.md) - Match any argument (wildcard)
+  - [`describe()`](./docs/api_references/describe.md) - Add metadata to test functions
+- [Utility Functions](./docs/api_references/README.md#utility-functions) - Helper functions
+  - [`getSpecs()`](./docs/api_references/get-specs.md) - Extract metadata from rules
+  - [`makeHelpMessage()`](./docs/api_references/make-help-message.md) - Generate help text
+
+#### Built-in Handlers
+
+- [Handler Functions Overview](./docs/api_references/README.md#handler-functions) - Built-in value processors
+- [Detailed Handler Documentation](./docs/flag_handlers/README.md) - Comprehensive handler examples
   - [Boolean Flags](./docs/flag_handlers/isBooleanAt.md) - `isBooleanAt()`
   - [String Values](./docs/flag_handlers/isStringAt.md) - `isStringAt()`
   - [Numeric Values](./docs/flag_handlers/isNumberAt.md) - `isNumberAt()`
   - [String Arrays](./docs/flag_handlers/isArrayStringAt.md) - `isArrayStringAt()`
   - [Number Arrays](./docs/flag_handlers/isArrayNumberAt.md) - `isArrayNumberAt()`
   - [Rest Arguments](./docs/flag_handlers/restArgumentsAt.md) - `restArgumentsAt()`
+
+#### Additional Resources
+
 - [Error Handling](./docs/api_references/errors.md) - `UnknownArgumentError`, `FlagsError`
-- [Help Generation](./docs/api_references/make-help-message.md) - `makeHelpMessage()`
 - [Advanced Examples](./docs/README.md#advanced-examples) - Real-world CLI patterns
+- [Complete Usage Guide](./docs/README.md) - In-depth documentation with examples
 
 ## API Reference
 
@@ -152,13 +242,14 @@ Test functions determine whether an argument matches a specific pattern and shou
 
 ### `flag(...flags: string[])`
 
-Matches arguments that begin with the specified flag names. Supports both `--flag value` and `--flag=value` formats.
+Matches command-line flags like `--verbose`, `-v`, or `--name=value`. Supports multiple aliases and both `--flag value` and `--flag=value` formats.
 
 **Features:**
 
 - Multiple aliases: `flag("--verbose", "-v")`
 - Inline values: `--name=value` automatically extracts `value`
 - Short flags: `-v`, `-h`, etc.
+- Long flags: `--verbose`, `--help`, etc.
 
 ```ts
 // Matches: --title, -t, --title=value, -t value
@@ -170,7 +261,7 @@ rule(flag("--port", "-p"), isNumberAt("port"));
 
 ### `command(name: string)`
 
-Matches an argument that exactly equals the given string. Commonly used for subcommands.
+Matches an argument that exactly equals the given string. Commonly used for subcommands like `build`, `serve`, or `test`.
 
 ```ts
 // Matches exactly "build"
@@ -179,11 +270,12 @@ const buildCmd = command("build");
 // Example: npm-like commands
 rule(command("install"), restArgumentsAt("packages")),
 rule(command("run"), restArgumentsAt("script")),
+rule(command("test"), restArgumentsAt("testArgs")),
 ```
 
 ### `argument()`
 
-Matches positional arguments in order. Each call to `argument()` captures the next available positional argument.
+Matches positional arguments in order. Each call to `argument()` captures the next available positional argument that isn't a flag or command.
 
 ```ts
 // Captures: cli.js <file> <output>
@@ -198,21 +290,30 @@ const rules = [
 
 ### `any()`
 
-Matches any argument. Useful for catch-all scenarios or when combined with `restArgumentsAt`.
+Matches any argument (wildcard pattern). Useful for catch-all scenarios, fallback handlers, or when combined with `restArgumentsAt()`.
 
 ```ts
+// Catch any unmatched argument
 rule(any(), restArgumentsAt("remaining"));
+
+// Can be used as a fallback
+rule(any(), (ctx) => {
+  console.warn(`Unhandled argument: ${ctx.arg}`);
+});
 ```
 
 ### `describe(test, spec)`
 
-Adds metadata (description, category) to a test function for help generation.
+Adds metadata (description, category) to a test function for automatic help generation and documentation.
 
 ```ts
 const verboseFlag = describe(flag("--verbose", "-v"), {
-  description: "Enable verbose output",
+  description: "Enable verbose output with detailed logging",
   category: "General Options",
 });
+
+// Use in rules
+rule(verboseFlag, isBooleanAt("verbose"));
 ```
 
 ## Handler Functions
@@ -317,27 +418,37 @@ rule(
 
 ### `makeHelpMessage(command, rules, samples?)`
 
-Generates a formatted help message based on your CLI rules. Uses the `@jondotsoy/console-draw` library for beautiful terminal output.
+Generates a beautifully formatted help message based on your CLI rules. Uses rule metadata added with `describe()` to create organized, professional help text.
+
+**Features:**
+
+- Automatic categorization based on `describe()` metadata
+- Terminal width-aware formatting
+- Usage examples with multiple samples
+- Professional alignment and spacing
 
 ```ts
 const rules = [
   rule(
     describe(flag("--verbose", "-v"), {
-      description: "Enable verbose output",
+      description: "Enable verbose output with detailed logging",
+      category: "Debug Options",
     }),
     isBooleanAt("verbose"),
   ),
 
   rule(
     describe(flag("--port", "-p"), {
-      description: "Set server port",
+      description: "Set server port number (default: 3000)",
+      category: "Server Options",
     }),
     isNumberAt("port"),
   ),
 
   rule(
     describe(command("build"), {
-      description: "Build the project",
+      description: "Build the project for production",
+      category: "Commands",
     }),
     restArgumentsAt("buildArgs"),
   ),
@@ -345,23 +456,64 @@ const rules = [
 
 const helpText = makeHelpMessage("mycli", rules, [
   "build --verbose",
-  "serve --port 3000",
+  "serve --port 8080",
+  "--help",
 ]);
 
 console.log(helpText);
+
+// Output:
+// Usage: mycli build --verbose
+//        mycli serve --port 8080
+//        mycli --help
+//
+// Commands:
+//    build                Build the project for production
+//
+// Server Options:
+//    --port, -p           Set server port number (default: 3000)
+//
+// Debug Options:
+//    --verbose, -v        Enable verbose output with detailed logging
 ```
 
 ### `getSpecs(rules)`
 
-Extracts metadata from rules for programmatic access.
+Extracts metadata from parsing rules for programmatic access. Returns a generator that yields spec objects containing rule metadata.
+
+**Use cases:**
+
+- Custom help generation
+- Configuration validation
+- CLI introspection
+- Documentation generation
 
 ```ts
+import { getSpecs } from "@jondotsoy/flags";
+
+// Extract all rule metadata
 for (const spec of getSpecs(rules)) {
   console.log({
     names: spec.names, // ["--verbose", "-v"]
-    category: spec.category, // "flag"
-    description: spec.description,
+    category: spec.category, // "Debug Options"
+    description: spec.description, // "Enable verbose output..."
   });
+}
+
+// Convert to array for manipulation
+const allSpecs = Array.from(getSpecs(rules));
+
+// Filter by category
+const debugSpecs = allSpecs.filter((spec) => spec.category === "Debug Options");
+
+// Generate custom documentation
+function generateConfigDocs(rules) {
+  const specs = Array.from(getSpecs(rules));
+  return specs.map((spec) => ({
+    flags: spec.names?.join(", "),
+    help: spec.description,
+    section: spec.category,
+  }));
 }
 ```
 
