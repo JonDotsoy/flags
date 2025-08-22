@@ -176,6 +176,8 @@ For comprehensive documentation, examples, and API reference:
 
 ## API Reference
 
+> 📖 **Complete API Documentation**: This is a quick reference. For comprehensive documentation, examples, and advanced patterns, see [**Complete API Reference →**](./docs/api_references/README.md)
+
 ### Core Function
 
 #### `flags<T>(args, initialOptions, rules)`
@@ -217,6 +219,8 @@ const nameRule = rule(flag("--name", "-n"), isStringAt("name"), {
 });
 ```
 
+> 📚 **Learn More**: See [**rule() API Reference →**](./docs/api_references/rule.md) for complete documentation and examples
+
 ### Type Definitions
 
 ```ts
@@ -240,6 +244,8 @@ export type Rule<T> = [Test<T>, Handler<T>];
 
 Test functions determine whether an argument matches a specific pattern and should be processed by the associated handler.
 
+> 📖 **Detailed Documentation**: For comprehensive examples, advanced patterns, and complete API reference, see [**Test Functions →**](./docs/api_references/README.md#test-functions)
+
 ### `flag(...flags: string[])`
 
 Matches command-line flags like `--verbose`, `-v`, or `--name=value`. Supports multiple aliases and both `--flag value` and `--flag=value` formats.
@@ -259,6 +265,8 @@ const titleFlag = flag("--title", "-t");
 rule(flag("--port", "-p"), isNumberAt("port"));
 ```
 
+> 📚 **Learn More**: See [**flag() API Reference →**](./docs/api_references/flag.md) for complete documentation and examples
+
 ### `command(name: string)`
 
 Matches an argument that exactly equals the given string. Commonly used for subcommands like `build`, `serve`, or `test`.
@@ -272,6 +280,8 @@ rule(command("install"), restArgumentsAt("packages")),
 rule(command("run"), restArgumentsAt("script")),
 rule(command("test"), restArgumentsAt("testArgs")),
 ```
+
+> 📚 **Learn More**: See [**command() API Reference →**](./docs/api_references/command.md) for complete documentation and examples
 
 ### `argument()`
 
@@ -288,6 +298,8 @@ const rules = [
 // Result: { inputFile: "input.txt", outputFile: "output.txt" }
 ```
 
+> 📚 **Learn More**: See [**argument() API Reference →**](./docs/api_references/argument.md) for complete documentation and examples
+
 ### `any()`
 
 Matches any argument (wildcard pattern). Useful for catch-all scenarios, fallback handlers, or when combined with `restArgumentsAt()`.
@@ -301,6 +313,8 @@ rule(any(), (ctx) => {
   console.warn(`Unhandled argument: ${ctx.arg}`);
 });
 ```
+
+> 📚 **Learn More**: See [**any() API Reference →**](./docs/api_references/any.md) for complete documentation and examples
 
 ### `describe(test, spec)`
 
@@ -316,9 +330,13 @@ const verboseFlag = describe(flag("--verbose", "-v"), {
 rule(verboseFlag, isBooleanAt("verbose"));
 ```
 
+> 📚 **Learn More**: See [**describe() API Reference →**](./docs/api_references/describe.md) for complete documentation and examples
+
 ## Handler Functions
 
 Handler functions process matched arguments and update the options object.
+
+> 📋 **Detailed Handler Documentation**: For comprehensive examples, advanced patterns, and testing approaches, see [**Built-in Handlers →**](./docs/flag_handlers/README.md)
 
 ### Basic Handlers
 
@@ -331,6 +349,8 @@ rule(flag("--verbose", "-v"), isBooleanAt("verbose"));
 // --verbose → { verbose: true }
 ```
 
+> 📚 **Learn More**: See [**isBooleanAt() Documentation →**](./docs/flag_handlers/isBooleanAt.md) for complete examples and patterns
+
 #### `isStringAt(propName)`
 
 Assigns the flag's value to the specified property.
@@ -341,6 +361,8 @@ rule(flag("--name"), isStringAt("name"));
 // --name=John → { name: "John" }
 ```
 
+> 📚 **Learn More**: See [**isStringAt() Documentation →**](./docs/flag_handlers/isStringAt.md) for complete examples and patterns
+
 #### `isNumberAt(propName)`
 
 Parses the flag's value as a number and assigns it to the property.
@@ -350,6 +372,8 @@ rule(flag("--port"), isNumberAt("port"));
 // --port 3000 → { port: 3000 }
 // --port abc → { port: NaN }
 ```
+
+> 📚 **Learn More**: See [**isNumberAt() Documentation →**](./docs/flag_handlers/isNumberAt.md) for complete examples and patterns
 
 ### Array Handlers
 
@@ -362,6 +386,8 @@ rule(flag("--include"), isArrayStringAt("includes"));
 // --include src --include lib → { includes: ["src", "lib"] }
 ```
 
+> 📚 **Learn More**: See [**isArrayStringAt() Documentation →**](./docs/flag_handlers/isArrayStringAt.md) for complete examples and patterns
+
 #### `isArrayNumberAt(propName)`
 
 Accumulates multiple numeric values into an array.
@@ -370,6 +396,8 @@ Accumulates multiple numeric values into an array.
 rule(flag("--port"), isArrayNumberAt("ports"));
 // --port 3000 --port 4000 → { ports: [3000, 4000] }
 ```
+
+> 📚 **Learn More**: See [**isArrayNumberAt() Documentation →**](./docs/flag_handlers/isArrayNumberAt.md) for complete examples and patterns
 
 ### Special Handlers
 
@@ -381,6 +409,8 @@ Captures all remaining arguments as an array. Useful for subcommands.
 rule(command("run"), restArgumentsAt("args"));
 // run build --watch → { args: ["build", "--watch"] }
 ```
+
+> 📚 **Learn More**: See [**restArgumentsAt() Documentation →**](./docs/flag_handlers/restArgumentsAt.md) for complete examples and patterns
 
 ### Advanced Handler
 
@@ -415,6 +445,8 @@ rule(
 ```
 
 ## Utilities
+
+> 📖 **Complete Utility Documentation**: For advanced patterns, customization options, and detailed examples, see [**Utility Functions →**](./docs/api_references/README.md#utility-functions)
 
 ### `makeHelpMessage(command, rules, samples?)`
 
@@ -477,6 +509,8 @@ console.log(helpText);
 //    --verbose, -v        Enable verbose output with detailed logging
 ```
 
+> 📚 **Learn More**: See [**makeHelpMessage() API Reference →**](./docs/api_references/make-help-message.md) for advanced customization and examples
+
 ### `getSpecs(rules)`
 
 Extracts metadata from parsing rules for programmatic access. Returns a generator that yields spec objects containing rule metadata.
@@ -517,9 +551,13 @@ function generateConfigDocs(rules) {
 }
 ```
 
+> 📚 **Learn More**: See [**getSpecs() API Reference →**](./docs/api_references/get-specs.md) for comprehensive usage patterns and examples
+
 ## Error Handling
 
 The library provides specific error types for better error handling:
+
+> 📚 **Complete Error Documentation**: See [**Error Handling →**](./docs/api_references/errors.md) for comprehensive error handling patterns and examples
 
 ### `UnknownArgumentError`
 
@@ -557,6 +595,8 @@ try {
 ```
 
 ## Complete Examples
+
+> 🚀 **More Advanced Examples**: For real-world CLI patterns, complex configurations, and production-ready examples, see [**Advanced Examples →**](./docs/README.md#advanced-examples)
 
 ### Basic CLI Tool
 
