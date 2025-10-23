@@ -33,8 +33,49 @@ export const rule = <T>(
   ...specs: Spec[]
 ): Rule<T> => [describe(test, ...specs), handler];
 
-export const flag = <T>(...flags: string[]): Test<T> =>
-  describe(
+export interface FlagBuilder<T> {
+  isBooleanAt(propName: keyof T): RuleWithDescribe<T>;
+  isStringAt(propName: keyof T): RuleWithDescribe<T>;
+  isNumberAt(propName: keyof T): RuleWithDescribe<T>;
+  isArrayStringAt(propName: keyof T): RuleWithDescribe<T>;
+  isArrayNumberAt(propName: keyof T): RuleWithDescribe<T>;
+}
+
+export interface RuleWithDescribe<T> extends Rule<T> {
+  describe(description: string): Rule<T>;
+}
+
+const createRuleWithDescribe = <T>(
+  test: Test<T>,
+  handler: Handler<T>,
+): RuleWithDescribe<T> => {
+  const ruleArray: any = [test, handler];
+
+  ruleArray.describe = (description: string): Rule<T> => {
+    const describedTest = describe(test, { description });
+    return [describedTest, handler];
+  };
+
+  return ruleArray as RuleWithDescribe<T>;
+};
+
+const createFlagBuilder = <T>(test: Test<T>): FlagBuilder<T> => {
+  return {
+    isBooleanAt: (propName: keyof T) =>
+      createRuleWithDescribe(test, isBooleanAt(propName)),
+    isStringAt: (propName: keyof T) =>
+      createRuleWithDescribe(test, isStringAt(propName)),
+    isNumberAt: (propName: keyof T) =>
+      createRuleWithDescribe(test, isNumberAt(propName)),
+    isArrayStringAt: (propName: keyof T) =>
+      createRuleWithDescribe(test, isArrayStringAt(propName)),
+    isArrayNumberAt: (propName: keyof T) =>
+      createRuleWithDescribe(test, isArrayNumberAt(propName)),
+  };
+};
+
+export function flag<T = any>(...flags: string[]): Test<T> & FlagBuilder<T> {
+  const test = describe(
     (arg, ctx: Context<T>) =>
       flags.some((flag) => {
         if (flag === arg) return true;
@@ -45,6 +86,9 @@ export const flag = <T>(...flags: string[]): Test<T> =>
       }),
     { category: "flag", names: flags },
   );
+
+  return Object.assign(test, createFlagBuilder<T>(test));
+}
 
 export const command = <T>(command: string): Test<T> =>
   describe(

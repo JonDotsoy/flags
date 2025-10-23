@@ -329,3 +329,143 @@ test("expect collect multiple numbers into a list with isArrayNumberAt", () => {
 
   expect(options.nums).toEqual([1, 2.5, -3]);
 });
+
+test("expect chained syntax: flag().isBooleanAt()", () => {
+  interface Options {
+    version: boolean;
+  }
+
+  const rules: Rule<Options>[] = [
+    flag("--version", "-v").isBooleanAt("version"),
+  ];
+
+  const options = flags<Options>(["--version"], {}, rules);
+
+  expect(options.version).toBeTrue();
+});
+
+test("expect chained syntax: flag().isBooleanAt().describe()", () => {
+  interface Options {
+    version: boolean;
+  }
+
+  const rules: Rule<Options>[] = [
+    flag("--version", "-v").isBooleanAt("version").describe("Show version"),
+  ];
+
+  const options = flags<Options>(["--version"], {}, rules);
+
+  expect(options.version).toBeTrue();
+
+  const specs = Array.from(getSpecs(rules));
+  expect(specs[0].description).toBe("Show version");
+});
+
+test("expect chained syntax: flag().isStringAt()", () => {
+  interface Options {
+    name: string;
+  }
+
+  const rules: Rule<Options>[] = [flag("--name", "-n").isStringAt("name")];
+
+  const options = flags<Options>(["--name", "foo"], {}, rules);
+
+  expect(options.name).toBe("foo");
+});
+
+test("expect chained syntax: flag().isStringAt().describe()", () => {
+  interface Options {
+    name: string;
+  }
+
+  const rules: Rule<Options>[] = [
+    flag("--name", "-n").isStringAt("name").describe("Set the name"),
+  ];
+
+  const options = flags<Options>(["--name", "bar"], {}, rules);
+
+  expect(options.name).toBe("bar");
+
+  const specs = Array.from(getSpecs(rules));
+  expect(specs[0].description).toBe("Set the name");
+});
+
+test("expect chained syntax: flag().isNumberAt().describe()", () => {
+  interface Options {
+    port: number;
+  }
+
+  const rules: Rule<Options>[] = [
+    flag("--port", "-p").isNumberAt("port").describe("Port number"),
+  ];
+
+  const options = flags<Options>(["--port", "3000"], {}, rules);
+
+  expect(options.port).toBe(3000);
+
+  const specs = Array.from(getSpecs(rules));
+  expect(specs[0].description).toBe("Port number");
+});
+
+test("expect chained syntax: flag().isArrayStringAt().describe()", () => {
+  interface Options {
+    items: string[];
+  }
+
+  const rules: Rule<Options>[] = [
+    flag("--item").isArrayStringAt("items").describe("Add an item"),
+  ];
+
+  const options = flags<Options>(["--item", "a", "--item", "b"], {}, rules);
+
+  expect(options.items).toEqual(["a", "b"]);
+
+  const specs = Array.from(getSpecs(rules));
+  expect(specs[0].description).toBe("Add an item");
+});
+
+test("expect chained syntax: flag().isArrayNumberAt().describe()", () => {
+  interface Options {
+    nums: number[];
+  }
+
+  const rules: Rule<Options>[] = [
+    flag("--num").isArrayNumberAt("nums").describe("Add a number"),
+  ];
+
+  const options = flags<Options>(["--num", "1", "--num", "2"], {}, rules);
+
+  expect(options.nums).toEqual([1, 2]);
+
+  const specs = Array.from(getSpecs(rules));
+  expect(specs[0].description).toBe("Add a number");
+});
+
+test("expect multiple chained flags in rules array", () => {
+  interface Options {
+    version: boolean;
+    name: string;
+    port: number;
+  }
+
+  const rules: Rule<Options>[] = [
+    flag("--version", "-v").isBooleanAt("version").describe("Show version"),
+    flag("--name", "-n").isStringAt("name").describe("Set name"),
+    flag("--port", "-p").isNumberAt("port"),
+  ];
+
+  const options = flags<Options>(
+    ["--version", "--name", "test", "--port", "8080"],
+    {},
+    rules,
+  );
+
+  expect(options.version).toBeTrue();
+  expect(options.name).toBe("test");
+  expect(options.port).toBe(8080);
+
+  const specs = Array.from(getSpecs(rules));
+  expect(specs[0].description).toBe("Show version");
+  expect(specs[1].description).toBe("Set name");
+  expect(specs[2].description).toBeUndefined();
+});
