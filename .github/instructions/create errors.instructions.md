@@ -12,7 +12,6 @@ applyTo: "src/common/errors/**"
 
 3. **Nombre descriptivo:**  
    El nombre de la clase de error y del archivo debe describir claramente el propósito del error. Ejemplo:
-
    - Archivo: `invalid-flag.error.ts`
    - Clase: `InvalidFlagError`
 

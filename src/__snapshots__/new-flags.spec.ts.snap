@@ -1,0 +1,69 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`helpMessage should generate help message with default format 1`] = `
+"Usage: cli
+
+Options:
+  --port, -p <number>      (required) "
+`;
+
+exports[`helpMessage should generate help message with custom program name using programName() 1`] = `
+"Usage: myapp
+
+Options:
+  --port, -p <number>      (required) "
+`;
+
+exports[`helpMessage should generate help message with description using describe() 1`] = `
+"Usage: myapp
+
+A simple CLI tool
+
+Options:
+  --verbose, -v            "
+`;
+
+exports[`helpMessage should generate help message with flag descriptions using describe() 1`] = `
+"Usage: cli
+
+Options:
+  --port, -p <number>      (required) Port number to listen on
+  --verbose, -v            Enable verbose output"
+`;
+
+exports[`helpMessage should support describe() before required() 1`] = `
+"Usage: cli
+
+Options:
+  --port, -p <number>      (required) Port number"
+`;
+
+exports[`helpMessage should generate help message for multiple flags 1`] = `
+"Usage: cli
+
+Options:
+  --port, -p <number>      (required) 
+  --name, -n <string>      
+  --verbose, -v            "
+`;
+
+exports[`helpMessage should generate complete help message with all features 1`] = `
+"Usage: myapp
+
+A simple CLI application
+
+Options:
+  --port, -p <number>      (required) Port number to listen on
+  --name, -n <string>      Application name
+  --verbose, -v            Enable verbose output
+  --label, -l <strings>    Add labels"
+`;
+
+exports[`helpMessage should support fluent API with programName, describe and parse 1`] = `
+"Usage: myapp
+
+A simple CLI tool
+
+Options:
+  --port, -p <number>      (required) Port number"
+`;

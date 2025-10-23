@@ -29,7 +29,6 @@ Flag handlers are functions that process argument values and set properties on y
 ### Array Handlers
 
 - **[`isArrayStringAt()`](./isArrayStringAt.md)** - Accumulate multiple string values
-
   - Use for: `--include src/ --include lib/`, `--tag js --tag react`
   - Example: `rule(flag("--include", "-I"), isArrayStringAt("include"))`
 
