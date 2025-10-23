@@ -1,26 +1,36 @@
 type FlagConfig<
   T = "boolean" | "string" | "strings" | "number",
   R extends boolean = boolean,
+  D = any,
 > = {
   names: string[];
   type: T;
   required?: R;
   description?: string;
+  default?: D;
 };
 
-type InferFlagType<T> = T extends { type: infer U; required?: infer R }
+type InferFlagType<T> = T extends {
+  type: infer U;
+  required?: infer R;
+  default?: infer D;
+}
   ? U extends "boolean"
     ? boolean
     : U extends "string"
       ? R extends true
         ? string
-        : string | null
+        : D extends string
+          ? string
+          : string | null
       : U extends "strings"
         ? string[]
         : U extends "number"
           ? R extends true
             ? number
-            : number | null
+            : D extends number
+              ? number
+              : number | null
           : never
   : never;
 
@@ -84,6 +94,18 @@ class FlagBuilder {
           description: desc,
           required: true as const,
         }),
+        default: <D extends string>(value: D) => ({
+          names: config.names,
+          type: "string" as const,
+          description: desc,
+          default: value,
+          describe: (desc2: string) => ({
+            names: config.names,
+            type: "string" as const,
+            description: desc2,
+            default: value,
+          }),
+        }),
       }),
       required: () => ({
         names: config.names,
@@ -95,6 +117,18 @@ class FlagBuilder {
           type: "string" as const,
           description: desc,
           required: true as const,
+        }),
+      }),
+      default: <D extends string>(value: D) => ({
+        names: config.names,
+        type: "string" as const,
+        description: config.description,
+        default: value,
+        describe: (desc: string) => ({
+          names: config.names,
+          type: "string" as const,
+          description: desc,
+          default: value,
         }),
       }),
     };
@@ -150,6 +184,18 @@ class FlagBuilder {
           description: desc,
           required: true as const,
         }),
+        default: <D extends number>(value: D) => ({
+          names: config.names,
+          type: "number" as const,
+          description: desc,
+          default: value,
+          describe: (desc2: string) => ({
+            names: config.names,
+            type: "number" as const,
+            description: desc2,
+            default: value,
+          }),
+        }),
       }),
       required: () => ({
         names: config.names,
@@ -161,6 +207,18 @@ class FlagBuilder {
           type: "number" as const,
           description: desc,
           required: true as const,
+        }),
+      }),
+      default: <D extends number>(value: D) => ({
+        names: config.names,
+        type: "number" as const,
+        description: config.description,
+        default: value,
+        describe: (desc: string) => ({
+          names: config.names,
+          type: "number" as const,
+          description: desc,
+          default: value,
         }),
       }),
     };
@@ -311,8 +369,22 @@ class FlagsParser<T extends Record<string, any>> {
       }
     }
 
-    // Validate required flags
+    // Apply default values and validate required flags
     for (const [key, config] of Object.entries(this.schema)) {
+      // Apply default value if result is null/undefined
+      // Check if default is not a function (it's an actual value)
+      if (
+        config.default !== undefined &&
+        typeof config.default !== "function"
+      ) {
+        if (config.type === "string" && result[key] === null) {
+          result[key] = config.default;
+        } else if (config.type === "number" && result[key] === null) {
+          result[key] = config.default;
+        }
+      }
+
+      // Validate required flags
       if (config.required === true) {
         if (config.type === "boolean" && result[key] === false) {
           throw new Error(`Required flag missing: ${config.names[0]}`);

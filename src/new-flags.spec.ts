@@ -222,3 +222,144 @@ describe("helpMessage", () => {
     expect(result).toEqual({ port: 3000 });
   });
 });
+
+describe("default values", () => {
+  it("should validate that default method only accepts number type for number flags", () => {
+    const defaultMethod = flag("--port", "-p").number().default;
+    expectTypeOf(defaultMethod).parameters.toEqualTypeOf<[number]>();
+  });
+
+  it("should validate that default method only accepts string type for string flags", () => {
+    const defaultMethod = flag("--host", "-h").string().default;
+    expectTypeOf(defaultMethod).parameters.toEqualTypeOf<[string]>();
+  });
+
+  it("should return default value when number flag is not provided", () => {
+    const result = flags({
+      port: flag("--port", "-p").number().default(3000),
+    }).parse([]);
+    expectTypeOf(result).toEqualTypeOf<{ port: number }>();
+    expect(result).toEqual({ port: 3000 });
+  });
+
+  it("should return default value when string flag is not provided", () => {
+    const result = flags({
+      host: flag("--host", "-h").string().default("localhost"),
+    }).parse([]);
+    expectTypeOf(result).toEqualTypeOf<{ host: string }>();
+    expect(result).toEqual({ host: "localhost" });
+  });
+
+  it("should override default value when number flag is provided", () => {
+    const result = flags({
+      port: flag("--port", "-p").number().default(3000),
+    }).parse(["--port", "8080"]);
+    expectTypeOf(result).toEqualTypeOf<{ port: number }>();
+    expect(result).toEqual({ port: 8080 });
+  });
+
+  it("should override default value when string flag is provided", () => {
+    const result = flags({
+      host: flag("--host", "-h").string().default("localhost"),
+    }).parse(["--host", "0.0.0.0"]);
+    expectTypeOf(result).toEqualTypeOf<{ host: string }>();
+    expect(result).toEqual({ host: "0.0.0.0" });
+  });
+
+  it("should support default with describe for number flags", () => {
+    const result = flags({
+      port: flag("--port", "-p").number().describe("Port number").default(3000),
+    }).parse([]);
+    expectTypeOf(result).toEqualTypeOf<{ port: number }>();
+    expect(result).toEqual({ port: 3000 });
+  });
+
+  it("should support default with describe for string flags", () => {
+    const result = flags({
+      host: flag("--host", "-h")
+        .string()
+        .describe("Host address")
+        .default("localhost"),
+    }).parse([]);
+    expectTypeOf(result).toEqualTypeOf<{ host: string }>();
+    expect(result).toEqual({ host: "localhost" });
+  });
+
+  it("should support describe after default for number flags", () => {
+    const result = flags({
+      port: flag("--port", "-p").number().default(3000).describe("Port number"),
+    }).parse([]);
+    expectTypeOf(result).toEqualTypeOf<{ port: number }>();
+    expect(result).toEqual({ port: 3000 });
+  });
+
+  it("should support describe after default for string flags", () => {
+    const result = flags({
+      host: flag("--host", "-h")
+        .string()
+        .default("localhost")
+        .describe("Host address"),
+    }).parse([]);
+    expectTypeOf(result).toEqualTypeOf<{ host: string }>();
+    expect(result).toEqual({ host: "localhost" });
+  });
+
+  it("should handle multiple flags with different default values", () => {
+    const result = flags({
+      port: flag("--port", "-p").number().default(3000),
+      host: flag("--host", "-h").string().default("localhost"),
+      verbose: flag("--verbose", "-v").boolean(),
+    }).parse([]);
+    expectTypeOf(result).toEqualTypeOf<{
+      port: number;
+      host: string;
+      verbose: boolean;
+    }>();
+    expect(result).toEqual({
+      port: 3000,
+      host: "localhost",
+      verbose: false,
+    });
+  });
+
+  it("should handle partial override of default values", () => {
+    const result = flags({
+      port: flag("--port", "-p").number().default(3000),
+      host: flag("--host", "-h").string().default("localhost"),
+    }).parse(["--port", "8080"]);
+    expectTypeOf(result).toEqualTypeOf<{ port: number; host: string }>();
+    expect(result).toEqual({ port: 8080, host: "localhost" });
+  });
+
+  it("should infer non-nullable type when default is provided for number", () => {
+    const result = flags({
+      port: flag("--port", "-p").number().default(3000),
+    }).parse([]);
+    // El tipo debe ser number, no number | null
+    expectTypeOf(result.port).toEqualTypeOf<number>();
+  });
+
+  it("should infer non-nullable type when default is provided for string", () => {
+    const result = flags({
+      host: flag("--host", "-h").string().default("localhost"),
+    }).parse([]);
+    // El tipo debe ser string, no string | null
+    expectTypeOf(result.host).toEqualTypeOf<string>();
+  });
+
+  it("should infer nullable type when default is NOT provided for number", () => {
+    const result = flags({
+      port: flag("--port", "-p").number(),
+    }).parse([]);
+    // El tipo debe ser number | null
+    expectTypeOf(result.port).toEqualTypeOf<number | null>();
+  });
+
+  it("should infer nullable type when default is NOT provided for string", () => {
+    const result = flags({
+      host: flag("--host", "-h").string(),
+    }).parse([]);
+    // El tipo debe ser string | null
+    expectTypeOf(result.host).toEqualTypeOf<string | null>();
+  });
+});
