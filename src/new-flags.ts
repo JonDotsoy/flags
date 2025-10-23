@@ -34,220 +34,99 @@ type InferFlagType<T> = T extends {
           : never
   : never;
 
-class FlagBuilder {
-  private config: FlagConfig;
+class FlagBuilder<T extends FlagConfig = FlagConfig<"boolean">> {
+  constructor(private config: T) {}
 
-  constructor(...names: string[]) {
-    this.config = {
-      names,
+  get names() {
+    return this.config.names;
+  }
+
+  get type() {
+    return this.config.type;
+  }
+
+  boolean(): FlagBuilder<FlagConfig<"boolean">> {
+    return new FlagBuilder({
+      ...this.config,
       type: "boolean",
-    };
+    } as FlagConfig<"boolean">);
   }
 
-  boolean() {
-    this.config.type = "boolean";
-    const config = this.config;
-    return {
-      names: config.names,
-      type: "boolean" as const,
-      description: config.description,
-      describe: (desc: string) => ({
-        names: config.names,
-        type: "boolean" as const,
-        description: desc,
-        required: () => ({
-          names: config.names,
-          type: "boolean" as const,
-          description: desc,
-          required: true as const,
-        }),
-      }),
-      required: () => ({
-        names: config.names,
-        type: "boolean" as const,
-        description: config.description,
-        required: true as const,
-        describe: (desc: string) => ({
-          names: config.names,
-          type: "boolean" as const,
-          description: desc,
-          required: true as const,
-        }),
-      }),
-    };
+  string(): FlagBuilder<FlagConfig<"string">> {
+    return new FlagBuilder({
+      ...this.config,
+      type: "string",
+    } as FlagConfig<"string">);
   }
 
-  string() {
-    this.config.type = "string";
-    const config = this.config;
-    return {
-      names: config.names,
-      type: "string" as const,
-      description: config.description,
-      describe: (desc: string) => ({
-        names: config.names,
-        type: "string" as const,
-        description: desc,
-        required: () => ({
-          names: config.names,
-          type: "string" as const,
-          description: desc,
-          required: true as const,
-        }),
-        default: <D extends string>(value: D) => ({
-          names: config.names,
-          type: "string" as const,
-          description: desc,
-          default: value,
-          describe: (desc2: string) => ({
-            names: config.names,
-            type: "string" as const,
-            description: desc2,
-            default: value,
-          }),
-        }),
-      }),
-      required: () => ({
-        names: config.names,
-        type: "string" as const,
-        description: config.description,
-        required: true as const,
-        describe: (desc: string) => ({
-          names: config.names,
-          type: "string" as const,
-          description: desc,
-          required: true as const,
-        }),
-      }),
-      default: <D extends string>(value: D) => ({
-        names: config.names,
-        type: "string" as const,
-        description: config.description,
-        default: value,
-        describe: (desc: string) => ({
-          names: config.names,
-          type: "string" as const,
-          description: desc,
-          default: value,
-        }),
-      }),
-    };
+  strings(): FlagBuilder<FlagConfig<"strings">> {
+    return new FlagBuilder({
+      ...this.config,
+      type: "strings",
+    } as FlagConfig<"strings">);
   }
 
-  strings() {
-    this.config.type = "strings";
-    const config = this.config;
-    return {
-      names: config.names,
-      type: "strings" as const,
-      description: config.description,
-      describe: (desc: string) => ({
-        names: config.names,
-        type: "strings" as const,
-        description: desc,
-        required: () => ({
-          names: config.names,
-          type: "strings" as const,
-          description: desc,
-          required: true as const,
-        }),
-      }),
-      required: () => ({
-        names: config.names,
-        type: "strings" as const,
-        description: config.description,
-        required: true as const,
-        describe: (desc: string) => ({
-          names: config.names,
-          type: "strings" as const,
-          description: desc,
-          required: true as const,
-        }),
-      }),
-    };
+  number(): FlagBuilder<FlagConfig<"number">> {
+    return new FlagBuilder({
+      ...this.config,
+      type: "number",
+    } as FlagConfig<"number">);
   }
 
-  number() {
-    this.config.type = "number";
-    const config = this.config;
-    return {
-      names: config.names,
-      type: "number" as const,
-      description: config.description,
-      describe: (desc: string) => ({
-        names: config.names,
-        type: "number" as const,
-        description: desc,
-        required: () => ({
-          names: config.names,
-          type: "number" as const,
-          description: desc,
-          required: true as const,
-        }),
-        default: <D extends number>(value: D) => ({
-          names: config.names,
-          type: "number" as const,
-          description: desc,
-          default: value,
-          describe: (desc2: string) => ({
-            names: config.names,
-            type: "number" as const,
-            description: desc2,
-            default: value,
-          }),
-        }),
-      }),
-      required: () => ({
-        names: config.names,
-        type: "number" as const,
-        description: config.description,
-        required: true as const,
-        describe: (desc: string) => ({
-          names: config.names,
-          type: "number" as const,
-          description: desc,
-          required: true as const,
-        }),
-      }),
-      default: <D extends number>(value: D) => ({
-        names: config.names,
-        type: "number" as const,
-        description: config.description,
-        default: value,
-        describe: (desc: string) => ({
-          names: config.names,
-          type: "number" as const,
-          description: desc,
-          default: value,
-        }),
-      }),
-    };
+  describe(desc: string): FlagBuilder<T> {
+    return new FlagBuilder({ ...this.config, description: desc } as T);
   }
 
-  toConfig(): FlagConfig<"boolean"> {
-    return this.config as FlagConfig<"boolean">;
+  required<R extends true = true>(): FlagBuilder<
+    FlagConfig<T["type"], R, T["default"]>
+  > {
+    return new FlagBuilder({
+      ...this.config,
+      required: true as R,
+    } as FlagConfig<T["type"], R, T["default"]>);
+  }
+
+  default<
+    D extends T["type"] extends "number"
+      ? number
+      : T["type"] extends "string"
+        ? string
+        : never,
+  >(
+    value: D,
+  ): FlagBuilder<
+    FlagConfig<
+      T["type"],
+      T["required"] extends boolean ? T["required"] : false,
+      D
+    >
+  > {
+    return new FlagBuilder({
+      ...this.config,
+      default: value,
+    } as FlagConfig<
+      T["type"],
+      T["required"] extends boolean ? T["required"] : false,
+      D
+    >);
+  }
+
+  toConfig(): T {
+    return this.config;
   }
 }
 
-export function flag(...names: string[]): FlagBuilder & FlagConfig<"boolean"> {
-  const builder = new FlagBuilder(...names);
-  const config = builder.toConfig();
-
-  return new Proxy(builder, {
-    get(target, prop) {
-      if (prop in target) {
-        return (target as any)[prop];
-      }
-      if (prop in config) {
-        return (config as any)[prop];
-      }
-      return undefined;
-    },
-  }) as FlagBuilder & FlagConfig<"boolean">;
+export function flag(...names: string[]): FlagBuilder<FlagConfig<"boolean">> {
+  return new FlagBuilder({
+    names,
+    type: "boolean",
+  });
 }
+
+type ExtractConfig<T> = T extends FlagBuilder<infer C> ? C : T;
 
 type ParseResult<T extends Record<string, any>> = {
-  [K in keyof T]: InferFlagType<T[K]>;
+  [K in keyof T]: InferFlagType<ExtractConfig<T[K]>>;
 };
 
 class FlagsParser<T extends Record<string, any>> {
@@ -283,7 +162,12 @@ class FlagsParser<T extends Record<string, any>> {
     lines.push("Options:");
 
     // Flag details
-    for (const [key, config] of Object.entries(this.schema)) {
+    for (const [key, flagBuilder] of Object.entries(this.schema)) {
+      const config =
+        flagBuilder instanceof FlagBuilder
+          ? flagBuilder.toConfig()
+          : flagBuilder;
+
       const names = config.names.join(", ");
       const type = config.type === "boolean" ? "" : `<${config.type}>`;
       const required = config.required === true ? "(required)" : "";
@@ -304,7 +188,12 @@ class FlagsParser<T extends Record<string, any>> {
     const flagMap = new Map<string, { key: keyof T; config: any }>();
 
     // Build flag map
-    for (const [key, config] of Object.entries(this.schema)) {
+    for (const [key, flagBuilder] of Object.entries(this.schema)) {
+      const config =
+        flagBuilder instanceof FlagBuilder
+          ? flagBuilder.toConfig()
+          : flagBuilder;
+
       for (const name of config.names) {
         flagMap.set(name, { key, config });
       }
@@ -370,7 +259,12 @@ class FlagsParser<T extends Record<string, any>> {
     }
 
     // Apply default values and validate required flags
-    for (const [key, config] of Object.entries(this.schema)) {
+    for (const [key, flagBuilder] of Object.entries(this.schema)) {
+      const config =
+        flagBuilder instanceof FlagBuilder
+          ? flagBuilder.toConfig()
+          : flagBuilder;
+
       // Apply default value if result is null/undefined
       // Check if default is not a function (it's an actual value)
       if (
