@@ -1,5 +1,5 @@
 type FlagConfig<
-  T = "boolean" | "string" | "strings" | "number",
+  T = "boolean" | "string" | "strings" | "number" | "keyValue",
   R extends boolean = boolean,
   D = any,
 > = {
@@ -46,9 +46,11 @@ type InferFlagType<T> = T extends {
             : D extends number
               ? number
               : number | null
-          : U extends "restArgs"
-            ? string[] | null
-            : never
+          : U extends "keyValue"
+            ? Record<string, string>
+            : U extends "restArgs"
+              ? string[] | null
+              : never
   : never;
 
 class FlagBuilder<T extends FlagConfig = FlagConfig<"boolean">> {
@@ -90,6 +92,13 @@ class FlagBuilder<T extends FlagConfig = FlagConfig<"boolean">> {
     } as FlagConfig<"number">);
   }
 
+  keyValue(): FlagBuilder<FlagConfig<"keyValue">> {
+    return new FlagBuilder({
+      ...this.config,
+      type: "keyValue",
+    } as FlagConfig<"keyValue">);
+  }
+
   describe(desc: string): FlagBuilder<T> {
     return new FlagBuilder({ ...this.config, description: desc } as T);
   }
@@ -108,7 +117,9 @@ class FlagBuilder<T extends FlagConfig = FlagConfig<"boolean">> {
       ? number
       : T["type"] extends "string"
         ? string
-        : never,
+        : T["type"] extends "keyValue"
+          ? Record<string, string>
+          : never,
   >(
     value: D,
   ): FlagBuilder<
@@ -340,6 +351,14 @@ class FlagsParser<T extends Record<string, any>> {
           result[key] = [];
         } else if (config.type === "number") {
           result[key] = null;
+        } else if (config.type === "keyValue") {
+          // Initialize with default value if provided, otherwise empty object
+          result[key] =
+            config.default !== undefined &&
+            typeof config.default === "object" &&
+            config.default !== null
+              ? { ...config.default }
+              : {};
         }
       } else if (builder instanceof CommandBuilder) {
         config = builder.toConfig();
@@ -373,9 +392,19 @@ class FlagsParser<T extends Record<string, any>> {
 
       // Check if it's a flag
       if (arg.startsWith("-")) {
-        const [flagName, value] = arg.includes("=")
-          ? arg.split("=", 2)
-          : [arg, null];
+        // Split only on the first = to preserve value with = in it
+        let flagName: string;
+        let value: string | null;
+
+        if (arg.includes("=")) {
+          const equalIndex = arg.indexOf("=");
+          flagName = arg.substring(0, equalIndex);
+          value = arg.substring(equalIndex + 1);
+        } else {
+          flagName = arg;
+          value = null;
+        }
+
         const flagInfo = flagMap.get(flagName);
 
         if (!flagInfo) {
@@ -408,6 +437,36 @@ class FlagsParser<T extends Record<string, any>> {
             numValue = args[++i];
           }
           result[key] = numValue !== null ? Number(numValue) : null;
+        } else if (config.type === "keyValue") {
+          // Handle key-value pattern: --arg name value, --arg name=value, --arg=name=value
+          let kvPair: string | null = null;
+
+          if (value !== null) {
+            // Format: --arg=name=value
+            kvPair = value;
+          } else if (i + 1 < args.length && !args[i + 1].startsWith("-")) {
+            // Format: --arg name value or --arg name=value
+            kvPair = args[++i];
+          }
+
+          if (kvPair !== null) {
+            if (kvPair.includes("=")) {
+              // Format: name=value (split only on first =)
+              const equalIndex = kvPair.indexOf("=");
+              const k = kvPair.substring(0, equalIndex);
+              const v = kvPair.substring(equalIndex + 1);
+              result[key][k] = v;
+            } else {
+              // Format: name value (need to get next arg)
+              const k = kvPair;
+              if (i + 1 < args.length && !args[i + 1].startsWith("-")) {
+                const v = args[++i];
+                result[key][k] = v;
+              } else {
+                result[key][k] = "";
+              }
+            }
+          }
         }
       } else {
         // Check if it's a command

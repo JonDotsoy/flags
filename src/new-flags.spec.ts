@@ -1140,3 +1140,214 @@ describe("docker CLI", () => {
     expect(parsed.ps).toEqual([]);
   });
 });
+
+describe("key-value pattern", () => {
+  it("should parse key-value with format: --arg name value", () => {
+    // Given: A parser with a keyValue flag
+    const parser = flags({
+      config: flag("--config", "-c").keyValue(),
+    });
+
+    // When: Parsing arguments with --config name value
+    const result = parser.parse(["--config", "host", "localhost"]);
+
+    // Then: The result type should be { config: Record<string, string> }
+    expectTypeOf(result).toEqualTypeOf<{ config: Record<string, string> }>();
+
+    // Then: The config should contain { host: "localhost" }
+    expect(result).toEqual({ config: { host: "localhost" } });
+  });
+
+  it("should parse key-value with format: --arg name=value", () => {
+    // Given: A parser with a keyValue flag
+    const parser = flags({
+      config: flag("--config", "-c").keyValue(),
+    });
+
+    // When: Parsing arguments with --config name=value
+    const result = parser.parse(["--config", "port=3000"]);
+
+    // Then: The result type should be { config: Record<string, string> }
+    expectTypeOf(result).toEqualTypeOf<{ config: Record<string, string> }>();
+
+    // Then: The config should contain { port: "3000" }
+    expect(result).toEqual({ config: { port: "3000" } });
+  });
+
+  it("should parse key-value with format: --arg=name=value", () => {
+    // Given: A parser with a keyValue flag
+    const parser = flags({
+      config: flag("--config", "-c").keyValue(),
+    });
+
+    // When: Parsing arguments with --config=name=value
+    const result = parser.parse(["--config=db=postgres"]);
+
+    // Then: The result type should be { config: Record<string, string> }
+    expectTypeOf(result).toEqualTypeOf<{ config: Record<string, string> }>();
+
+    // Then: The config should contain { db: "postgres" }
+    expect(result).toEqual({ config: { db: "postgres" } });
+  });
+
+  it("should parse multiple key-value pairs with mixed formats", () => {
+    // Given: A parser with a keyValue flag
+    const parser = flags({
+      config: flag("--config", "-c").keyValue(),
+    });
+
+    // When: Parsing multiple key-value pairs with different formats
+    const result = parser.parse([
+      "--config",
+      "host",
+      "localhost",
+      "--config",
+      "port=3000",
+      "--config=db=postgres",
+    ]);
+
+    // Then: The result type should be { config: Record<string, string> }
+    expectTypeOf(result).toEqualTypeOf<{ config: Record<string, string> }>();
+
+    // Then: The config should contain all key-value pairs
+    expect(result).toEqual({
+      config: {
+        host: "localhost",
+        port: "3000",
+        db: "postgres",
+      },
+    });
+  });
+
+  it("should parse key-value with short flag syntax", () => {
+    // Given: A parser with a keyValue flag with short alias
+    const parser = flags({
+      config: flag("--config", "-c").keyValue(),
+    });
+
+    // When: Parsing arguments with short flag -c
+    const result = parser.parse(["-c", "env", "production"]);
+
+    // Then: The result type should be { config: Record<string, string> }
+    expectTypeOf(result).toEqualTypeOf<{ config: Record<string, string> }>();
+
+    // Then: The config should contain { env: "production" }
+    expect(result).toEqual({ config: { env: "production" } });
+  });
+
+  it("should return empty object when key-value flag is not provided", () => {
+    // Given: A parser with a keyValue flag
+    const parser = flags({
+      config: flag("--config", "-c").keyValue(),
+    });
+
+    // When: Parsing empty arguments
+    const result = parser.parse([]);
+
+    // Then: The result type should be { config: Record<string, string> }
+    expectTypeOf(result).toEqualTypeOf<{ config: Record<string, string> }>();
+
+    // Then: The config should be an empty object
+    expect(result).toEqual({ config: {} });
+  });
+
+  it("should override duplicate keys with last value", () => {
+    // Given: A parser with a keyValue flag
+    const parser = flags({
+      config: flag("--config", "-c").keyValue(),
+    });
+
+    // When: Parsing arguments with duplicate keys
+    const result = parser.parse([
+      "--config",
+      "port",
+      "3000",
+      "--config",
+      "port=8080",
+    ]);
+
+    // Then: The result type should be { config: Record<string, string> }
+    expectTypeOf(result).toEqualTypeOf<{ config: Record<string, string> }>();
+
+    // Then: The config should contain the last value for port
+    expect(result).toEqual({ config: { port: "8080" } });
+  });
+
+  it("should parse key-value with describe", () => {
+    // Given: A parser with a keyValue flag with description
+    const parser = flags({
+      config: flag("--config", "-c")
+        .keyValue()
+        .describe("Set configuration key-value pairs"),
+    });
+
+    // When: Parsing arguments with key-value pairs
+    const result = parser.parse(["--config", "timeout", "30"]);
+
+    // Then: The config should contain { timeout: "30" }
+    expect(result).toEqual({ config: { timeout: "30" } });
+  });
+
+  it("should return default value when key-value flag is not provided", () => {
+    // Given: A parser with a keyValue flag with default value
+    const parser = flags({
+      config: flag("--config", "-c").keyValue().default({ host: "localhost" }),
+    });
+
+    // When: Parsing empty arguments
+    const result = parser.parse([]);
+
+    // Then: The result type should be { config: Record<string, string> }
+    expectTypeOf(result).toEqualTypeOf<{ config: Record<string, string> }>();
+
+    // Then: The config should contain the default value
+    expect(result).toEqual({ config: { host: "localhost" } });
+  });
+
+  it("should merge default value with provided key-value pairs", () => {
+    // Given: A parser with a keyValue flag with default value
+    const parser = flags({
+      config: flag("--config", "-c")
+        .keyValue()
+        .default({ host: "localhost", port: "3000" }),
+    });
+
+    // When: Parsing arguments with additional key-value pairs
+    const result = parser.parse(["--config", "db", "postgres"]);
+
+    // Then: The result type should be { config: Record<string, string> }
+    expectTypeOf(result).toEqualTypeOf<{ config: Record<string, string> }>();
+
+    // Then: The config should merge default and provided values
+    expect(result).toEqual({
+      config: {
+        host: "localhost",
+        port: "3000",
+        db: "postgres",
+      },
+    });
+  });
+
+  it("should override default value with provided key-value pairs", () => {
+    // Given: A parser with a keyValue flag with default value
+    const parser = flags({
+      config: flag("--config", "-c")
+        .keyValue()
+        .default({ host: "localhost", port: "3000" }),
+    });
+
+    // When: Parsing arguments that override default keys
+    const result = parser.parse(["--config", "host", "0.0.0.0"]);
+
+    // Then: The result type should be { config: Record<string, string> }
+    expectTypeOf(result).toEqualTypeOf<{ config: Record<string, string> }>();
+
+    // Then: The config should override the default host value
+    expect(result).toEqual({
+      config: {
+        host: "0.0.0.0",
+        port: "3000",
+      },
+    });
+  });
+});
