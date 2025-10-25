@@ -10,6 +10,21 @@ type FlagConfig<
   default?: D;
 };
 
+type CommandConfig<T = "boolean" | "restArgs"> = {
+  kind: "command";
+  name: string;
+  type: T;
+  description?: string;
+};
+
+type ArgumentConfig<T = "string", R extends boolean = boolean, D = any> = {
+  kind: "argument";
+  type: T;
+  required?: R;
+  description?: string;
+  default?: D;
+};
+
 type InferFlagType<T> = T extends {
   type: infer U;
   required?: infer R;
@@ -31,7 +46,9 @@ type InferFlagType<T> = T extends {
             : D extends number
               ? number
               : number | null
-          : never
+          : U extends "restArgs"
+            ? string[]
+            : never
   : never;
 
 class FlagBuilder<T extends FlagConfig = FlagConfig<"boolean">> {
@@ -123,7 +140,97 @@ export function flag(...names: string[]): FlagBuilder<FlagConfig<"boolean">> {
   });
 }
 
-type ExtractConfig<T> = T extends FlagBuilder<infer C> ? C : T;
+class CommandBuilder<T extends CommandConfig = CommandConfig<"boolean">> {
+  constructor(private config: T) {}
+
+  get name() {
+    return this.config.name;
+  }
+
+  get type() {
+    return this.config.type;
+  }
+
+  boolean(): CommandBuilder<CommandConfig<"boolean">> {
+    return new CommandBuilder({
+      ...this.config,
+      type: "boolean",
+    } as CommandConfig<"boolean">);
+  }
+
+  restArgs(): CommandBuilder<CommandConfig<"restArgs">> {
+    return new CommandBuilder({
+      ...this.config,
+      type: "restArgs",
+    } as CommandConfig<"restArgs">);
+  }
+
+  describe(desc: string): CommandBuilder<T> {
+    return new CommandBuilder({ ...this.config, description: desc } as T);
+  }
+
+  toConfig(): T {
+    return this.config;
+  }
+}
+
+export function command(
+  name: string,
+): CommandBuilder<CommandConfig<"boolean">> {
+  return new CommandBuilder({
+    kind: "command",
+    name,
+    type: "boolean",
+  });
+}
+
+class ArgumentBuilder<T extends ArgumentConfig = ArgumentConfig<"string">> {
+  constructor(private config: T) {}
+
+  get type() {
+    return this.config.type;
+  }
+
+  string(): ArgumentBuilder<ArgumentConfig<"string">> {
+    return new ArgumentBuilder({
+      ...this.config,
+      type: "string",
+    } as ArgumentConfig<"string">);
+  }
+
+  describe(desc: string): ArgumentBuilder<T> {
+    return new ArgumentBuilder({ ...this.config, description: desc } as T);
+  }
+
+  required<R extends true = true>(): ArgumentBuilder<
+    ArgumentConfig<T["type"], R, T["default"]>
+  > {
+    return new ArgumentBuilder({
+      ...this.config,
+      required: true as R,
+    } as ArgumentConfig<T["type"], R, T["default"]>);
+  }
+
+  toConfig(): T {
+    return this.config;
+  }
+}
+
+export function argument(): ArgumentBuilder<ArgumentConfig<"string">> {
+  return new ArgumentBuilder({
+    kind: "argument",
+    type: "string",
+  });
+}
+
+type ExtractConfig<T> =
+  T extends FlagBuilder<infer C>
+    ? C
+    : T extends CommandBuilder<infer C>
+      ? C
+      : T extends ArgumentBuilder<infer C>
+        ? C
+        : T;
 
 type ParseResult<T extends Record<string, any>> = {
   [K in keyof T]: InferFlagType<ExtractConfig<T[K]>>;
@@ -186,33 +293,57 @@ class FlagsParser<T extends Record<string, any>> {
   parse(args: string[]): ParseResult<T> {
     const result: any = {};
     const flagMap = new Map<string, { key: keyof T; config: any }>();
+    const commandMap = new Map<string, { key: keyof T; config: any }>();
+    const argumentKeys: Array<{ key: keyof T; config: any }> = [];
 
-    // Build flag map
-    for (const [key, flagBuilder] of Object.entries(this.schema)) {
-      const config =
-        flagBuilder instanceof FlagBuilder
-          ? flagBuilder.toConfig()
-          : flagBuilder;
+    // Build maps and initialize values
+    for (const [key, builder] of Object.entries(this.schema)) {
+      let config: any;
 
-      for (const name of config.names) {
-        flagMap.set(name, { key, config });
-      }
-
-      // Initialize default values
-      if (config.type === "boolean") {
-        result[key] = false;
-      } else if (config.type === "string") {
-        result[key] = null;
-      } else if (config.type === "strings") {
-        result[key] = [];
-      } else if (config.type === "number") {
+      if (builder instanceof FlagBuilder) {
+        config = builder.toConfig();
+        for (const name of config.names) {
+          flagMap.set(name, { key, config });
+        }
+        // Initialize flag defaults
+        if (config.type === "boolean") {
+          result[key] = false;
+        } else if (config.type === "string") {
+          result[key] = null;
+        } else if (config.type === "strings") {
+          result[key] = [];
+        } else if (config.type === "number") {
+          result[key] = null;
+        }
+      } else if (builder instanceof CommandBuilder) {
+        config = builder.toConfig();
+        commandMap.set(config.name, { key, config });
+        // Initialize command defaults
+        if (config.type === "boolean") {
+          result[key] = false;
+        } else if (config.type === "restArgs") {
+          result[key] = [];
+        }
+      } else if (builder instanceof ArgumentBuilder) {
+        config = builder.toConfig();
+        argumentKeys.push({ key, config });
+        // Initialize argument defaults
         result[key] = null;
       }
     }
 
     // Parse arguments
+    let currentArgumentIndex = 0;
+    let captureRestArgs: keyof T | null = null;
+
     for (let i = 0; i < args.length; i++) {
       const arg = args[i];
+
+      // If we're capturing rest args, add everything
+      if (captureRestArgs !== null) {
+        result[captureRestArgs].push(arg);
+        continue;
+      }
 
       // Check if it's a flag
       if (arg.startsWith("-")) {
@@ -253,42 +384,65 @@ class FlagsParser<T extends Record<string, any>> {
           result[key] = numValue !== null ? Number(numValue) : null;
         }
       } else {
-        // Non-flag argument
-        throw new Error(`Unexpected argument: ${arg}`);
+        // Check if it's a command
+        const commandInfo = commandMap.get(arg);
+        if (commandInfo) {
+          const { key, config } = commandInfo;
+          if (config.type === "boolean") {
+            result[key] = true;
+          } else if (config.type === "restArgs") {
+            result[key] = args.slice(i + 1);
+            captureRestArgs = key;
+            break; // Stop processing after capturing rest args
+          }
+        } else {
+          // It's a positional argument
+          if (currentArgumentIndex < argumentKeys.length) {
+            const { key } = argumentKeys[currentArgumentIndex];
+            result[key] = arg;
+            currentArgumentIndex++;
+          } else {
+            throw new Error(`Unexpected argument: ${arg}`);
+          }
+        }
       }
     }
 
-    // Apply default values and validate required flags
-    for (const [key, flagBuilder] of Object.entries(this.schema)) {
-      const config =
-        flagBuilder instanceof FlagBuilder
-          ? flagBuilder.toConfig()
-          : flagBuilder;
+    // Apply default values and validate required
+    for (const [key, builder] of Object.entries(this.schema)) {
+      let config: any;
 
-      // Apply default value if result is null/undefined
-      // Check if default is not a function (it's an actual value)
-      if (
-        config.default !== undefined &&
-        typeof config.default !== "function"
-      ) {
-        if (config.type === "string" && result[key] === null) {
-          result[key] = config.default;
-        } else if (config.type === "number" && result[key] === null) {
-          result[key] = config.default;
-        }
-      }
+      if (builder instanceof FlagBuilder) {
+        config = builder.toConfig();
 
-      // Validate required flags
-      if (config.required === true) {
-        if (config.type === "boolean" && result[key] === false) {
-          throw new Error(`Required flag missing: ${config.names[0]}`);
-        } else if (
-          (config.type === "string" || config.type === "number") &&
-          result[key] === null
+        if (
+          config.default !== undefined &&
+          typeof config.default !== "function"
         ) {
-          throw new Error(`Required flag missing: ${config.names[0]}`);
-        } else if (config.type === "strings" && result[key].length === 0) {
-          throw new Error(`Required flag missing: ${config.names[0]}`);
+          if (config.type === "string" && result[key] === null) {
+            result[key] = config.default;
+          } else if (config.type === "number" && result[key] === null) {
+            result[key] = config.default;
+          }
+        }
+
+        if (config.required === true) {
+          if (config.type === "boolean" && result[key] === false) {
+            throw new Error(`Required flag missing: ${config.names[0]}`);
+          } else if (
+            (config.type === "string" || config.type === "number") &&
+            result[key] === null
+          ) {
+            throw new Error(`Required flag missing: ${config.names[0]}`);
+          } else if (config.type === "strings" && result[key].length === 0) {
+            throw new Error(`Required flag missing: ${config.names[0]}`);
+          }
+        }
+      } else if (builder instanceof ArgumentBuilder) {
+        config = builder.toConfig();
+
+        if (config.required === true && result[key] === null) {
+          throw new Error(`Required argument missing`);
         }
       }
     }

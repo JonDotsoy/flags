@@ -1,5 +1,5 @@
 import { describe, it, expect, expectTypeOf } from "bun:test";
-import { flags, flag } from "./new-flags";
+import { flags, flag, command, argument } from "./new-flags";
 
 describe("new-flags", () => {
   it("should parse boolean flag with --version", () => {
@@ -361,5 +361,134 @@ describe("default values", () => {
     }).parse([]);
     // El tipo debe ser string | null
     expectTypeOf(result.host).toEqualTypeOf<string | null>();
+  });
+});
+
+describe("commands", () => {
+  it("should parse command with restArgs", () => {
+    const parsed = flags({
+      user: command("user").restArgs(),
+    }).parse(["user", "export", "-u", "123", "-o", "./export"]);
+
+    expectTypeOf(parsed).toEqualTypeOf<{ user: string[] }>();
+    expect(parsed.user).toEqual(["export", "-u", "123", "-o", "./export"]);
+  });
+
+  it("should parse boolean command with flag", () => {
+    const flagsParser = flags({
+      verbose: flag("--verbose").boolean(),
+      user: command("user").boolean(),
+    });
+
+    const parsed = flagsParser.parse(["user", "--verbose"]);
+    expectTypeOf(parsed).toEqualTypeOf<{ verbose: boolean; user: boolean }>();
+    expect(parsed.user).toBe(true);
+    expect(parsed.verbose).toBe(true);
+  });
+
+  it("should parse multiple boolean commands", () => {
+    const flagsParser = flags({
+      verbose: flag("--verbose").boolean(),
+      user: command("user").boolean(),
+      info: command("info").boolean(),
+    });
+
+    const parsed = flagsParser.parse(["user", "info", "--verbose"]);
+    expectTypeOf(parsed).toEqualTypeOf<{
+      verbose: boolean;
+      user: boolean;
+      info: boolean;
+    }>();
+    expect(parsed.verbose).toBe(true);
+    expect(parsed.user).toBe(true);
+    expect(parsed.info).toBe(true);
+  });
+
+  it("should parse single command without others", () => {
+    const flagsParser = flags({
+      verbose: flag("--verbose").boolean(),
+      user: command("user").boolean(),
+      info: command("info").boolean(),
+    });
+
+    const parsed = flagsParser.parse(["user"]);
+    expectTypeOf(parsed).toEqualTypeOf<{
+      verbose: boolean;
+      user: boolean;
+      info: boolean;
+    }>();
+    expect(parsed.user).toBe(true);
+    expect(parsed.info).toBe(false);
+    expect(parsed.verbose).toBe(false);
+  });
+});
+
+describe("arguments", () => {
+  it("should parse single argument with command", () => {
+    const flagsParser = flags({
+      verbose: flag("--verbose").boolean(),
+      command: argument().string(),
+    });
+
+    const parsed = flagsParser.parse(["user"]);
+    expectTypeOf(parsed).toEqualTypeOf<{
+      verbose: boolean;
+      command: string | null;
+    }>();
+    expect(parsed.command).toBe("user");
+    expect(parsed.verbose).toBe(false);
+  });
+
+  it("should throw error when extra argument is provided", () => {
+    const flagsParser = flags({
+      verbose: flag("--verbose").boolean(),
+      command: argument().string(),
+    });
+
+    expect(() => {
+      flagsParser.parse(["user", "info"]);
+    }).toThrow("Unexpected argument: info");
+  });
+
+  it("should parse multiple arguments", () => {
+    const flagsParser = flags({
+      verb: argument().string(),
+      userId: argument().string(),
+    });
+
+    const parsed = flagsParser.parse(["read", "123"]);
+
+    expectTypeOf(parsed).toEqualTypeOf<{
+      verb: string | null;
+      userId: string | null;
+    }>();
+    expect(parsed.verb).toBe("read");
+    expect(parsed.userId).toBe("123");
+  });
+
+  it("should parse partial arguments", () => {
+    const flagsParser = flags({
+      verb: argument().string(),
+      userId: argument().string(),
+    });
+
+    const parsed = flagsParser.parse(["read"]);
+    expectTypeOf(parsed).toEqualTypeOf<{
+      verb: string | null;
+      userId: string | null;
+    }>();
+    expect(parsed.verb).toBe("read");
+    expect(parsed.userId).toBe(null);
+  });
+
+  it("should throw error when too many arguments provided", () => {
+    const flagsParser = flags({
+      verb: argument().string(),
+      userId: argument().string(),
+    });
+
+    expect(() => {
+      flagsParser.parse(["read", "123", "foo"]);
+    }).toThrow("Unexpected argument: foo");
   });
 });
