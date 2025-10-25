@@ -370,7 +370,7 @@ describe("commands", () => {
       user: command("user").restArgs(),
     }).parse(["user", "export", "-u", "123", "-o", "./export"]);
 
-    expectTypeOf(parsed).toEqualTypeOf<{ user: string[] }>();
+    expectTypeOf(parsed).toEqualTypeOf<{ user: string[] | null }>();
     expect(parsed.user).toEqual(["export", "-u", "123", "-o", "./export"]);
   });
 
@@ -420,6 +420,127 @@ describe("commands", () => {
     expect(parsed.user).toBe(true);
     expect(parsed.info).toBe(false);
     expect(parsed.verbose).toBe(false);
+  });
+
+  it("should parse flags only without commands", () => {
+    const flagsParser = flags({
+      name: flag("--name").string(),
+      version: flag("--version").number(),
+      run: command("run").restArgs(),
+      test: command("test").restArgs(),
+    });
+
+    const parsed = flagsParser.parse(["--name", "jhon"]);
+    expectTypeOf(parsed).toEqualTypeOf<{
+      name: string | null;
+      version: number | null;
+      run: string[] | null;
+      test: string[] | null;
+    }>();
+    expect(parsed).toEqual({
+      name: "jhon",
+      version: null,
+      run: null,
+      test: null,
+    });
+  });
+
+  it("should parse flags with = syntax without commands", () => {
+    const flagsParser = flags({
+      name: flag("--name").string(),
+      version: flag("--version").number(),
+      run: command("run").restArgs(),
+      test: command("test").restArgs(),
+    });
+
+    const parsed = flagsParser.parse(["--name=jhon"]);
+
+    expect(parsed).toEqual({
+      name: "jhon",
+      version: null,
+      run: null,
+      test: null,
+    });
+  });
+
+  it("should parse multiple flags with = syntax", () => {
+    const flagsParser = flags({
+      name: flag("--name").string(),
+      version: flag("--version").number(),
+      run: command("run").restArgs(),
+      test: command("test").restArgs(),
+    });
+
+    const parsed = flagsParser.parse(["--name=jhon", "--version=1"]);
+    expect(parsed).toEqual({
+      name: "jhon",
+      version: 1,
+      run: null,
+      test: null,
+    });
+  });
+
+  it("should parse multiple flags with mixed syntax", () => {
+    const flagsParser = flags({
+      name: flag("--name").string(),
+      version: flag("--version").number(),
+      run: command("run").restArgs(),
+      test: command("test").restArgs(),
+    });
+
+    const parsed = flagsParser.parse(["--name", "jhon", "--version=1"]);
+    expect(parsed).toEqual({
+      name: "jhon",
+      version: 1,
+      run: null,
+      test: null,
+    });
+  });
+
+  it("should parse flags with run command and restArgs", () => {
+    const flagsParser = flags({
+      name: flag("--name").string(),
+      version: flag("--version").number(),
+      run: command("run").restArgs(),
+      test: command("test").restArgs(),
+    });
+
+    const parsed = flagsParser.parse([
+      "--name",
+      "jhon",
+      "--version=1",
+      "run",
+      "foo",
+    ]);
+    expect(parsed).toEqual({
+      name: "jhon",
+      version: 1,
+      run: ["foo"],
+      test: null,
+    });
+  });
+
+  it("should parse flags with test command and restArgs", () => {
+    const flagsParser = flags({
+      name: flag("--name").string(),
+      version: flag("--version").number(),
+      run: command("run").restArgs(),
+      test: command("test").restArgs(),
+    });
+
+    const parsed = flagsParser.parse([
+      "--name",
+      "jhon",
+      "--version=1",
+      "test",
+      "taz",
+    ]);
+    expect(parsed).toEqual({
+      name: "jhon",
+      version: 1,
+      run: null,
+      test: ["taz"],
+    });
   });
 });
 
@@ -490,5 +611,169 @@ describe("arguments", () => {
     expect(() => {
       flagsParser.parse(["read", "123", "foo"]);
     }).toThrow("Unexpected argument: foo");
+  });
+});
+
+describe("docker CLI", () => {
+  const dockerFlags = flags({
+    // Global Options
+    config: flag("--config")
+      .string()
+      .describe(
+        'Location of client config files (default "/Users/jonathan.delgado/.docker")',
+      ),
+
+    context: flag("-c", "--context")
+      .string()
+      .describe("Name of the context to use to connect to the daemon"),
+
+    debug: flag("-D", "--debug").boolean().describe("Enable debug mode"),
+
+    host: flag("-H", "--host").string().describe("Daemon socket to connect to"),
+
+    logLevel: flag("-l", "--log-level")
+      .string()
+      .default("info")
+      .describe(
+        'Set the logging level ("debug", "info", "warn", "error", "fatal")',
+      ),
+
+    tls: flag("--tls").boolean().describe("Use TLS; implied by --tlsverify"),
+
+    version: flag("-v", "--version")
+      .boolean()
+      .describe("Print version information and quit"),
+
+    // Common Commands
+    run: command("run")
+      .restArgs()
+      .describe("Create and run a new container from an image"),
+
+    exec: command("exec")
+      .restArgs()
+      .describe("Execute a command in a running container"),
+
+    ps: command("ps").restArgs().describe("List containers"),
+
+    build: command("build")
+      .restArgs()
+      .describe("Build an image from a Dockerfile"),
+
+    pull: command("pull")
+      .restArgs()
+      .describe("Download an image from a registry"),
+
+    images: command("images").restArgs().describe("List images"),
+
+    login: command("login").restArgs().describe("Authenticate to a registry"),
+
+    // Management Commands
+    container: command("container").restArgs().describe("Manage containers"),
+
+    image: command("image").restArgs().describe("Manage images"),
+
+    network: command("network").restArgs().describe("Manage networks"),
+
+    volume: command("volume").restArgs().describe("Manage volumes"),
+  })
+    .programName("docker")
+    .describe("A self-sufficient runtime for containers");
+
+  it("should generate docker help message", () => {
+    const help = dockerFlags.helpMessage();
+    expect(help).toMatchSnapshot();
+  });
+
+  it("should parse docker --config flag", () => {
+    const parsed = dockerFlags.parse(["--config", "/custom/path"]);
+    expect(parsed.config).toBe("/custom/path");
+    expect(parsed.logLevel).toBe("info"); // default value
+  });
+
+  it("should parse docker run command with args", () => {
+    const parsed = dockerFlags.parse([
+      "run",
+      "-d",
+      "-p",
+      "8080:80",
+      "nginx:latest",
+    ]);
+    expect(parsed.run).toEqual(["-d", "-p", "8080:80", "nginx:latest"]);
+    expect(parsed.exec).toBe(null);
+  });
+
+  it("should parse docker run with global flags", () => {
+    const parsed = dockerFlags.parse([
+      "--debug",
+      "--host",
+      "tcp://localhost:2375",
+      "run",
+      "nginx",
+    ]);
+    expect(parsed.debug).toBe(true);
+    expect(parsed.host).toBe("tcp://localhost:2375");
+    expect(parsed.run).toEqual(["nginx"]);
+  });
+
+  it("should parse docker ps command", () => {
+    const parsed = dockerFlags.parse(["ps", "-a"]);
+    expect(parsed.ps).toEqual(["-a"]);
+  });
+
+  it("should parse docker build with context", () => {
+    const parsed = dockerFlags.parse(["build", "-t", "myapp:latest", "."]);
+    expect(parsed.build).toEqual(["-t", "myapp:latest", "."]);
+  });
+
+  it("should parse docker exec command", () => {
+    const parsed = dockerFlags.parse([
+      "exec",
+      "-it",
+      "container_name",
+      "/bin/bash",
+    ]);
+    expect(parsed.exec).toEqual(["-it", "container_name", "/bin/bash"]);
+  });
+
+  it("should parse docker with short context flag", () => {
+    const parsed = dockerFlags.parse(["-c", "mycontext", "ps"]);
+    expect(parsed.context).toBe("mycontext");
+    expect(parsed.ps).toEqual([]);
+  });
+
+  it("should parse docker images command", () => {
+    const parsed = dockerFlags.parse(["images", "-a"]);
+    expect(parsed.images).toEqual(["-a"]);
+  });
+
+  it("should parse docker pull command", () => {
+    const parsed = dockerFlags.parse(["pull", "ubuntu:22.04"]);
+    expect(parsed.pull).toEqual(["ubuntu:22.04"]);
+  });
+
+  it("should parse docker with multiple global flags", () => {
+    const parsed = dockerFlags.parse([
+      "--debug",
+      "--tls",
+      "-l",
+      "debug",
+      "container",
+      "ls",
+    ]);
+    expect(parsed.debug).toBe(true);
+    expect(parsed.tls).toBe(true);
+    expect(parsed.logLevel).toBe("debug");
+    expect(parsed.container).toEqual(["ls"]);
+  });
+
+  it("should parse docker version flag", () => {
+    const parsed = dockerFlags.parse(["--version"]);
+    expect(parsed.version).toBe(true);
+  });
+
+  it("should parse docker with log-level using = syntax", () => {
+    const parsed = dockerFlags.parse(["--log-level=warn", "ps"]);
+    expect(parsed.logLevel).toBe("warn");
+    expect(parsed.ps).toEqual([]);
   });
 });

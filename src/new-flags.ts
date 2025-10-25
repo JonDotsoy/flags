@@ -47,7 +47,7 @@ type InferFlagType<T> = T extends {
               ? number
               : number | null
           : U extends "restArgs"
-            ? string[]
+            ? string[] | null
             : never
   : never;
 
@@ -265,26 +265,52 @@ class FlagsParser<T extends Record<string, any>> {
       lines.push("");
     }
 
-    // Options header
-    lines.push("Options:");
+    // Separate flags and commands
+    const flags: Array<[string, any]> = [];
+    const commands: Array<[string, any]> = [];
 
-    // Flag details
     for (const [key, flagBuilder] of Object.entries(this.schema)) {
-      const config =
-        flagBuilder instanceof FlagBuilder
-          ? flagBuilder.toConfig()
-          : flagBuilder;
+      if (flagBuilder instanceof CommandBuilder) {
+        commands.push([key, flagBuilder]);
+      } else if (flagBuilder instanceof FlagBuilder) {
+        flags.push([key, flagBuilder]);
+      } else if (flagBuilder instanceof ArgumentBuilder) {
+        // Skip arguments in help for now
+      }
+    }
 
-      const names = config.names.join(", ");
-      const type = config.type === "boolean" ? "" : `<${config.type}>`;
-      const required = config.required === true ? "(required)" : "";
-      const description = config.description || "";
+    // Options header and details
+    if (flags.length > 0) {
+      lines.push("Options:");
+      for (const [key, flagBuilder] of flags) {
+        const config = flagBuilder.toConfig();
+        const names = config.names.join(", ");
+        const type = config.type === "boolean" ? "" : `<${config.type}>`;
+        const required = config.required === true ? "(required)" : "";
+        const description = config.description || "";
 
-      const flagLine = `${names}${type ? " " + type : ""}`;
-      const padding = " ".repeat(Math.max(25 - flagLine.length, 2));
+        const flagLine = `${names}${type ? " " + type : ""}`;
+        const padding = " ".repeat(Math.max(25 - flagLine.length, 2));
 
-      const requiredPart = required ? `${required} ` : "";
-      lines.push(`  ${flagLine}${padding}${requiredPart}${description}`);
+        const requiredPart = required ? `${required} ` : "";
+        lines.push(`  ${flagLine}${padding}${requiredPart}${description}`);
+      }
+    }
+
+    // Commands header and details
+    if (commands.length > 0) {
+      if (flags.length > 0) {
+        lines.push("");
+      }
+      lines.push("Commands:");
+      for (const [key, commandBuilder] of commands) {
+        const config = commandBuilder.toConfig();
+        const name = config.name;
+        const description = config.description || "";
+
+        const padding = " ".repeat(Math.max(25 - name.length, 2));
+        lines.push(`  ${name}${padding}${description}`);
+      }
     }
 
     return lines.join("\n");
@@ -322,7 +348,7 @@ class FlagsParser<T extends Record<string, any>> {
         if (config.type === "boolean") {
           result[key] = false;
         } else if (config.type === "restArgs") {
-          result[key] = [];
+          result[key] = null;
         }
       } else if (builder instanceof ArgumentBuilder) {
         config = builder.toConfig();
@@ -391,7 +417,8 @@ class FlagsParser<T extends Record<string, any>> {
           if (config.type === "boolean") {
             result[key] = true;
           } else if (config.type === "restArgs") {
-            result[key] = args.slice(i + 1);
+            const restArgs = args.slice(i + 1);
+            result[key] = restArgs.length > 0 ? restArgs : [];
             captureRestArgs = key;
             break; // Stop processing after capturing rest args
           }

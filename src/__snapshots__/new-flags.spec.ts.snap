@@ -67,3 +67,31 @@ A simple CLI tool
 Options:
   --port, -p <number>      (required) Port number"
 `;
+
+exports[`docker CLI should generate docker help message 1`] = `
+"Usage: docker
+
+A self-sufficient runtime for containers
+
+Options:
+  --config <string>        Location of client config files (default "/Users/jonathan.delgado/.docker")
+  -c, --context <string>   Name of the context to use to connect to the daemon
+  -D, --debug              Enable debug mode
+  -H, --host <string>      Daemon socket to connect to
+  -l, --log-level <string>  Set the logging level ("debug", "info", "warn", "error", "fatal")
+  --tls                    Use TLS; implied by --tlsverify
+  -v, --version            Print version information and quit
+
+Commands:
+  run                      Create and run a new container from an image
+  exec                     Execute a command in a running container
+  ps                       List containers
+  build                    Build an image from a Dockerfile
+  pull                     Download an image from a registry
+  images                   List images
+  login                    Authenticate to a registry
+  container                Manage containers
+  image                    Manage images
+  network                  Manage networks
+  volume                   Manage volumes"
+`;
