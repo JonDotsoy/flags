@@ -2,6 +2,74 @@ import { describe, it, expect, expectTypeOf } from "bun:test";
 import { flags, flag, command, argument } from "./new-flags";
 
 describe("new-flags", () => {
+  describe("Builder inheritance", () => {
+    it("should verify FlagBuilder, CommandBuilder, and ArgumentBuilder extend Builder", () => {
+      // Given: Instances of each builder type
+      const flagBuilder = flag("--test");
+      const commandBuilder = command("test");
+      const argumentBuilder = argument();
+
+      // Then: All builders should have the describe method from the base Builder class
+      expect(typeof flagBuilder.describe).toBe("function");
+      expect(typeof commandBuilder.describe).toBe("function");
+      expect(typeof argumentBuilder.describe).toBe("function");
+
+      // Then: All builders should have the toConfig method
+      expect(typeof flagBuilder.toConfig).toBe("function");
+      expect(typeof commandBuilder.toConfig).toBe("function");
+      expect(typeof argumentBuilder.toConfig).toBe("function");
+    });
+
+    it("should allow describe() to be called on all builder types", () => {
+      // Given: Builders with descriptions
+      const flagWithDesc = flag("--test").describe("Test flag");
+      const commandWithDesc = command("test").describe("Test command");
+      const argumentWithDesc = argument().describe("Test argument");
+
+      // When: Getting configs
+      const flagConfig = flagWithDesc.toConfig();
+      const commandConfig = commandWithDesc.toConfig();
+      const argumentConfig = argumentWithDesc.toConfig();
+
+      // Then: All configs should have descriptions
+      expect(flagConfig.description).toBe("Test flag");
+      expect(commandConfig.description).toBe("Test command");
+      expect(argumentConfig.description).toBe("Test argument");
+    });
+
+    it("should maintain fluent API after describe() for all builders", () => {
+      // Given: Builders with chained methods including describe
+      const flagBuilder = flag("--port")
+        .number()
+        .describe("Port number")
+        .required();
+
+      const commandBuilder = command("run").restArgs().describe("Run command");
+
+      const argumentBuilder = argument()
+        .string()
+        .describe("Input file")
+        .required();
+
+      // When: Getting configs
+      const flagConfig = flagBuilder.toConfig();
+      const commandConfig = commandBuilder.toConfig();
+      const argumentConfig = argumentBuilder.toConfig();
+
+      // Then: All configs should have descriptions and other properties
+      expect(flagConfig.description).toBe("Port number");
+      expect(flagConfig.type).toBe("number");
+      expect(flagConfig.required).toBe(true);
+
+      expect(commandConfig.description).toBe("Run command");
+      expect(commandConfig.type).toBe("restArgs");
+
+      expect(argumentConfig.description).toBe("Input file");
+      expect(argumentConfig.type).toBe("string");
+      expect(argumentConfig.required).toBe(true);
+    });
+  });
+
   it("should parse boolean flag with --version", () => {
     // Given: A parser with a boolean version flag
     const parser = flags({ version: flag("--version", "-v") });

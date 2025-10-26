@@ -1,27 +1,32 @@
+type BaseConfig = {
+  description?: string;
+};
+
 type FlagConfig<
   T = "boolean" | "string" | "strings" | "number" | "keyValue",
   R extends boolean = boolean,
   D = any,
-> = {
+> = BaseConfig & {
   names: string[];
   type: T;
   required?: R;
-  description?: string;
   default?: D;
 };
 
-type CommandConfig<T = "boolean" | "restArgs"> = {
+type CommandConfig<T = "boolean" | "restArgs"> = BaseConfig & {
   kind: "command";
   name: string;
   type: T;
-  description?: string;
 };
 
-type ArgumentConfig<T = "string", R extends boolean = boolean, D = any> = {
+type ArgumentConfig<
+  T = "string",
+  R extends boolean = boolean,
+  D = any,
+> = BaseConfig & {
   kind: "argument";
   type: T;
   required?: R;
-  description?: string;
   default?: D;
 };
 
@@ -53,8 +58,23 @@ type InferFlagType<T> = T extends {
               : never
   : never;
 
-class FlagBuilder<T extends FlagConfig = FlagConfig<"boolean">> {
-  constructor(private config: T) {}
+abstract class Builder<T extends BaseConfig> {
+  constructor(protected config: T) {}
+
+  abstract toConfig(): T;
+
+  describe(desc: string): this {
+    const newConfig = { ...this.config, description: desc } as T;
+    return new (this.constructor as any)(newConfig);
+  }
+}
+
+class FlagBuilder<
+  T extends FlagConfig = FlagConfig<"boolean">,
+> extends Builder<T> {
+  constructor(config: T) {
+    super(config);
+  }
 
   get names() {
     return this.config.names;
@@ -97,10 +117,6 @@ class FlagBuilder<T extends FlagConfig = FlagConfig<"boolean">> {
       ...this.config,
       type: "keyValue",
     } as FlagConfig<"keyValue">);
-  }
-
-  describe(desc: string): FlagBuilder<T> {
-    return new FlagBuilder({ ...this.config, description: desc } as T);
   }
 
   required<R extends true = true>(): FlagBuilder<
@@ -151,8 +167,12 @@ export function flag(...names: string[]): FlagBuilder<FlagConfig<"boolean">> {
   });
 }
 
-class CommandBuilder<T extends CommandConfig = CommandConfig<"boolean">> {
-  constructor(private config: T) {}
+class CommandBuilder<
+  T extends CommandConfig = CommandConfig<"boolean">,
+> extends Builder<T> {
+  constructor(config: T) {
+    super(config);
+  }
 
   get name() {
     return this.config.name;
@@ -176,10 +196,6 @@ class CommandBuilder<T extends CommandConfig = CommandConfig<"boolean">> {
     } as CommandConfig<"restArgs">);
   }
 
-  describe(desc: string): CommandBuilder<T> {
-    return new CommandBuilder({ ...this.config, description: desc } as T);
-  }
-
   toConfig(): T {
     return this.config;
   }
@@ -195,8 +211,12 @@ export function command(
   });
 }
 
-class ArgumentBuilder<T extends ArgumentConfig = ArgumentConfig<"string">> {
-  constructor(private config: T) {}
+class ArgumentBuilder<
+  T extends ArgumentConfig = ArgumentConfig<"string">,
+> extends Builder<T> {
+  constructor(config: T) {
+    super(config);
+  }
 
   get type() {
     return this.config.type;
@@ -207,10 +227,6 @@ class ArgumentBuilder<T extends ArgumentConfig = ArgumentConfig<"string">> {
       ...this.config,
       type: "string",
     } as ArgumentConfig<"string">);
-  }
-
-  describe(desc: string): ArgumentBuilder<T> {
-    return new ArgumentBuilder({ ...this.config, description: desc } as T);
   }
 
   required<R extends true = true>(): ArgumentBuilder<
