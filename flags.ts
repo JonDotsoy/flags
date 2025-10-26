@@ -1,3 +1,7 @@
+/**
+ * DEPRECATED!: new login in new-flags.ts
+ */
+
 import { render, componentModules } from "@jondotsoy/console-draw";
 export { FlagsError } from "./src/common/errors/flags.error.js";
 import { UnknownArgumentError } from "./src/common/errors/unknown-argument.error.js";
