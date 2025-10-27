@@ -672,6 +672,24 @@ class FlagsParser<T extends Record<string, any>> {
       // Skip arguments in help for now
     }
 
+    // Calculate the maximum length for both flags and commands
+    let maxLength = 22; // Minimum width
+
+    // Check flags
+    for (const [_key, flagBuilder] of flags) {
+      const config = flagBuilder.toConfig();
+      const names = config.names.join(", ");
+      const type = config.type === "boolean" ? "" : `<${config.type}>`;
+      const flagLine = `${names}${type ? " " + type : ""}`;
+      maxLength = Math.max(maxLength, flagLine.length);
+    }
+
+    // Check commands
+    for (const [_key, commandBuilder] of commands) {
+      const config = commandBuilder.toConfig();
+      maxLength = Math.max(maxLength, config.name.length);
+    }
+
     // Options header and details
     if (flags.length > 0) {
       lines.push("Options:");
@@ -683,7 +701,9 @@ class FlagsParser<T extends Record<string, any>> {
         const description = config.description || "";
 
         const flagLine = `${names}${type ? " " + type : ""}`;
-        const padding = " ".repeat(Math.max(25 - flagLine.length, 2));
+        const padding = " ".repeat(
+          Math.max(maxLength - flagLine.length + 3, 3),
+        );
 
         const requiredPart = required ? `${required} ` : "";
         lines.push(`  ${flagLine}${padding}${requiredPart}${description}`);
@@ -695,13 +715,14 @@ class FlagsParser<T extends Record<string, any>> {
       if (flags.length > 0) {
         lines.push("");
       }
+
       lines.push("Commands:");
       for (const [_key, commandBuilder] of commands) {
         const config = commandBuilder.toConfig();
         const name = config.name;
         const description = config.description || "";
 
-        const padding = " ".repeat(Math.max(25 - name.length, 2));
+        const padding = " ".repeat(Math.max(maxLength - name.length + 3, 3));
         lines.push(`  ${name}${padding}${description}`);
       }
     }
