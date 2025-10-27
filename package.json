@@ -1,16 +1,18 @@
 {
   "name": "@jondotsoy/flags",
   "version": "2.5.0",
-  "description": "A Javascript arguments processor",
+  "author": "Jonathan Delgado <hi@jon.soy> (https://jon.soy)",
   "main": "./lib/cjs/flags.js",
   "module": "./lib/esm/flags.js",
-  "types": "./lib/types/flags.d.ts",
-  "scripts": {
-    "prepack": "make",
-    "test": "bun test",
-    "build": "make",
-    "fmt": "prettier -w ."
+  "devDependencies": {
+    "@types/bun": "latest",
+    "prettier": "3.6.2",
+    "typescript": "5.9.3"
   },
+  "description": "A Javascript arguments processor",
+  "files": [
+    "lib"
+  ],
   "keywords": [
     "arguments",
     "args",
@@ -19,20 +21,15 @@
     "command-line-processor",
     "command-line-parser"
   ],
-  "author": "Jonathan Delgado <hi@jon.soy> (https://jon.soy)",
   "license": "MIT",
-  "devDependencies": {
-    "@types/bun": "latest",
-    "prettier": "3.6.2",
-    "typescript": "5.9.3"
-  },
   "publishConfig": {
     "access": "public"
   },
-  "files": [
-    "lib"
-  ],
-  "dependencies": {
-    "@jondotsoy/console-draw": "0.1.2"
-  }
+  "scripts": {
+    "prepack": "make",
+    "test": "bun test",
+    "build": "make",
+    "fmt": "prettier -w ."
+  },
+  "types": "./lib/types/flags.d.ts"
 }
