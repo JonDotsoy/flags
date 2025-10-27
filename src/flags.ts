@@ -105,21 +105,16 @@ export class FlagBuilder<InitialValue, ParseResult> extends Builder<
       return config.default as InitialValue;
     }
 
-    if (config.type === "boolean") {
-      return false as InitialValue;
-    } else if (config.type === "string") {
-      return null as InitialValue;
-    } else if (config.type === "strings") {
-      return [] as InitialValue;
-    } else if (config.type === "number") {
-      return null as InitialValue;
-    } else if (config.type === "keyValue") {
-      return {} as InitialValue;
-    } else if (config.type === "restArgs") {
-      return null as InitialValue;
-    }
+    const initialValues: Record<string, any> = {
+      boolean: false,
+      string: null,
+      strings: [],
+      number: null,
+      keyValue: {},
+      restArgs: null,
+    };
 
-    return null as InitialValue;
+    return (initialValues[config.type] ?? null) as InitialValue;
   }
 
   test(
