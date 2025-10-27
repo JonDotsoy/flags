@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.0](https://github.com/JonDotsoy/flags/compare/flags-v2.5.0...flags-v3.0.0) (2025-10-27)
+
+
+### Miscellaneous Chores
+
+* release 3.0.0 ([efd6736](https://github.com/JonDotsoy/flags/commit/efd67364d1109ff998aa74dbf616893942cda1be))
+
 ## [2.5.0](https://github.com/JonDotsoy/flags/compare/flags-v2.4.0...flags-v2.5.0) (2025-06-10)
 
 
