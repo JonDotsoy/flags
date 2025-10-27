@@ -728,6 +728,22 @@ class FlagsParser<T extends Record<string, any>> {
       builders.push({ key, builder, used: false });
     }
 
+    // Build a map of single-letter boolean flags for expansion
+    const singleLetterBooleanFlags = new Map<string, boolean>();
+    for (const { builder } of builders) {
+      if (builder.builderKind() === "flag") {
+        const flagBuilder = builder as FlagBuilder<any, any>;
+        if (flagBuilder.type === "boolean") {
+          for (const name of flagBuilder.names) {
+            // Only consider single-letter flags (e.g., -a, -b, not --all)
+            if (name.length === 2 && name.startsWith("-") && name[1] !== "-") {
+              singleLetterBooleanFlags.set(name[1], true);
+            }
+          }
+        }
+      }
+    }
+
     // Parse arguments using builder.test()
     let i = 0;
     let currentArgumentIndex = 0;
@@ -739,41 +755,66 @@ class FlagsParser<T extends Record<string, any>> {
       const arg = args[i];
       let matched = false;
 
-      // Try to match with each builder
-      for (const builderEntry of builders) {
-        const { key, builder } = builderEntry;
-        const match = builder.test(arg, i, args);
+      // Try to expand combined flags before matching
+      const expandedFlags = this.tryExpandCombinedFlag(
+        arg,
+        singleLetterBooleanFlags,
+      );
 
-        if (match !== null) {
-          // Special handling for positional arguments - only match in order
-          if (builder.isPositionalArgument()) {
-            if (
-              currentArgumentIndex < argumentBuilders.length &&
-              argumentBuilders[currentArgumentIndex].key === key
-            ) {
+      if (expandedFlags.length > 1) {
+        // This is a combined flag that was expanded
+        // Process each expanded flag
+        for (const expandedFlag of expandedFlags) {
+          for (const builderEntry of builders) {
+            const { key, builder } = builderEntry;
+            const match = builder.test(expandedFlag, i, [expandedFlag]);
+
+            if (match !== null && !builder.isPositionalArgument()) {
               result[key] = builder.accumulate(result[key], match.parsed);
-              currentArgumentIndex++;
               builderEntry.used = true;
-              matched = true;
-            }
-            // If not the right position, continue to next builder
-          } else {
-            // Use accumulate method for all other builders
-            result[key] = builder.accumulate(result[key], match.parsed);
-            builderEntry.used = true;
-            matched = true;
-
-            // Check if we should stop parsing (e.g., restArgs commands)
-            if (builder.shouldStopParsing()) {
-              i = args.length; // Exit loop
               break;
             }
           }
+        }
+        matched = true;
+        i++;
+      } else {
+        // Try to match with each builder
+        for (const builderEntry of builders) {
+          const { key, builder } = builderEntry;
+          const match = builder.test(arg, i, args);
 
-          // Advance index by consumed args if matched
-          if (matched) {
-            i += match.args.length;
-            break;
+          if (match !== null) {
+            // Special handling for positional arguments - only match in order
+            if (builder.isPositionalArgument()) {
+              if (
+                currentArgumentIndex < argumentBuilders.length &&
+                argumentBuilders[currentArgumentIndex].key === key
+              ) {
+                result[key] = builder.accumulate(result[key], match.parsed);
+                currentArgumentIndex++;
+                builderEntry.used = true;
+                matched = true;
+              }
+              // If not the right position, continue to next builder
+            } else {
+              // Use accumulate method for all other builders
+              result[key] = builder.accumulate(result[key], match.parsed);
+              builderEntry.used = true;
+              matched = true;
+
+              // Check if we should stop parsing (e.g., restArgs commands)
+              if (builder.shouldStopParsing()) {
+                i = args.length; // Exit loop
+                break;
+              }
+            }
+
+            // Advance index by consumed args if matched
+            if (matched) {
+              i += match.args.length;
+              break;
+            }
           }
         }
       }
@@ -794,6 +835,44 @@ class FlagsParser<T extends Record<string, any>> {
     }
 
     return result as ParseResultType<T>;
+  }
+
+  private tryExpandCombinedFlag(
+    arg: string,
+    singleLetterBooleanFlags: Map<string, boolean>,
+  ): string[] {
+    // Check if this is a potential combined flag: starts with single dash,
+    // has multiple characters, no equals sign, and not a double dash
+    if (
+      arg.startsWith("-") &&
+      !arg.startsWith("--") &&
+      !arg.includes("=") &&
+      arg.length > 2
+    ) {
+      // Try to expand as combined flags
+      const letters = arg.slice(1); // Remove the leading dash
+      let canExpand = true;
+
+      // Check if all letters are single-letter boolean flags
+      for (const letter of letters) {
+        if (!singleLetterBooleanFlags.has(letter)) {
+          canExpand = false;
+          break;
+        }
+      }
+
+      if (canExpand) {
+        // Expand into individual flags
+        const expanded: string[] = [];
+        for (const letter of letters) {
+          expanded.push(`-${letter}`);
+        }
+        return expanded;
+      }
+    }
+
+    // Cannot expand or not a combined flag, return as single element array
+    return [arg];
   }
 }
 

@@ -7,9 +7,10 @@ A powerful and type-safe JavaScript/TypeScript command-line arguments parser wit
 - 🔥 **Type-safe**: Full TypeScript support with type inference
 - 🎯 **Fluent API**: Chainable builder pattern for intuitive flag definitions
 - 📋 **Multiple formats**: Support for `--flag=value`, `--flag value`, and `-f` syntax
+- 🔗 **Combined flags**: Automatic expansion of combined short flags like `-abc` → `-a -b -c`
 - 🔧 **Built-in types**: Boolean, string, strings array, number, and key-value handlers
 - 📚 **Commands**: Support for subcommands and rest arguments
-- � **Positional arguments**: Ordered argument parsing
+- 📍 **Positional arguments**: Ordered argument parsing
 - 🆘 **Help generation**: Automatic help message generation
 - ⚡ **Lightweight**: Zero dependencies, minimal overhead
 
@@ -129,8 +130,40 @@ console.log(parser.helpMessage());
 Creates a flag builder for named options. Supports multiple aliases.
 
 ```ts
+// Single name
+flag("--port"); // Matches --port only
+
+// Multiple names (aliases)
 flag("--verbose", "-v"); // Matches --verbose or -v
-flag("--port"); // Matches --port
+flag("-t", "--tty"); // Matches -t or --tty
+
+// Multiple long and short names
+flag("--help", "-h", "-?"); // Matches --help, -h, or -?
+```
+
+**Examples:**
+
+```ts
+const parser = flags({
+  // Long form only
+  version: flag("--version").boolean(),
+
+  // Short and long form
+  verbose: flag("-v", "--verbose").boolean(),
+
+  // Multiple aliases
+  help: flag("-h", "--help", "-?").boolean(),
+
+  // Docker-style: short first, then long
+  tty: flag("-t", "--tty").boolean(),
+  interactive: flag("-i", "--interactive").boolean(),
+});
+
+// All of these work:
+parser.parse(["--verbose"]); // { verbose: true, ... }
+parser.parse(["-v"]); // { verbose: true, ... }
+parser.parse(["-ti"]); // { tty: true, interactive: true, ... } (combined!)
+parser.parse(["--tty", "--interactive"]); // { tty: true, interactive: true, ... }
 ```
 
 #### Flag Type Methods
@@ -140,6 +173,11 @@ flag("--port"); // Matches --port
 ```ts
 flag("--verbose").boolean();
 // --verbose → true
+
+// Single-letter boolean flags support combined syntax
+flag("-t").boolean();
+flag("-i").boolean();
+// -ti → { t: true, i: true } (automatically expanded)
 ```
 
 **`.string()`** - String value flag
@@ -378,6 +416,65 @@ try {
     process.exit(1);
   }
 }
+```
+
+## Combined Short Flags
+
+Single-letter boolean flags can be combined for convenience, similar to common Unix tools:
+
+```ts
+import { flags, flag } from "@jondotsoy/flags";
+
+const parser = flags({
+  all: flag("-a", "--all").boolean().describe("Show all files"),
+  long: flag("-l", "--long").boolean().describe("Use long listing format"),
+  human: flag("-h", "--human-readable")
+    .boolean()
+    .describe("Human readable sizes"),
+});
+
+// All of these are equivalent:
+parser.parse(["-a", "-l", "-h"]); // Separate flags
+parser.parse(["-alh"]); // Combined flags
+parser.parse(["-lah"]); // Order doesn't matter
+parser.parse(["-al", "-h"]); // Partially combined
+
+// Result: { all: true, long: true, human: true }
+```
+
+### Docker-style Example
+
+```ts
+const dockerParser = flags({
+  tty: flag("-t", "--tty").boolean().describe("Allocate a pseudo-TTY"),
+  interactive: flag("-i", "--interactive")
+    .boolean()
+    .describe("Keep STDIN open"),
+  detach: flag("-d", "--detach").boolean().describe("Run in background"),
+});
+
+// Docker-style combined flags
+dockerParser.parse(["-ti"]); // { tty: true, interactive: true, detach: false }
+dockerParser.parse(["-tid"]); // { tty: true, interactive: true, detach: true }
+```
+
+### Rules for Combined Flags
+
+1. **Only single-letter flags**: `-abc` works, but `-test` does not expand
+2. **Only boolean flags**: All flags in the combination must be boolean type
+3. **No equals syntax**: `-a=value` is not expanded (treated as single flag)
+4. **All must exist**: If any letter is not a defined flag, the combination is not expanded
+
+```ts
+const parser = flags({
+  all: flag("-a").boolean(),
+  brief: flag("-b").boolean(),
+  count: flag("-c").number(), // Not boolean!
+});
+
+parser.parse(["-ab"]); // ✅ Works: { all: true, brief: true, count: null }
+parser.parse(["-abc"]); // ❌ Throws: -c requires a value, cannot be combined
+parser.parse(["-abx"]); // ❌ Throws: Unknown flag -x
 ```
 
 ## Complete Examples
@@ -660,6 +757,22 @@ A: Yes! Use `.strings()` for string arrays:
 flag("--include").strings();
 // --include src --include lib → ["src", "lib"]
 ```
+
+**Q: Can I combine short flags like `-abc`?**
+
+A: Yes! Single-letter boolean flags are automatically expanded:
+
+```ts
+const parser = flags({
+  all: flag("-a").boolean(),
+  brief: flag("-b").boolean(),
+  color: flag("-c").boolean(),
+});
+
+parser.parse(["-abc"]); // { all: true, brief: true, color: true }
+```
+
+Note: This only works for single-letter boolean flags. Flags with values or multi-letter flags are not expanded.
 
 **Q: How do I handle key-value pairs?**
 

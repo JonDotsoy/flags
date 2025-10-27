@@ -1968,6 +1968,265 @@ describe("flag with restArgs", () => {
   });
 });
 
+describe("combined short flags", () => {
+  it("should parse combined single-letter boolean flags like -ti", () => {
+    // Given: A parser with two single-letter boolean flags
+    const parser = flags({
+      tty: flag("-t").boolean(),
+      interactive: flag("-i").boolean(),
+    });
+
+    // When: Parsing combined flags -ti
+    const result = parser.parse(["-ti"]);
+
+    // Then: The result type should be { tty: boolean; interactive: boolean }
+    expectTypeOf(result).toEqualTypeOf<{
+      tty: boolean;
+      interactive: boolean;
+    }>();
+
+    // Then: Both flags should be true
+    expect(result).toEqual({ tty: true, interactive: true });
+  });
+
+  it("should parse combined single-letter boolean flags like -abc", () => {
+    // Given: A parser with three single-letter boolean flags
+    const parser = flags({
+      all: flag("-a").boolean(),
+      brief: flag("-b").boolean(),
+      color: flag("-c").boolean(),
+    });
+
+    // When: Parsing combined flags -abc
+    const result = parser.parse(["-abc"]);
+
+    // Then: The result type should match expected types
+    expectTypeOf(result).toEqualTypeOf<{
+      all: boolean;
+      brief: boolean;
+      color: boolean;
+    }>();
+
+    // Then: All flags should be true
+    expect(result).toEqual({ all: true, brief: true, color: true });
+  });
+
+  it("should parse combined flags with other separate flags", () => {
+    // Given: A parser with multiple single-letter boolean flags
+    const parser = flags({
+      all: flag("-a").boolean(),
+      brief: flag("-b").boolean(),
+      verbose: flag("-v").boolean(),
+    });
+
+    // When: Parsing combined flags -ab followed by separate flag -v
+    const result = parser.parse(["-ab", "-v"]);
+
+    // Then: All flags should be true
+    expect(result).toEqual({ all: true, brief: true, verbose: true });
+  });
+
+  it("should not expand combined flags if they are not single-letter", () => {
+    // Given: A parser with a multi-letter flag
+    const parser = flags({
+      test: flag("-test").boolean(),
+    });
+
+    // When: Parsing -test flag
+    const result = parser.parse(["-test"]);
+
+    // Then: The test flag should be true
+    expect(result).toEqual({ test: true });
+  });
+
+  it("should not expand combined flags if any flag is not boolean", () => {
+    // Given: A parser with a single-letter string flag
+    const parser = flags({
+      name: flag("-n").string(),
+      verbose: flag("-v").boolean(),
+    });
+
+    // When: Parsing -n with a value
+    const result = parser.parse(["-n", "test"]);
+
+    // Then: Only name should be set
+    expect(result).toEqual({ name: "test", verbose: false });
+  });
+
+  it("should parse docker-style combined flags -ti", () => {
+    // Given: A parser with docker-style flags
+    const parser = flags({
+      tty: flag("-t", "--tty").boolean(),
+      interactive: flag("-i", "--interactive").boolean(),
+    });
+
+    // When: Parsing combined flags -ti
+    const result = parser.parse(["-ti"]);
+
+    // Then: Both flags should be true
+    expect(result).toEqual({ tty: true, interactive: true });
+  });
+
+  it("should parse combined flags with long flags also defined", () => {
+    // Given: A parser with flags that have both short and long forms
+    const parser = flags({
+      all: flag("-a", "--all").boolean(),
+      long: flag("-l", "--long").boolean(),
+      human: flag("-h", "--human-readable").boolean(),
+    });
+
+    // When: Parsing combined flags -alh
+    const result = parser.parse(["-alh"]);
+
+    // Then: All flags should be true
+    expect(result).toEqual({ all: true, long: true, human: true });
+  });
+
+  it("should parse combined flags mixed with other arguments", () => {
+    // Given: A parser with flags and a command
+    const parser = flags({
+      all: flag("-a").boolean(),
+      long: flag("-l").boolean(),
+      run: command("run").restArgs(),
+    });
+
+    // When: Parsing combined flags before a command
+    const result = parser.parse(["-al", "run", "test"]);
+
+    // Then: Flags should be true and command should capture args
+    expect(result).toEqual({ all: true, long: true, run: ["test"] });
+  });
+
+  it("should throw error for combined flags with unknown letters", () => {
+    // Given: A parser with only -a and -b flags
+    const parser = flags({
+      all: flag("-a").boolean(),
+      brief: flag("-b").boolean(),
+    });
+
+    // When/Then: Parsing combined flags with unknown letter should throw
+    expect(() => {
+      parser.parse(["-abc"]);
+    }).toThrow("Unexpected argument: -abc");
+  });
+
+  it("should parse combined flags in docker exec example", () => {
+    // Given: A docker-style parser
+    const parser = flags({
+      tty: flag("-t").boolean(),
+      interactive: flag("-i").boolean(),
+      exec: command("exec").restArgs(),
+    });
+
+    // When: Parsing docker exec with combined flags after the command
+    const result = parser.parse(["exec", "-ti", "container", "/bin/bash"]);
+
+    // Then: Flags should be false because exec restArgs captures everything after it
+    // The -ti is captured as part of exec's arguments, not parsed as flags
+    expect(result).toEqual({
+      tty: false,
+      interactive: false,
+      exec: ["-ti", "container", "/bin/bash"],
+    });
+  });
+
+  it("should handle combined flags with = syntax not expanding", () => {
+    // Given: A parser with single-letter flags
+    const parser = flags({
+      name: flag("-n").string(),
+      value: flag("-v").string(),
+    });
+
+    // When: Parsing -n=test (should not expand)
+    const result = parser.parse(["-n=test"]);
+
+    // Then: Only name should be set with value "test"
+    expect(result).toEqual({ name: "test", value: null });
+  });
+
+  it("should parse combined flags only for single-letter boolean flags", () => {
+    // Given: A parser with mixed flag types
+    const parser = flags({
+      all: flag("-a").boolean(),
+      brief: flag("-b").boolean(),
+      count: flag("-c").number(),
+    });
+
+    // When: Parsing -ab (should work) but -abc should fail because -c needs a value
+    const result1 = parser.parse(["-ab"]);
+    expect(result1).toEqual({ all: true, brief: true, count: null });
+
+    // When: Parsing -abc should not expand because -c is not boolean
+    expect(() => {
+      parser.parse(["-abc"]);
+    }).toThrow("Unexpected argument: -abc");
+  });
+
+  it("should parse combined flags with both short and long forms defined", () => {
+    // Given: A parser with flags that have both short and long forms
+    const parser = flags({
+      verbose: flag("-v", "--verbose").boolean(),
+      help: flag("-h", "--help", "-?").boolean(),
+      tty: flag("-t", "--tty").boolean(),
+      interactive: flag("-i", "--interactive").boolean(),
+    });
+
+    // When: Parsing with long forms
+    const result1 = parser.parse(["--verbose"]);
+    expect(result1).toEqual({
+      verbose: true,
+      help: false,
+      tty: false,
+      interactive: false,
+    });
+
+    // When: Parsing with short forms
+    const result2 = parser.parse(["-v"]);
+    expect(result2).toEqual({
+      verbose: true,
+      help: false,
+      tty: false,
+      interactive: false,
+    });
+
+    // When: Parsing with combined short forms
+    const result3 = parser.parse(["-ti"]);
+    expect(result3).toEqual({
+      verbose: false,
+      help: false,
+      tty: true,
+      interactive: true,
+    });
+
+    // When: Parsing with mixed long and short forms
+    const result4 = parser.parse(["--tty", "--interactive"]);
+    expect(result4).toEqual({
+      verbose: false,
+      help: false,
+      tty: true,
+      interactive: true,
+    });
+
+    // When: Parsing with all combined
+    const result5 = parser.parse(["-vhti"]);
+    expect(result5).toEqual({
+      verbose: true,
+      help: true,
+      tty: true,
+      interactive: true,
+    });
+
+    // When: Parsing with multiple aliases for help
+    const result6 = parser.parse(["-?"]);
+    expect(result6).toEqual({
+      verbose: false,
+      help: true,
+      tty: false,
+      interactive: false,
+    });
+  });
+});
+
 describe("Type transformations with Builder generics", () => {
   it("should transform FlagBuilder types when calling required() on string flag", () => {
     // Given: A string flag that starts as FlagBuilder<string | null, string | null>
