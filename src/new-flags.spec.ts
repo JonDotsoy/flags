@@ -1743,6 +1743,231 @@ describe("key-value pattern", () => {
   });
 });
 
+describe("flag with restArgs", () => {
+  it("should parse flag with restArgs capturing all remaining arguments", () => {
+    // Given: A parser with a flag that captures rest args
+    const parser = flags({
+      C: flag("-C").restArgs(),
+    });
+
+    // When: Parsing arguments with -C flag and additional args
+    const parsed = parser.parse(["-C", "arg1", "arg2", "arg3"]);
+
+    // Then: The result type should be { C: string[] | null }
+    expectTypeOf(parsed).toEqualTypeOf<{ C: string[] | null }>();
+
+    // Then: The C flag should contain all remaining arguments
+    expect(parsed.C).toEqual(["arg1", "arg2", "arg3"]);
+  });
+
+  it("should parse flag with restArgs and no additional arguments", () => {
+    // Given: A parser with a flag that captures rest args
+    const parser = flags({
+      C: flag("-C").restArgs(),
+    });
+
+    // When: Parsing arguments with -C flag but no additional args
+    const parsed = parser.parse(["-C"]);
+
+    // Then: The result type should be { C: string[] | null }
+    expectTypeOf(parsed).toEqualTypeOf<{ C: string[] | null }>();
+
+    // Then: The C flag should be an empty array
+    expect(parsed.C).toEqual([]);
+  });
+
+  it("should return null when flag with restArgs is not provided", () => {
+    // Given: A parser with a flag that captures rest args
+    const parser = flags({
+      C: flag("-C").restArgs(),
+    });
+
+    // When: Parsing empty arguments
+    const parsed = parser.parse([]);
+
+    // Then: The result type should be { C: string[] | null }
+    expectTypeOf(parsed).toEqualTypeOf<{ C: string[] | null }>();
+
+    // Then: The C flag should be null
+    expect(parsed.C).toBe(null);
+  });
+
+  it("should parse other flags before flag with restArgs", () => {
+    // Given: A parser with regular flags and a flag with restArgs
+    const parser = flags({
+      verbose: flag("--verbose").boolean(),
+      name: flag("--name").string(),
+      C: flag("-C").restArgs(),
+    });
+
+    // When: Parsing arguments with regular flags before -C
+    const parsed = parser.parse([
+      "--verbose",
+      "--name",
+      "test",
+      "-C",
+      "arg1",
+      "arg2",
+    ]);
+
+    // Then: The result type should match expected types
+    expectTypeOf(parsed).toEqualTypeOf<{
+      verbose: boolean;
+      name: string | null;
+      C: string[] | null;
+    }>();
+
+    // Then: All flags should be parsed correctly
+    expect(parsed.verbose).toBe(true);
+    expect(parsed.name).toBe("test");
+    expect(parsed.C).toEqual(["arg1", "arg2"]);
+  });
+
+  it("should stop parsing after flag with restArgs", () => {
+    // Given: A parser with a flag with restArgs
+    const parser = flags({
+      C: flag("-C").restArgs(),
+      verbose: flag("--verbose").boolean(),
+    });
+
+    // When: Parsing arguments with -C followed by what looks like flags
+    const parsed = parser.parse(["-C", "--verbose", "-x", "value"]);
+
+    // Then: The result type should match expected types
+    expectTypeOf(parsed).toEqualTypeOf<{
+      C: string[] | null;
+      verbose: boolean;
+    }>();
+
+    // Then: Everything after -C should be captured as rest args
+    expect(parsed.C).toEqual(["--verbose", "-x", "value"]);
+    expect(parsed.verbose).toBe(false);
+  });
+
+  it("should parse flag with restArgs using long flag name", () => {
+    // Given: A parser with a long flag that captures rest args
+    const parser = flags({
+      chdir: flag("--chdir", "-C").restArgs(),
+    });
+
+    // When: Parsing arguments with --chdir flag
+    const parsed = parser.parse(["--chdir", "dir1", "dir2"]);
+
+    // Then: The result type should be { chdir: string[] | null }
+    expectTypeOf(parsed).toEqualTypeOf<{ chdir: string[] | null }>();
+
+    // Then: The chdir flag should contain all remaining arguments
+    expect(parsed.chdir).toEqual(["dir1", "dir2"]);
+  });
+
+  it("should parse flag with restArgs using short flag name", () => {
+    // Given: A parser with a flag that has both long and short names
+    const parser = flags({
+      chdir: flag("--chdir", "-C").restArgs(),
+    });
+
+    // When: Parsing arguments with -C short flag
+    const parsed = parser.parse(["-C", "dir1", "dir2"]);
+
+    // Then: The result type should be { chdir: string[] | null }
+    expectTypeOf(parsed).toEqualTypeOf<{ chdir: string[] | null }>();
+
+    // Then: The chdir flag should contain all remaining arguments
+    expect(parsed.chdir).toEqual(["dir1", "dir2"]);
+  });
+
+  it("should support describe with flag restArgs", () => {
+    // Given: A parser with a flag with restArgs and description
+    const parser = flags({
+      C: flag("-C").restArgs().describe("Change directory and run command"),
+    });
+
+    // When: Parsing arguments with -C flag
+    const parsed = parser.parse(["-C", "build", "test"]);
+
+    // Then: The C flag should contain all remaining arguments
+    expect(parsed.C).toEqual(["build", "test"]);
+  });
+
+  it("should parse multiple flags but only one can have restArgs", () => {
+    // Given: A parser with multiple flags where one has restArgs
+    const parser = flags({
+      verbose: flag("--verbose", "-v").boolean(),
+      port: flag("--port", "-p").number(),
+      exec: flag("--exec", "-e").restArgs(),
+    });
+
+    // When: Parsing arguments with regular flags before restArgs flag
+    const parsed = parser.parse([
+      "--verbose",
+      "--port",
+      "3000",
+      "--exec",
+      "npm",
+      "run",
+      "dev",
+    ]);
+
+    // Then: All flags should be parsed correctly
+    expect(parsed.verbose).toBe(true);
+    expect(parsed.port).toBe(3000);
+    expect(parsed.exec).toEqual(["npm", "run", "dev"]);
+  });
+
+  it("should support restArgs on command builder", () => {
+    // Given: A parser with a command that has restArgs
+    const parser = flags({
+      run: command("run").restArgs(),
+    });
+
+    // When: Parsing arguments with run command
+    const parsed = parser.parse(["run", "arg1", "arg2"]);
+
+    // Then: The result type should be { run: string[] | null }
+    expectTypeOf(parsed).toEqualTypeOf<{ run: string[] | null }>();
+
+    // Then: The run command should contain all remaining arguments
+    expect(parsed.run).toEqual(["arg1", "arg2"]);
+  });
+
+  it("should support restArgs on argument builder", () => {
+    // Given: A parser with an argument that has restArgs
+    const parser = flags({
+      args: argument().restArgs(),
+    });
+
+    // When: Parsing arguments with multiple values
+    const parsed = parser.parse(["arg1", "arg2", "arg3"]);
+
+    // Then: The result type should be { args: string[] | null }
+    expectTypeOf(parsed).toEqualTypeOf<{ args: string[] | null }>();
+
+    // Then: The args should contain all arguments
+    expect(parsed.args).toEqual(["arg1", "arg2", "arg3"]);
+  });
+
+  it("should support restArgs on argument with flags before", () => {
+    // Given: A parser with flags and an argument with restArgs
+    const parser = flags({
+      verbose: flag("--verbose").boolean(),
+      files: argument().restArgs(),
+    });
+
+    // When: Parsing arguments with flag before positional args
+    const parsed = parser.parse(["--verbose", "file1.txt", "file2.txt"]);
+
+    // Then: The result type should match expected types
+    expectTypeOf(parsed).toEqualTypeOf<{
+      verbose: boolean;
+      files: string[] | null;
+    }>();
+
+    // Then: All should be parsed correctly
+    expect(parsed.verbose).toBe(true);
+    expect(parsed.files).toEqual(["file1.txt", "file2.txt"]);
+  });
+});
+
 describe("Type transformations with Builder generics", () => {
   it("should transform FlagBuilder types when calling required() on string flag", () => {
     // Given: A string flag that starts as FlagBuilder<string | null, string | null>

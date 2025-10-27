@@ -32,7 +32,7 @@ type BaseConfig = {
 };
 
 type BuilderConfig<
-  T = "boolean" | "string" | "strings" | "number" | "keyValue",
+  T = "boolean" | "string" | "strings" | "number" | "keyValue" | "restArgs",
   R extends boolean = boolean,
   D = any,
 > = BaseConfig & {
@@ -49,7 +49,7 @@ type CommandConfig<T = "boolean" | "restArgs"> = BaseConfig & {
 };
 
 type ArgumentConfig<
-  T = "string",
+  T = "string" | "restArgs",
   R extends boolean = boolean,
   D = any,
 > = BaseConfig & {
@@ -115,6 +115,8 @@ export class FlagBuilder<InitialValue, ParseResult> extends Builder<
       return null as InitialValue;
     } else if (config.type === "keyValue") {
       return {} as InitialValue;
+    } else if (config.type === "restArgs") {
+      return null as InitialValue;
     }
 
     return null as InitialValue;
@@ -137,6 +139,9 @@ export class FlagBuilder<InitialValue, ParseResult> extends Builder<
         if (config.type === "boolean") {
           // Boolean flags only consume 1 argument
           consumedArgs = [arg];
+        } else if (config.type === "restArgs") {
+          // restArgs flags consume all remaining arguments
+          consumedArgs = args.slice(index);
         } else if (arg.includes("=")) {
           // Flags with = syntax consume 1 argument
           consumedArgs = [arg];
@@ -201,6 +206,9 @@ export class FlagBuilder<InitialValue, ParseResult> extends Builder<
 
     if (config.type === "boolean") {
       return true as ParseResult;
+    } else if (config.type === "restArgs") {
+      const restArgs = args.slice(index + 1);
+      return (restArgs.length > 0 ? restArgs : []) as ParseResult;
     } else if (config.type === "string") {
       if (value !== null) {
         return value as ParseResult;
@@ -294,6 +302,13 @@ export class FlagBuilder<InitialValue, ParseResult> extends Builder<
     });
   }
 
+  restArgs(): FlagBuilder<string[] | null, string[] | null> {
+    return new FlagBuilder({
+      ...this.config,
+      type: "restArgs",
+    });
+  }
+
   required(): FlagBuilder<InitialValue, Exclude<ParseResult, null>> {
     return new FlagBuilder({
       ...this.config,
@@ -330,7 +345,8 @@ export class FlagBuilder<InitialValue, ParseResult> extends Builder<
   }
 
   shouldStopParsing(): boolean {
-    return false;
+    // Stop parsing if this is a restArgs flag
+    return this.config.type === "restArgs";
   }
 
   isPositionalArgument(): boolean {
@@ -511,12 +527,41 @@ class ArgumentBuilder<InitialValue, ParseResult> extends Builder<
       return null;
     }
 
-    // Positional arguments consume 1 argument
+    const config = this.config;
     const parsed = this.parse(arg, index, args);
+
+    if (config.type === "restArgs") {
+      // restArgs arguments consume all remaining non-flag arguments
+      const consumedArgs: string[] = [];
+      for (let i = index; i < args.length; i++) {
+        if (!args[i].startsWith("-")) {
+          consumedArgs.push(args[i]);
+        } else {
+          break;
+        }
+      }
+      return { index, args: consumedArgs, parsed };
+    }
+
+    // Positional arguments consume 1 argument
     return { index, args: [arg], parsed };
   }
 
   private parse(arg: string, index: number, args: string[]): ParseResult {
+    const config = this.config;
+
+    if (config.type === "restArgs") {
+      const restArgs: string[] = [];
+      for (let i = index; i < args.length; i++) {
+        if (!args[i].startsWith("-")) {
+          restArgs.push(args[i]);
+        } else {
+          break;
+        }
+      }
+      return (restArgs.length > 0 ? restArgs : []) as ParseResult;
+    }
+
     return arg as ParseResult;
   }
 
@@ -524,6 +569,13 @@ class ArgumentBuilder<InitialValue, ParseResult> extends Builder<
     return new ArgumentBuilder({
       ...this.config,
       type: "string",
+    });
+  }
+
+  restArgs(): ArgumentBuilder<string[] | null, string[] | null> {
+    return new ArgumentBuilder({
+      ...this.config,
+      type: "restArgs",
     });
   }
 
@@ -540,7 +592,8 @@ class ArgumentBuilder<InitialValue, ParseResult> extends Builder<
   }
 
   shouldStopParsing(): boolean {
-    return false;
+    // Stop parsing if this is a restArgs argument
+    return this.config.type === "restArgs";
   }
 
   isPositionalArgument(): boolean {
