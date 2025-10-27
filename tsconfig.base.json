@@ -4,5 +4,5 @@
     "noEmit": false,
     "allowImportingTsExtensions": false
   },
-  "exclude": ["./lib/", "*.spec.ts"]
+  "exclude": ["./lib/", "*.spec.ts", "./samples/"]
 }

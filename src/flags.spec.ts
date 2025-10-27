@@ -1,5 +1,5 @@
 import { describe, it, expect, expectTypeOf } from "bun:test";
-import { flags, flag, command, argument } from "./new-flags";
+import { flags, flag, command, argument } from "./flags";
 
 describe("new-flags", () => {
   describe("Builder with two templates", () => {

@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { flags, flag } from "../src/new-flags";
+import { flags, flag } from "../src/flags";
 
 // Basic example with simple flags
 const parser = flags({
