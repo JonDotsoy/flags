@@ -618,7 +618,7 @@ describe("helpMessage", () => {
     });
 
     // When: Generating help message
-    const help = parser.helpMessage();
+    const help = parser.helpMessage({ terminalWidth: 80 });
 
     // Then: The help message should match snapshot
     expect(help).toMatchSnapshot();
@@ -631,7 +631,7 @@ describe("helpMessage", () => {
     }).programName("myapp");
 
     // When: Generating help message
-    const help = parser.helpMessage();
+    const help = parser.helpMessage({ terminalWidth: 80 });
 
     // Then: The help message should match snapshot
     expect(help).toMatchSnapshot();
@@ -646,7 +646,7 @@ describe("helpMessage", () => {
       .describe("A simple CLI tool");
 
     // When: Generating help message
-    const help = parser.helpMessage();
+    const help = parser.helpMessage({ terminalWidth: 80 });
 
     // Then: The help message should match snapshot
     expect(help).toMatchSnapshot();
@@ -665,7 +665,7 @@ describe("helpMessage", () => {
     });
 
     // When: Generating help message
-    const help = parser.helpMessage();
+    const help = parser.helpMessage({ terminalWidth: 80 });
 
     // Then: The help message should match snapshot
     expect(help).toMatchSnapshot();
@@ -678,7 +678,7 @@ describe("helpMessage", () => {
     });
 
     // When: Generating help message
-    const help = parser.helpMessage();
+    const help = parser.helpMessage({ terminalWidth: 80 });
 
     // Then: The help message should match snapshot
     expect(help).toMatchSnapshot();
@@ -693,7 +693,7 @@ describe("helpMessage", () => {
     });
 
     // When: Generating help message
-    const help = parser.helpMessage();
+    const help = parser.helpMessage({ terminalWidth: 80 });
 
     // Then: The help message should match snapshot
     expect(help).toMatchSnapshot();
@@ -716,7 +716,7 @@ describe("helpMessage", () => {
       .describe("A simple CLI application");
 
     // When: Generating help message
-    const help = parser.helpMessage();
+    const help = parser.helpMessage({ terminalWidth: 80 });
 
     // Then: The help message should match snapshot
     expect(help).toMatchSnapshot();
@@ -731,7 +731,7 @@ describe("helpMessage", () => {
       .describe("A simple CLI tool");
 
     // When: Generating help message
-    const help = parser.helpMessage();
+    const help = parser.helpMessage({ terminalWidth: 80 });
 
     // Then: The help message should match snapshot
     expect(help).toMatchSnapshot();
@@ -741,6 +741,116 @@ describe("helpMessage", () => {
 
     // Then: The port should be 3000
     expect(result).toEqual({ port: 3000 });
+  });
+
+  it("should support fluent API with extremely long description containing ASCII colors", () => {
+    // Given: A parser configured with fluent API and an extremely long flag description with colors
+    const parser = flags({
+      port: flag("--port", "-p")
+        .number()
+        .required()
+        .describe(
+          "This is an \x1b[32mextremely comprehensive\x1b[0m and \x1b[35mdetailed\x1b[0m port number configuration flag that allows you to specify the \x1b[33mnetwork port\x1b[0m on which the application server will listen for incoming connections. " +
+            "The port number must be a \x1b[36mvalid integer\x1b[0m between 1 and 65535, representing a TCP/IP port. " +
+            "Common port numbers include \x1b[34m80\x1b[0m for HTTP, \x1b[34m443\x1b[0m for HTTPS, \x1b[34m3000\x1b[0m for development servers, and \x1b[34m8080\x1b[0m for alternative HTTP services. " +
+            "This flag is \x1b[31mrequired\x1b[0m and must be provided when starting the application. " +
+            "The port selection is \x1b[33mcritical\x1b[0m for proper network communication and should be chosen carefully to avoid conflicts with other running services. " +
+            "Make sure the selected port is not already in use by another application and that you have the necessary \x1b[32mpermissions\x1b[0m to bind to it (ports below 1024 typically require elevated privileges on Unix-like systems). " +
+            "The application will \x1b[35mautomatically\x1b[0m validate the port number and throw an error if it's invalid or unavailable.",
+        ),
+      verbose: flag("--verbose", "-v")
+        .boolean()
+        .describe("\x1b[31mEnable verbose output\x1b[0m for detailed logging"),
+    })
+      .programName("myapp")
+      .describe("A simple CLI tool");
+
+    // When: Generating help message
+    const help = parser.helpMessage({ terminalWidth: 80 });
+
+    // Then: The help message should match snapshot
+    expect(help).toMatchSnapshot();
+
+    // When: Parsing arguments
+    const result = parser.parse(["--port", "3000", "--verbose"]);
+
+    // Then: The result should contain all parsed values
+    expect(result).toEqual({ port: 3000, verbose: true });
+  });
+
+  it("should wrap long CLI description text", () => {
+    // Given: A parser with a very long CLI description and long flag descriptions
+    const parser = flags({
+      verbose: flag("--verbose", "-v")
+        .boolean()
+        .describe(
+          "Enable \x1b[32mverbose output mode\x1b[0m which provides \x1b[36mdetailed information\x1b[0m about the execution process, including step-by-step progress updates, " +
+            "internal state changes, \x1b[33mconfiguration values\x1b[0m being used, \x1b[34mnetwork requests\x1b[0m being made, and any \x1b[33mwarnings\x1b[0m or informational messages. " +
+            "This is particularly useful for \x1b[35mdebugging issues\x1b[0m, understanding application behavior, \x1b[36mmonitoring performance\x1b[0m, and troubleshooting problems " +
+            "in \x1b[32mdevelopment\x1b[0m and \x1b[32mstaging environments\x1b[0m. The verbose output includes \x1b[34mtimestamps\x1b[0m, \x1b[34mlog levels\x1b[0m, and contextual information to help trace execution flow.",
+        ),
+      debug: flag("--debug", "-d").boolean().describe("Enable debug mode"),
+    })
+      .programName("myapp")
+      .describe(
+        "This is a comprehensive command-line interface tool designed to help developers manage and deploy their applications efficiently. " +
+          "It provides a wide range of features including configuration management, deployment automation, monitoring capabilities, and much more. " +
+          "The tool is built with modern best practices in mind and supports multiple environments including development, staging, and production.",
+      );
+
+    // When: Generating help message
+    const help = parser.helpMessage({ terminalWidth: 80 });
+
+    // Then: The help message should match snapshot
+    expect(help).toMatchSnapshot();
+  });
+
+  it("should strip ANSI colors when noColor option is true", () => {
+    // Given: A parser with colored descriptions
+    const parser = flags({
+      verbose: flag("--verbose", "-v")
+        .boolean()
+        .describe(
+          "Enable \x1b[32mverbose output\x1b[0m with \x1b[36mdetailed information\x1b[0m",
+        ),
+      debug: flag("--debug", "-d")
+        .boolean()
+        .describe("Enable \x1b[31mdebug mode\x1b[0m"),
+    })
+      .programName("myapp")
+      .describe("A \x1b[33mcommand-line interface\x1b[0m tool for developers");
+
+    // When: Generating help message with noColor option
+    const help = parser.helpMessage({ terminalWidth: 80, noColor: true });
+
+    // Then: The help message should not contain ANSI codes
+    expect(help).not.toContain("\x1b[");
+    expect(help).toContain("verbose output");
+    expect(help).toContain("detailed information");
+    expect(help).toContain("debug mode");
+    expect(help).toContain("command-line interface");
+
+    // Then: The help message should match snapshot
+    expect(help).toMatchSnapshot();
+  });
+
+  it("should preserve ANSI colors when noColor option is false or undefined", () => {
+    // Given: A parser with colored descriptions
+    const parser = flags({
+      verbose: flag("--verbose", "-v")
+        .boolean()
+        .describe("Enable \x1b[32mverbose output\x1b[0m"),
+    }).programName("myapp");
+
+    // When: Generating help message without noColor option
+    const helpDefault = parser.helpMessage({ terminalWidth: 80 });
+    const helpFalse = parser.helpMessage({ terminalWidth: 80, noColor: false });
+
+    // Then: Both should contain ANSI codes
+    expect(helpDefault).toContain("\x1b[32m");
+    expect(helpDefault).toContain("\x1b[0m");
+    expect(helpFalse).toContain("\x1b[32m");
+    expect(helpFalse).toContain("\x1b[0m");
   });
 });
 
@@ -1386,7 +1496,7 @@ describe("docker CLI", () => {
 
   it("should generate docker help message", () => {
     // When: Generating help message for docker CLI
-    const help = dockerFlags.helpMessage();
+    const help = dockerFlags.helpMessage({ terminalWidth: 180 });
 
     // Then: The help message should match snapshot
     expect(help).toMatchSnapshot();

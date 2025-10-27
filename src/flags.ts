@@ -645,8 +645,57 @@ class FlagsParser<T extends Record<string, any>> {
     return this;
   }
 
-  helpMessage(): string {
+  helpMessage({
+    terminalWidth,
+    noColor,
+  }: { terminalWidth?: number; noColor?: boolean } = {}): string {
     const lines: string[] = [];
+
+    // Get terminal width (default to 80 if not available)
+    const width =
+      terminalWidth ??
+      (typeof process !== "undefined" && process.stdout?.columns
+        ? process.stdout.columns
+        : 80);
+
+    // Helper function to strip ANSI codes for length calculation
+    const stripAnsi = (str: string): string => {
+      return str.replace(/\x1b\[[0-9;]*m/g, "");
+    };
+
+    // Helper function to remove ANSI codes if noColor is true
+    const processText = (text: string): string => {
+      return noColor ? stripAnsi(text) : text;
+    };
+
+    // Helper function to wrap text
+    const wrapText = (text: string, width: number): string[] => {
+      if (!text) return [""];
+
+      const words = text.split(/\s+/);
+      const wrappedLines: string[] = [];
+      let currentLine = "";
+
+      for (const word of words) {
+        const currentLineVisible = stripAnsi(currentLine).length;
+        const wordVisible = stripAnsi(word).length;
+
+        if (currentLine.length === 0) {
+          currentLine = word;
+        } else if (currentLineVisible + 1 + wordVisible <= width) {
+          currentLine += " " + word;
+        } else {
+          wrappedLines.push(currentLine);
+          currentLine = word;
+        }
+      }
+
+      if (currentLine.length > 0) {
+        wrappedLines.push(currentLine);
+      }
+
+      return wrappedLines.length > 0 ? wrappedLines : [""];
+    };
 
     // Usage line
     lines.push(`Usage: ${this._programName}`);
@@ -654,7 +703,13 @@ class FlagsParser<T extends Record<string, any>> {
 
     // Description if provided
     if (this._description) {
-      lines.push(this._description);
+      const wrappedDescription = wrapText(
+        processText(this._description),
+        width,
+      );
+      for (const line of wrappedDescription) {
+        lines.push(line);
+      }
       lines.push("");
     }
 
@@ -690,6 +745,10 @@ class FlagsParser<T extends Record<string, any>> {
       maxLength = Math.max(maxLength, config.name.length);
     }
 
+    // Calculate description column width
+    const leftColumnWidth = 2 + maxLength + 3; // indent + maxLength + padding
+    const descriptionWidth = Math.max(width - leftColumnWidth, 30);
+
     // Options header and details
     if (flags.length > 0) {
       lines.push("Options:");
@@ -706,7 +765,19 @@ class FlagsParser<T extends Record<string, any>> {
         );
 
         const requiredPart = required ? `${required} ` : "";
-        lines.push(`  ${flagLine}${padding}${requiredPart}${description}`);
+        const fullDescription = `${requiredPart}${processText(description)}`;
+
+        // Wrap description text
+        const wrappedLines = wrapText(fullDescription, descriptionWidth);
+
+        // First line with flag
+        lines.push(`  ${flagLine}${padding}${wrappedLines[0]}`);
+
+        // Subsequent lines with proper indentation
+        for (let i = 1; i < wrappedLines.length; i++) {
+          const indent = " ".repeat(leftColumnWidth);
+          lines.push(`${indent}${wrappedLines[i]}`);
+        }
       }
     }
 
@@ -723,7 +794,21 @@ class FlagsParser<T extends Record<string, any>> {
         const description = config.description || "";
 
         const padding = " ".repeat(Math.max(maxLength - name.length + 3, 3));
-        lines.push(`  ${name}${padding}${description}`);
+
+        // Wrap description text
+        const wrappedLines = wrapText(
+          processText(description),
+          descriptionWidth,
+        );
+
+        // First line with command
+        lines.push(`  ${name}${padding}${wrappedLines[0]}`);
+
+        // Subsequent lines with proper indentation
+        for (let i = 1; i < wrappedLines.length; i++) {
+          const indent = " ".repeat(leftColumnWidth);
+          lines.push(`${indent}${wrappedLines[i]}`);
+        }
       }
     }
 
