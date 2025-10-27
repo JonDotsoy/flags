@@ -31,5 +31,9 @@
     "build": "make",
     "fmt": "prettier -w ."
   },
-  "types": "./lib/types/flags.d.ts"
+  "types": "./lib/types/flags.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JonDotsoy/flags.git"
+  }
 }
