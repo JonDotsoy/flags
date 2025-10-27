@@ -1,0 +1,161 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`helpMessage should generate help message with default format 1`] = `
+"Usage: cli
+
+Options:
+  --port, -p <number>      (required) "
+`;
+
+exports[`helpMessage should generate help message with custom program name using programName() 1`] = `
+"Usage: myapp
+
+Options:
+  --port, -p <number>      (required) "
+`;
+
+exports[`helpMessage should generate help message with description using describe() 1`] = `
+"Usage: myapp
+
+A simple CLI tool
+
+Options:
+  --verbose, -v            "
+`;
+
+exports[`helpMessage should generate help message with flag descriptions using describe() 1`] = `
+"Usage: cli
+
+Options:
+  --port, -p <number>      (required) Port number to listen on
+  --verbose, -v            Enable verbose output"
+`;
+
+exports[`helpMessage should support describe() before required() 1`] = `
+"Usage: cli
+
+Options:
+  --port, -p <number>      (required) Port number"
+`;
+
+exports[`helpMessage should generate help message for multiple flags 1`] = `
+"Usage: cli
+
+Options:
+  --port, -p <number>      (required) 
+  --name, -n <string>      
+  --verbose, -v            "
+`;
+
+exports[`helpMessage should generate complete help message with all features 1`] = `
+"Usage: myapp
+
+A simple CLI application
+
+Options:
+  --port, -p <number>      (required) Port number to listen on
+  --name, -n <string>      Application name
+  --verbose, -v            Enable verbose output
+  --label, -l <strings>    Add labels"
+`;
+
+exports[`helpMessage should support fluent API with programName, describe and parse 1`] = `
+"Usage: myapp
+
+A simple CLI tool
+
+Options:
+  --port, -p <number>      (required) Port number"
+`;
+
+exports[`helpMessage should support fluent API with extremely long description containing ASCII colors 1`] = `
+"Usage: myapp
+
+A simple CLI tool
+
+Options:
+  --port, -p <number>      (required) This is an \x1B[32mextremely comprehensive\x1B[0m and
+                           \x1B[35mdetailed\x1B[0m port number configuration flag that allows
+                           you to specify the \x1B[33mnetwork port\x1B[0m on which the
+                           application server will listen for incoming
+                           connections. The port number must be a \x1B[36mvalid integer\x1B[0m
+                           between 1 and 65535, representing a TCP/IP port.
+                           Common port numbers include \x1B[34m80\x1B[0m for HTTP, \x1B[34m443\x1B[0m for
+                           HTTPS, \x1B[34m3000\x1B[0m for development servers, and \x1B[34m8080\x1B[0m for
+                           alternative HTTP services. This flag is \x1B[31mrequired\x1B[0m and
+                           must be provided when starting the application. The
+                           port selection is \x1B[33mcritical\x1B[0m for proper network
+                           communication and should be chosen carefully to avoid
+                           conflicts with other running services. Make sure the
+                           selected port is not already in use by another
+                           application and that you have the necessary
+                           \x1B[32mpermissions\x1B[0m to bind to it (ports below 1024 typically
+                           require elevated privileges on Unix-like systems).
+                           The application will \x1B[35mautomatically\x1B[0m validate the port
+                           number and throw an error if it's invalid or
+                           unavailable.
+  --verbose, -v            \x1B[31mEnable verbose output\x1B[0m for detailed logging"
+`;
+
+exports[`helpMessage should wrap long CLI description text 1`] = `
+"Usage: myapp
+
+This is a comprehensive command-line interface tool designed to help developers
+manage and deploy their applications efficiently. It provides a wide range of
+features including configuration management, deployment automation, monitoring
+capabilities, and much more. The tool is built with modern best practices in
+mind and supports multiple environments including development, staging, and
+production.
+
+Options:
+  --verbose, -v            Enable \x1B[32mverbose output mode\x1B[0m which provides \x1B[36mdetailed
+                           information\x1B[0m about the execution process, including
+                           step-by-step progress updates, internal state
+                           changes, \x1B[33mconfiguration values\x1B[0m being used, \x1B[34mnetwork
+                           requests\x1B[0m being made, and any \x1B[33mwarnings\x1B[0m or
+                           informational messages. This is particularly useful
+                           for \x1B[35mdebugging issues\x1B[0m, understanding application
+                           behavior, \x1B[36mmonitoring performance\x1B[0m, and troubleshooting
+                           problems in \x1B[32mdevelopment\x1B[0m and \x1B[32mstaging environments\x1B[0m. The
+                           verbose output includes \x1B[34mtimestamps\x1B[0m, \x1B[34mlog levels\x1B[0m, and
+                           contextual information to help trace execution flow.
+  --debug, -d              Enable debug mode"
+`;
+
+exports[`helpMessage should strip ANSI colors when noColor option is true 1`] = `
+"Usage: myapp
+
+A command-line interface tool for developers
+
+Options:
+  --verbose, -v            Enable verbose output with detailed information
+  --debug, -d              Enable debug mode"
+`;
+
+exports[`docker CLI should generate docker help message 1`] = `
+"Usage: docker
+
+A self-sufficient runtime for containers
+
+Options:
+  --config <string>          Location of client config files (default "/Users/jonathan.delgado/.docker")
+  -c, --context <string>     Name of the context to use to connect to the daemon
+  -D, --debug                Enable debug mode
+  -H, --host <string>        Daemon socket to connect to
+  -l, --log-level <string>   Set the logging level ("debug", "info", "warn", "error", "fatal")
+  --tls                      Use TLS; implied by --tlsverify
+  -v, --version              Print version information and quit
+
+Commands:
+  run                        Create and run a new container from an image
+  exec                       Execute a command in a running container
+  ps                         List containers
+  build                      Build an image from a Dockerfile
+  pull                       Download an image from a registry
+  images                     List images
+  login                      Authenticate to a registry
+  container                  Manage containers
+  image                      Manage images
+  network                    Manage networks
+  volume                     Manage volumes"
+`;
