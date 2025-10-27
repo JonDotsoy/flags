@@ -1,3 +1,32 @@
+// Error classes
+export class FlagsParseError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "FlagsParseError";
+  }
+}
+
+export class UnexpectedArgumentError extends FlagsParseError {
+  constructor(public argument: string) {
+    super(`Unexpected argument: ${argument}`);
+    this.name = "UnexpectedArgumentError";
+  }
+}
+
+export class RequiredFlagMissingError extends FlagsParseError {
+  constructor(public flagName: string) {
+    super(`Required flag missing: ${flagName}`);
+    this.name = "RequiredFlagMissingError";
+  }
+}
+
+export class RequiredArgumentMissingError extends FlagsParseError {
+  constructor() {
+    super(`Required argument missing`);
+    this.name = "RequiredArgumentMissingError";
+  }
+}
+
 type BaseConfig = {
   description?: string;
 };
@@ -29,62 +58,6 @@ type ArgumentConfig<
   required?: R;
   default?: D;
 };
-
-type InferFlagType<T> = T extends {
-  type: infer U;
-  required?: infer R;
-  default?: infer D;
-}
-  ? U extends "boolean"
-    ? boolean
-    : U extends "string"
-      ? R extends true
-        ? string
-        : D extends string
-          ? string
-          : string | null
-      : U extends "strings"
-        ? string[]
-        : U extends "number"
-          ? R extends true
-            ? number
-            : D extends number
-              ? number
-              : number | null
-          : U extends "keyValue"
-            ? Record<string, string>
-            : U extends "restArgs"
-              ? string[] | null
-              : never
-  : never;
-
-type InferParseResult<T> = T extends {
-  type: infer U;
-  required?: infer R;
-  default?: infer D;
-}
-  ? U extends "boolean"
-    ? boolean
-    : U extends "string"
-      ? R extends true
-        ? string
-        : D extends string
-          ? string
-          : string | null
-      : U extends "strings"
-        ? string | null
-        : U extends "number"
-          ? R extends true
-            ? number
-            : D extends number
-              ? number
-              : number | null
-          : U extends "keyValue"
-            ? Record<string, string>
-            : U extends "restArgs"
-              ? string[] | null
-              : never
-  : never;
 
 export abstract class Builder<InitialValue, ParseResult> {
   constructor(protected config: BaseConfig) {}
@@ -378,7 +351,7 @@ export class FlagBuilder<InitialValue, ParseResult> extends Builder<
   validateRequired(result: any, key: string | number | symbol): void {
     const config = this.config;
     if (config.required === true) {
-      throw new Error(`Required flag missing: ${config.names[0]}`);
+      throw new RequiredFlagMissingError(config.names[0]);
     }
   }
 
@@ -585,7 +558,7 @@ class ArgumentBuilder<InitialValue, ParseResult> extends Builder<
   validateRequired(result: any, key: string | number | symbol): void {
     const config = this.config;
     if (config.required === true) {
-      throw new Error(`Required argument missing`);
+      throw new RequiredArgumentMissingError();
     }
   }
 
@@ -753,7 +726,7 @@ class FlagsParser<T extends Record<string, any>> {
       }
 
       if (!matched) {
-        throw new Error(`Unexpected argument: ${arg}`);
+        throw new UnexpectedArgumentError(arg);
       }
     }
 
