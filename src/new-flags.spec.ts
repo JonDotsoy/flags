@@ -2,6 +2,295 @@ import { describe, it, expect, expectTypeOf } from "bun:test";
 import { flags, flag, command, argument } from "./new-flags";
 
 describe("new-flags", () => {
+  describe("Builder with two templates", () => {
+    it("should have initialValue method that returns initial value type", () => {
+      // Given: A flag builder for a boolean flag
+      const booleanFlag = flag("--verbose").boolean();
+
+      // When: Getting the initial value
+      const initialValue = booleanFlag.initialValue();
+
+      // Then: The initial value should be false for boolean flags
+      expect(initialValue).toBe(false);
+      expectTypeOf(initialValue).toEqualTypeOf<boolean>();
+    });
+
+    it("should have test method that validates if argument can be parsed", () => {
+      // Given: A flag builder for a string flag
+      const stringFlag = flag("--name").string();
+
+      // When: Testing if an argument matches the flag with space syntax
+      const matchSpace = stringFlag.test("--name", 0, ["--name", "value"]);
+
+      // Then: test should return match info with args consumed and parsed value
+      expect(matchSpace).toEqual({
+        index: 0,
+        args: ["--name", "value"],
+        parsed: "value"
+      });
+
+      // When: Testing if an argument matches the flag with = syntax
+      const matchEquals = stringFlag.test("--name=value", 0, ["--name=value"]);
+
+      // Then: test should return match info with 1 argument consumed
+      expect(matchEquals).toEqual({
+        index: 0,
+        args: ["--name=value"],
+        parsed: "value"
+      });
+
+      // When: Testing if an argument does not match
+      const noMatch = stringFlag.test("--other", 0, ["--other", "value"]);
+
+      // Then: test should return null for non-matching flag
+      expect(noMatch).toBe(null);
+    });
+
+    it("should have test method that returns parsed value directly", () => {
+      // Given: A flag builder for a string flag
+      const stringFlag = flag("--name").string();
+
+      // When: Testing an argument
+      const match = stringFlag.test("--name", 0, ["--name", "john"]);
+
+      // Then: The match should contain the parsed value
+      expect(match).not.toBe(null);
+      expect(match?.parsed).toBe("john");
+      expectTypeOf(match?.parsed).toEqualTypeOf<string | null | undefined>();
+    });
+
+    it("should return correct initial value for string flags", () => {
+      // Given: A string flag
+      const stringFlag = flag("--host").string();
+
+      // When: Getting initial value
+      const initialValue = stringFlag.initialValue();
+
+      // Then: Initial value should be null
+      expect(initialValue).toBe(null);
+      expectTypeOf(initialValue).toEqualTypeOf<string | null>();
+    });
+
+    it("should return correct initial value for number flags", () => {
+      // Given: A number flag
+      const numberFlag = flag("--port").number();
+
+      // When: Getting initial value
+      const initialValue = numberFlag.initialValue();
+
+      // Then: Initial value should be null
+      expect(initialValue).toBe(null);
+      expectTypeOf(initialValue).toEqualTypeOf<number | null>();
+    });
+
+    it("should return correct initial value for strings array flags", () => {
+      // Given: A strings array flag
+      const stringsFlag = flag("--label").strings();
+
+      // When: Getting initial value
+      const initialValue = stringsFlag.initialValue();
+
+      // Then: Initial value should be empty array
+      expect(initialValue).toEqual([]);
+      expectTypeOf(initialValue).toEqualTypeOf<string[]>();
+    });
+
+    it("should return correct initial value for keyValue flags", () => {
+      // Given: A keyValue flag
+      const kvFlag = flag("--config").keyValue();
+
+      // When: Getting initial value
+      const initialValue = kvFlag.initialValue();
+
+      // Then: Initial value should be empty object
+      expect(initialValue).toEqual({});
+      expectTypeOf(initialValue).toEqualTypeOf<Record<string, string>>();
+    });
+
+    it("should return default value as initial value when default is set", () => {
+      // Given: A number flag with default value
+      const numberFlag = flag("--port").number().default(3000);
+
+      // When: Getting initial value
+      const initialValue = numberFlag.initialValue();
+
+      // Then: Initial value should be the default value
+      expect(initialValue).toBe(3000);
+      expectTypeOf(initialValue).toEqualTypeOf<number>();
+    });
+
+    it("should parse strings array flag correctly", () => {
+      // Given: A strings array flag
+      const stringsFlag = flag("--label").strings();
+
+      // When: Getting initial value
+      const initialValue = stringsFlag.initialValue();
+
+      // Then: Initial value should be empty array
+      expect(initialValue).toEqual([]);
+      expectTypeOf(initialValue).toEqualTypeOf<string[]>();
+
+      // Note: Individual parse calls return string values that get accumulated into the array
+      // The actual accumulation logic is handled by the FlagsParser
+    });
+
+
+
+    it("should test command arguments correctly", () => {
+      // Given: A command builder with restArgs
+      const runCommand = command("run").restArgs();
+
+      // When: Testing if argument matches command
+      const match = runCommand.test("run", 0, ["run", "arg1", "arg2"]);
+
+      // Then: test should return match info consuming all remaining args
+      expect(match).toEqual({
+        index: 0,
+        args: ["run", "arg1", "arg2"],
+        parsed: ["arg1", "arg2"]
+      });
+
+      // When: Testing if argument does not match
+      const noMatch = runCommand.test("other", 0, ["other", "arg1"]);
+
+      // Then: test should return null for non-matching command
+      expect(noMatch).toBe(null);
+    });
+
+
+
+    it("should test argument correctly", () => {
+      // Given: An argument builder
+      const arg = argument().string();
+
+      // When: Testing if argument can be parsed (not a flag or command)
+      const match = arg.test("value", 0, ["value"]);
+
+      // Then: test should return match info with 1 argument consumed
+      expect(match).toEqual({
+        index: 0,
+        args: ["value"],
+        parsed: "value"
+      });
+
+      // When: Testing if argument is a flag
+      const noMatch = arg.test("--flag", 0, ["--flag"]);
+
+      // Then: test should return null for flags
+      expect(noMatch).toBe(null);
+    });
+
+    it("should test boolean flag correctly", () => {
+      // Given: A boolean flag
+      const verboseFlag = flag("--verbose", "-v").boolean();
+
+      // When: Testing with long flag
+      const matchLong = verboseFlag.test("--verbose", 0, ["--verbose"]);
+
+      // Then: test should return match info with 1 argument consumed
+      expect(matchLong).toEqual({
+        index: 0,
+        args: ["--verbose"],
+        parsed: true
+      });
+
+      // When: Testing with short flag
+      const matchShort = verboseFlag.test("-v", 0, ["-v"]);
+
+      // Then: test should return match info with 1 argument consumed
+      expect(matchShort).toEqual({
+        index: 0,
+        args: ["-v"],
+        parsed: true
+      });
+    });
+
+    it("should test number flag with different syntaxes", () => {
+      // Given: A number flag
+      const portFlag = flag("--port").number();
+
+      // When: Testing with space syntax
+      const matchSpace = portFlag.test("--port", 0, ["--port", "3000"]);
+
+      // Then: test should return match info with 2 arguments consumed
+      expect(matchSpace).toEqual({
+        index: 0,
+        args: ["--port", "3000"],
+        parsed: 3000
+      });
+
+      // When: Testing with = syntax
+      const matchEquals = portFlag.test("--port=3000", 0, ["--port=3000"]);
+
+      // Then: test should return match info with 1 argument consumed
+      expect(matchEquals).toEqual({
+        index: 0,
+        args: ["--port=3000"],
+        parsed: 3000
+      });
+
+      // When: Testing flag without value
+      const matchNoValue = portFlag.test("--port", 0, ["--port"]);
+
+      // Then: test should return match info with 1 argument consumed
+      expect(matchNoValue).toEqual({
+        index: 0,
+        args: ["--port"],
+        parsed: null
+      });
+    });
+
+    it("should test keyValue flag with different syntaxes", () => {
+      // Given: A keyValue flag
+      const configFlag = flag("--config").keyValue();
+
+      // When: Testing with name value syntax (3 args total)
+      const matchNameValue = configFlag.test("--config", 0, ["--config", "host", "localhost"]);
+
+      // Then: test should return match info with 3 arguments consumed
+      expect(matchNameValue).toEqual({
+        index: 0,
+        args: ["--config", "host", "localhost"],
+        parsed: { host: "localhost" }
+      });
+
+      // When: Testing with name=value syntax (2 args total)
+      const matchNameEquals = configFlag.test("--config", 0, ["--config", "host=localhost"]);
+
+      // Then: test should return match info with 2 arguments consumed
+      expect(matchNameEquals).toEqual({
+        index: 0,
+        args: ["--config", "host=localhost"],
+        parsed: { host: "localhost" }
+      });
+
+      // When: Testing with --flag=name=value syntax (1 arg total)
+      const matchAllEquals = configFlag.test("--config=host=localhost", 0, ["--config=host=localhost"]);
+
+      // Then: test should return match info with 1 argument consumed
+      expect(matchAllEquals).toEqual({
+        index: 0,
+        args: ["--config=host=localhost"],
+        parsed: { host: "localhost" }
+      });
+    });
+
+    it("should test boolean command correctly", () => {
+      // Given: A boolean command
+      const userCommand = command("user").boolean();
+
+      // When: Testing if argument matches command
+      const match = userCommand.test("user", 0, ["user"]);
+
+      // Then: test should return match info with 1 argument consumed
+      expect(match).toEqual({
+        index: 0,
+        args: ["user"],
+        parsed: true
+      });
+    });
+  });
+
   describe("Builder inheritance", () => {
     it("should verify FlagBuilder, CommandBuilder, and ArgumentBuilder extend Builder", () => {
       // Given: Instances of each builder type

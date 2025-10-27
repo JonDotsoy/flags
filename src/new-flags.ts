@@ -36,43 +36,77 @@ type InferFlagType<T> = T extends {
   default?: infer D;
 }
   ? U extends "boolean"
-    ? boolean
-    : U extends "string"
-      ? R extends true
-        ? string
-        : D extends string
-          ? string
-          : string | null
-      : U extends "strings"
-        ? string[]
-        : U extends "number"
-          ? R extends true
-            ? number
-            : D extends number
-              ? number
-              : number | null
-          : U extends "keyValue"
-            ? Record<string, string>
-            : U extends "restArgs"
-              ? string[] | null
-              : never
+  ? boolean
+  : U extends "string"
+  ? R extends true
+  ? string
+  : D extends string
+  ? string
+  : string | null
+  : U extends "strings"
+  ? string[]
+  : U extends "number"
+  ? R extends true
+  ? number
+  : D extends number
+  ? number
+  : number | null
+  : U extends "keyValue"
+  ? Record<string, string>
+  : U extends "restArgs"
+  ? string[] | null
+  : never
   : never;
 
-abstract class Builder<T extends BaseConfig> {
-  constructor(protected config: T) {}
+type InferParseResult<T> = T extends {
+  type: infer U;
+  required?: infer R;
+  default?: infer D;
+}
+  ? U extends "boolean"
+  ? boolean
+  : U extends "string"
+  ? R extends true
+  ? string
+  : D extends string
+  ? string
+  : string | null
+  : U extends "strings"
+  ? string | null
+  : U extends "number"
+  ? R extends true
+  ? number
+  : D extends number
+  ? number
+  : number | null
+  : U extends "keyValue"
+  ? Record<string, string>
+  : U extends "restArgs"
+  ? string[] | null
+  : never
+  : never;
 
-  abstract toConfig(): T;
+export abstract class Builder<InitialValue, ParseResult> {
+  constructor(protected config: BaseConfig) { }
+
+  abstract toConfig(): BaseConfig;
+  abstract initialValue(): InitialValue;
+  abstract test(
+    arg: string,
+    index: number,
+    args: string[],
+  ): null | { index: number; args: string[]; parsed: ParseResult };
 
   describe(desc: string): this {
-    const newConfig = { ...this.config, description: desc } as T;
+    const newConfig = { ...this.config, description: desc };
     return new (this.constructor as any)(newConfig);
   }
 }
 
-class FlagBuilder<
+export class FlagBuilder<
   T extends FlagConfig = FlagConfig<"boolean">,
-> extends Builder<T> {
-  constructor(config: T) {
+> extends Builder<InferFlagType<T>, InferParseResult<T>> {
+  constructor(protected config: T) {
     super(config);
   }
 
@@ -82,6 +116,170 @@ class FlagBuilder<
 
   get type() {
     return this.config.type;
+  }
+
+  initialValue(): InferFlagType<T> {
+    const config = this.config;
+
+    if (config.default !== undefined && typeof config.default !== "function") {
+      return config.default as InferFlagType<T>;
+    }
+
+    if (config.type === "boolean") {
+      return false as InferFlagType<T>;
+    } else if (config.type === "string") {
+      return null as InferFlagType<T>;
+    } else if (config.type === "strings") {
+      return [] as InferFlagType<T>;
+    } else if (config.type === "number") {
+      return null as InferFlagType<T>;
+    } else if (config.type === "keyValue") {
+      return {} as InferFlagType<T>;
+    }
+
+    return null as InferFlagType<T>;
+  }
+
+  test(
+    arg: string,
+    index: number,
+    args: string[],
+  ): null | { index: number; args: string[]; parsed: InferParseResult<T> } {
+    const config = this.config;
+
+    // Check if arg matches any of the flag names
+    for (const name of config.names) {
+      if (arg === name || arg.startsWith(name + "=")) {
+        // Parse the value and determine consumed arguments
+        const parsed = this.parse(arg, index, args);
+        let consumedArgs: string[] = [arg];
+
+        if (config.type === "boolean") {
+          // Boolean flags only consume 1 argument
+          consumedArgs = [arg];
+        } else if (arg.includes("=")) {
+          // Flags with = syntax consume 1 argument
+          consumedArgs = [arg];
+        } else if (
+          config.type === "string" ||
+          config.type === "strings" ||
+          config.type === "number"
+        ) {
+          // Check if there's a next argument that's not a flag
+          if (index + 1 < args.length && !args[index + 1].startsWith("-")) {
+            consumedArgs = [arg, args[index + 1]];
+          } else {
+            consumedArgs = [arg];
+          }
+        } else if (config.type === "keyValue") {
+          // KeyValue can consume 1, 2, or 3 arguments
+          if (arg.includes("=")) {
+            // --config=name=value (1 arg)
+            consumedArgs = [arg];
+          } else if (
+            index + 1 < args.length &&
+            !args[index + 1].startsWith("-")
+          ) {
+            const nextArg = args[index + 1];
+            if (nextArg.includes("=")) {
+              // --config name=value (2 args)
+              consumedArgs = [arg, nextArg];
+            } else if (
+              index + 2 < args.length &&
+              !args[index + 2].startsWith("-")
+            ) {
+              // --config name value (3 args)
+              consumedArgs = [arg, nextArg, args[index + 2]];
+            } else {
+              // --config name (2 args, value will be empty)
+              consumedArgs = [arg, nextArg];
+            }
+          } else {
+            consumedArgs = [arg];
+          }
+        }
+
+        return { index, args: consumedArgs, parsed };
+      }
+    }
+
+    return null;
+  }
+
+  private parse(arg: string, index: number, args: string[]): InferParseResult<T> {
+    const config = this.config;
+
+    // Extract flag name and value
+    let flagName: string;
+    let value: string | null;
+
+    if (arg.includes("=")) {
+      const equalIndex = arg.indexOf("=");
+      flagName = arg.substring(0, equalIndex);
+      value = arg.substring(equalIndex + 1);
+    } else {
+      flagName = arg;
+      value = null;
+    }
+
+    if (config.type === "boolean") {
+      return true as InferParseResult<T>;
+    } else if (config.type === "string") {
+      if (value !== null) {
+        return value as InferParseResult<T>;
+      } else if (index + 1 < args.length && !args[index + 1].startsWith("-")) {
+        return args[index + 1] as InferParseResult<T>;
+      } else {
+        return null as InferParseResult<T>;
+      }
+    } else if (config.type === "strings") {
+      // For strings type, return single value to be accumulated
+      if (value !== null) {
+        return value as InferParseResult<T>;
+      } else if (index + 1 < args.length && !args[index + 1].startsWith("-")) {
+        return args[index + 1] as InferParseResult<T>;
+      }
+      return null as InferParseResult<T>;
+    } else if (config.type === "number") {
+      let numValue: string | null = null;
+      if (value !== null) {
+        numValue = value;
+      } else if (index + 1 < args.length && !args[index + 1].startsWith("-")) {
+        numValue = args[index + 1];
+      }
+      return (numValue !== null ? Number(numValue) : null) as InferParseResult<T>;
+    } else if (config.type === "keyValue") {
+      let kvPair: string | null = null;
+
+      if (value !== null) {
+        kvPair = value;
+      } else if (index + 1 < args.length && !args[index + 1].startsWith("-")) {
+        kvPair = args[index + 1];
+      }
+
+      const result: Record<string, string> = {};
+
+      if (kvPair !== null) {
+        if (kvPair.includes("=")) {
+          const equalIndex = kvPair.indexOf("=");
+          const k = kvPair.substring(0, equalIndex);
+          const v = kvPair.substring(equalIndex + 1);
+          result[k] = v;
+        } else {
+          const k = kvPair;
+          if (index + 2 < args.length && !args[index + 2].startsWith("-")) {
+            const v = args[index + 2];
+            result[k] = v;
+          } else {
+            result[k] = "";
+          }
+        }
+      }
+
+      return result as InferParseResult<T>;
+    }
+
+    return null as InferParseResult<T>;
   }
 
   boolean(): FlagBuilder<FlagConfig<"boolean">> {
@@ -130,12 +328,12 @@ class FlagBuilder<
 
   default<
     D extends T["type"] extends "number"
-      ? number
-      : T["type"] extends "string"
-        ? string
-        : T["type"] extends "keyValue"
-          ? Record<string, string>
-          : never,
+    ? number
+    : T["type"] extends "string"
+    ? string
+    : T["type"] extends "keyValue"
+    ? Record<string, string>
+    : never,
   >(
     value: D,
   ): FlagBuilder<
@@ -169,8 +367,8 @@ export function flag(...names: string[]): FlagBuilder<FlagConfig<"boolean">> {
 
 class CommandBuilder<
   T extends CommandConfig = CommandConfig<"boolean">,
-> extends Builder<T> {
-  constructor(config: T) {
+> extends Builder<InferFlagType<T>, InferParseResult<T>> {
+  constructor(protected config: T) {
     super(config);
   }
 
@@ -180,6 +378,55 @@ class CommandBuilder<
 
   get type() {
     return this.config.type;
+  }
+
+  initialValue(): InferFlagType<T> {
+    const config = this.config;
+
+    if (config.type === "boolean") {
+      return false as InferFlagType<T>;
+    } else if (config.type === "restArgs") {
+      return null as InferFlagType<T>;
+    }
+
+    return null as InferFlagType<T>;
+  }
+
+  test(
+    arg: string,
+    index: number,
+    args: string[],
+  ): null | { index: number; args: string[]; parsed: InferParseResult<T> } {
+    if (arg !== this.config.name) {
+      return null;
+    }
+
+    const config = this.config;
+    const parsed = this.parse(arg, index, args);
+
+    if (config.type === "boolean") {
+      // Boolean commands consume 1 argument
+      return { index, args: [arg], parsed };
+    } else if (config.type === "restArgs") {
+      // restArgs commands consume all remaining arguments
+      const consumedArgs = args.slice(index);
+      return { index, args: consumedArgs, parsed };
+    }
+
+    return { index, args: [arg], parsed };
+  }
+
+  private parse(arg: string, index: number, args: string[]): InferParseResult<T> {
+    const config = this.config;
+
+    if (config.type === "boolean") {
+      return true as InferParseResult<T>;
+    } else if (config.type === "restArgs") {
+      const restArgs = args.slice(index + 1);
+      return (restArgs.length > 0 ? restArgs : []) as InferParseResult<T>;
+    }
+
+    return null as InferParseResult<T>;
   }
 
   boolean(): CommandBuilder<CommandConfig<"boolean">> {
@@ -213,13 +460,36 @@ export function command(
 
 class ArgumentBuilder<
   T extends ArgumentConfig = ArgumentConfig<"string">,
-> extends Builder<T> {
-  constructor(config: T) {
+> extends Builder<InferFlagType<T>, InferParseResult<T>> {
+  constructor(protected config: T) {
     super(config);
   }
 
   get type() {
     return this.config.type;
+  }
+
+  initialValue(): InferFlagType<T> {
+    return null as InferFlagType<T>;
+  }
+
+  test(
+    arg: string,
+    index: number,
+    args: string[],
+  ): null | { index: number; args: string[]; parsed: InferParseResult<T> } {
+    // Arguments match any non-flag, non-command value
+    if (arg.startsWith("-")) {
+      return null;
+    }
+
+    // Positional arguments consume 1 argument
+    const parsed = this.parse(arg, index, args);
+    return { index, args: [arg], parsed };
+  }
+
+  private parse(arg: string, index: number, args: string[]): InferParseResult<T> {
+    return arg as InferParseResult<T>;
   }
 
   string(): ArgumentBuilder<ArgumentConfig<"string">> {
@@ -252,12 +522,12 @@ export function argument(): ArgumentBuilder<ArgumentConfig<"string">> {
 
 type ExtractConfig<T> =
   T extends FlagBuilder<infer C>
-    ? C
-    : T extends CommandBuilder<infer C>
-      ? C
-      : T extends ArgumentBuilder<infer C>
-        ? C
-        : T;
+  ? C
+  : T extends CommandBuilder<infer C>
+  ? C
+  : T extends ArgumentBuilder<infer C>
+  ? C
+  : T;
 
 type ParseResult<T extends Record<string, any>> = {
   [K in keyof T]: InferFlagType<ExtractConfig<T[K]>>;
@@ -267,7 +537,7 @@ class FlagsParser<T extends Record<string, any>> {
   private _programName: string = "cli";
   private _description?: string;
 
-  constructor(private schema: T) {}
+  constructor(private schema: T) { }
 
   programName(name: string): this {
     this._programName = name;
@@ -371,8 +641,8 @@ class FlagsParser<T extends Record<string, any>> {
           // Initialize with default value if provided, otherwise empty object
           result[key] =
             config.default !== undefined &&
-            typeof config.default === "object" &&
-            config.default !== null
+              typeof config.default === "object" &&
+              config.default !== null
               ? { ...config.default }
               : {};
         }
