@@ -2330,3 +2330,502 @@ describe("Type transformations with Builder generics", () => {
     }
   });
 });
+
+describe("Legacy flags.spec.ts compatibility tests", () => {
+  describe("Basic flag parsing", () => {
+    it("should run flags function with empty config", () => {
+      // Given: A parser with no flags
+      interface Options {
+        version: boolean;
+        name: string;
+        help: boolean;
+      }
+
+      const parser = flags({});
+
+      // When: Parsing empty arguments
+      const result = parser.parse([]);
+
+      // Then: Should not throw
+      expect(result).toEqual({});
+    });
+
+    it("should return undefined for unprovided flags (version)", () => {
+      // Given: A parser with version flag
+      interface Options {
+        version: boolean;
+        name: string;
+        help: boolean;
+      }
+
+      const parser = flags({
+        version: flag("--version", "-v").boolean(),
+      });
+
+      // When: Parsing empty arguments
+      const result = parser.parse([]);
+
+      // Then: Version should be false (not undefined, but false for boolean)
+      expect(result.version).toBe(false);
+    });
+
+    it("should parse version flag as true with ['--version']", () => {
+      // Given: A parser with version flag
+      interface Options {
+        version: boolean;
+        name: string;
+        help: boolean;
+      }
+
+      const parser = flags({
+        version: flag("--version", "-v").boolean(),
+      });
+
+      // When: Parsing arguments with --version
+      const result = parser.parse(["--version"]);
+
+      // Then: Version should be true
+      expect(result.version).toBe(true);
+    });
+
+    it("should parse name flag as 'foo' with ['--name','foo']", () => {
+      // Given: A parser with name flag
+      interface Options {
+        version: boolean;
+        name: string;
+        help: boolean;
+      }
+
+      const parser = flags({
+        name: flag("--name").string(),
+      });
+
+      // When: Parsing arguments with --name foo
+      const result = parser.parse(["--name", "foo"]);
+
+      // Then: Name should be "foo"
+      expect(result.name).toEqual("foo");
+    });
+
+    it("should parse name flag as 'foo' with ['--name=foo']", () => {
+      // Given: A parser with name flag
+      interface Options {
+        version: boolean;
+        name: string;
+        help: boolean;
+      }
+
+      const parser = flags({
+        name: flag("--name").string(),
+      });
+
+      // When: Parsing arguments with --name=foo
+      const result = parser.parse(["--name=foo"]);
+
+      // Then: Name should be "foo"
+      expect(result.name).toEqual("foo");
+    });
+
+    it("should parse name='foo' and version=true with ['--name=foo','-v']", () => {
+      // Given: A parser with name and version flags
+      interface Options {
+        version: boolean;
+        name: string;
+        help: boolean;
+      }
+
+      const parser = flags({
+        name: flag("--name").string(),
+        version: flag("--version", "-v").boolean(),
+      });
+
+      // When: Parsing arguments with --name=foo and -v
+      const result = parser.parse(["--name=foo", "-v"]);
+
+      // Then: Name should be "foo" and version should be true
+      expect(result.name).toEqual("foo");
+      expect(result.version).toBe(true);
+    });
+
+    it("should reject if not match argument", () => {
+      // Given: A parser with verbose flag
+      const parser = flags({
+        verbose: flag("--verbose", "-V").boolean(),
+      });
+
+      // When/Then: Parsing unknown argument should throw
+      expect(() => {
+        parser.parse(["-V", "unknown"]);
+      }).toThrow(/unexpected argument/i);
+    });
+  });
+
+  describe("Rest arguments", () => {
+    it("should group rest of arguments on a property with any()", () => {
+      // Given: A parser with verbose flag and rest arguments
+      const parser = flags({
+        verbose: flag("--verbose", "-V").boolean(),
+        rest: argument().restArgs(),
+      });
+
+      // When: Parsing arguments with -V and multiple unknown args
+      const result = parser.parse([
+        "-V",
+        "unknown",
+        "unknown2",
+        "unknown3",
+        "unknown4",
+        "unknown5",
+      ]);
+
+      // Then: Rest should contain all non-flag arguments
+      expect(result.rest).toEqual([
+        "unknown",
+        "unknown2",
+        "unknown3",
+        "unknown4",
+        "unknown5",
+      ]);
+    });
+
+    it("should group rest of arguments after command", () => {
+      // Given: A parser with verbose flag and command with rest args
+      const parser = flags({
+        verbose: flag("--verbose", "-V").boolean(),
+        name: command("name").restArgs(),
+      });
+
+      // When: Parsing arguments with command name and rest args
+      const result = parser.parse([
+        "name",
+        "unknown",
+        "-V",
+        "unknown2",
+        "unknown3",
+        "unknown4",
+        "unknown5",
+      ]);
+
+      // Then: Rest should contain all arguments after command
+      expect(result.name).toEqual([
+        "unknown",
+        "-V",
+        "unknown2",
+        "unknown3",
+        "unknown4",
+        "unknown5",
+      ]);
+    });
+
+    it("should match command with rest arguments", () => {
+      // Given: A parser with verbose flag and say command
+      type Options = {
+        verbose: boolean;
+        say: string[];
+      };
+
+      const parser = flags({
+        verbose: flag("-V", "--verbose").boolean(),
+        say: command("say").restArgs(),
+      });
+
+      // When: Parsing arguments with -V and say command
+      const result = parser.parse(["-V", "say", "hello"]);
+
+      // Then: Verbose should be true and say should contain ["hello"]
+      expect(result.verbose).toBe(true);
+      expect(result.say).toEqual(["hello"]);
+    });
+  });
+
+  describe("Arguments", () => {
+    it("should get the first argument", () => {
+      // Given: A parser with a single argument
+      const parser = flags({
+        firstArg: argument().string(),
+      });
+
+      // When: Parsing arguments with one value
+      const result = parser.parse(["foo"]);
+
+      // Then: FirstArg should be "foo"
+      expect(result.firstArg).toEqual("foo");
+    });
+
+    it("should get the second argument", () => {
+      // Given: A parser with two arguments
+      const parser = flags({
+        firstArg: argument().string(),
+        secondArg: argument().string(),
+      });
+
+      // When: Parsing arguments with two values
+      const result = parser.parse(["foo", "taz"]);
+
+      // Then: SecondArg should be "taz"
+      expect(result.secondArg).toEqual("taz");
+    });
+
+    it("should throw error if more arguments than rules", () => {
+      // Given: A parser with a single argument
+      const parser = flags({
+        firstArg: argument().string(),
+      });
+
+      // When/Then: Parsing with too many arguments should throw
+      expect(() => {
+        parser.parse(["foo", "taz"]);
+      }).toThrow();
+    });
+  });
+
+  describe("Array values", () => {
+    it("should collect multiple values into a list", () => {
+      // Given: A parser with strings array flag
+      interface Options {
+        items: string[];
+      }
+
+      const parser = flags({
+        items: flag("--taz").strings(),
+      });
+
+      // When: Parsing arguments with multiple --taz flags
+      const result = parser.parse(["--taz", "foo", "--taz", "buz"]);
+
+      // Then: Items should contain ["foo", "buz"]
+      expect(result.items).toEqual(["foo", "buz"]);
+    });
+
+    it("should parse numbers with number flag", () => {
+      // Given: A parser with number flags
+      interface Options {
+        num1: number;
+        num2: number;
+        num3: number;
+      }
+
+      const parser = flags({
+        num1: flag("--num1").number(),
+        num2: flag("--num2").number(),
+        num3: flag("--num3").number(),
+      });
+
+      // When: Parsing arguments with numbers and invalid number
+      const result = parser.parse([
+        "--num1",
+        "1",
+        "--num2",
+        "1.24",
+        "--num3",
+        "foo",
+      ]);
+
+      // Then: num1 should be 1, num2 should be 1.24, num3 should be NaN
+      expect(result.num1).toBe(1);
+      expect(result.num2).toBeCloseTo(1.24);
+      expect(result.num3).toBeNaN();
+    });
+
+    it("should collect multiple numbers into a list with isArrayNumberAt equivalent", () => {
+      // Given: A parser with numbers array flag (using strings and manual conversion)
+      interface Options {
+        nums: string[];
+      }
+
+      const parser = flags({
+        nums: flag("--nums").strings(),
+      });
+
+      // When: Parsing arguments with multiple --nums flags
+      // Note: In new-flags, negative numbers need special handling or use = syntax
+      const result = parser.parse([
+        "--nums",
+        "1",
+        "--nums",
+        "2.5",
+        "--nums=-3",
+      ]);
+
+      // Then: Nums should contain string values that can be converted to numbers
+      const nums = result.nums.map(Number);
+      expect(nums).toEqual([1, 2.5, -3]);
+    });
+  });
+
+  describe("Chained syntax", () => {
+    it("should support chained syntax: flag().boolean()", () => {
+      // Given: A parser with chained boolean flag
+      interface Options {
+        version: boolean;
+      }
+
+      const parser = flags({
+        version: flag("--version", "-v").boolean(),
+      });
+
+      // When: Parsing arguments with --version
+      const result = parser.parse(["--version"]);
+
+      // Then: Version should be true
+      expect(result.version).toBe(true);
+    });
+
+    it("should support chained syntax: flag().boolean().describe()", () => {
+      // Given: A parser with chained boolean flag with description
+      interface Options {
+        version: boolean;
+      }
+
+      const parser = flags({
+        version: flag("--version", "-v").boolean().describe("Show version"),
+      });
+
+      // When: Parsing arguments with --version
+      const result = parser.parse(["--version"]);
+
+      // Then: Version should be true
+      expect(result.version).toBe(true);
+
+      // Then: Config should have description
+      const config = flag("--version", "-v")
+        .boolean()
+        .describe("Show version")
+        .toConfig();
+      expect(config.description).toBe("Show version");
+    });
+
+    it("should support chained syntax: flag().string()", () => {
+      // Given: A parser with chained string flag
+      interface Options {
+        name: string;
+      }
+
+      const parser = flags({
+        name: flag("--name", "-n").string(),
+      });
+
+      // When: Parsing arguments with --name foo
+      const result = parser.parse(["--name", "foo"]);
+
+      // Then: Name should be "foo"
+      expect(result.name).toBe("foo");
+    });
+
+    it("should support chained syntax: flag().string().describe()", () => {
+      // Given: A parser with chained string flag with description
+      interface Options {
+        name: string;
+      }
+
+      const parser = flags({
+        name: flag("--name", "-n").string().describe("Set the name"),
+      });
+
+      // When: Parsing arguments with --name bar
+      const result = parser.parse(["--name", "bar"]);
+
+      // Then: Name should be "bar"
+      expect(result.name).toBe("bar");
+
+      // Then: Config should have description
+      const config = flag("--name", "-n")
+        .string()
+        .describe("Set the name")
+        .toConfig();
+      expect(config.description).toBe("Set the name");
+    });
+
+    it("should support chained syntax: flag().number().describe()", () => {
+      // Given: A parser with chained number flag with description
+      interface Options {
+        port: number;
+      }
+
+      const parser = flags({
+        port: flag("--port", "-p").number().describe("Port number"),
+      });
+
+      // When: Parsing arguments with --port 3000
+      const result = parser.parse(["--port", "3000"]);
+
+      // Then: Port should be 3000
+      expect(result.port).toBe(3000);
+
+      // Then: Config should have description
+      const config = flag("--port", "-p")
+        .number()
+        .describe("Port number")
+        .toConfig();
+      expect(config.description).toBe("Port number");
+    });
+
+    it("should support chained syntax: flag().strings().describe()", () => {
+      // Given: A parser with chained strings flag with description
+      interface Options {
+        items: string[];
+      }
+
+      const parser = flags({
+        items: flag("--item").strings().describe("Add an item"),
+      });
+
+      // When: Parsing arguments with multiple --item flags
+      const result = parser.parse(["--item", "a", "--item", "b"]);
+
+      // Then: Items should contain ["a", "b"]
+      expect(result.items).toEqual(["a", "b"]);
+
+      // Then: Config should have description
+      const config = flag("--item")
+        .strings()
+        .describe("Add an item")
+        .toConfig();
+      expect(config.description).toBe("Add an item");
+    });
+
+    it("should support multiple chained flags in schema", () => {
+      // Given: A parser with multiple chained flags
+      interface Options {
+        version: boolean;
+        name: string;
+        port: number;
+      }
+
+      const parser = flags({
+        version: flag("--version", "-v").boolean().describe("Show version"),
+        name: flag("--name", "-n").string().describe("Set name"),
+        port: flag("--port", "-p").number(),
+      });
+
+      // When: Parsing arguments with all flags
+      const result = parser.parse([
+        "--version",
+        "--name",
+        "test",
+        "--port",
+        "8080",
+      ]);
+
+      // Then: All flags should be parsed correctly
+      expect(result.version).toBe(true);
+      expect(result.name).toBe("test");
+      expect(result.port).toBe(8080);
+
+      // Then: Configs should have descriptions
+      const versionConfig = flag("--version", "-v")
+        .boolean()
+        .describe("Show version")
+        .toConfig();
+      const nameConfig = flag("--name", "-n")
+        .string()
+        .describe("Set name")
+        .toConfig();
+      const portConfig = flag("--port", "-p").number().toConfig();
+
+      expect(versionConfig.description).toBe("Show version");
+      expect(nameConfig.description).toBe("Set name");
+      expect(portConfig.description).toBeUndefined();
+    });
+  });
+});
