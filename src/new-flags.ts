@@ -2,7 +2,7 @@ type BaseConfig = {
   description?: string;
 };
 
-type FlagConfig<
+type BuilderConfig<
   T = "boolean" | "string" | "strings" | "number" | "keyValue",
   R extends boolean = boolean,
   D = any,
@@ -96,6 +96,12 @@ export abstract class Builder<InitialValue, ParseResult> {
     index: number,
     args: string[],
   ): null | { index: number; args: string[]; parsed: ParseResult };
+  abstract accumulate(current: InitialValue, parsed: ParseResult): InitialValue;
+  abstract shouldStopParsing(): boolean;
+  abstract isPositionalArgument(): boolean;
+  abstract builderKind(): "flag" | "command" | "argument";
+  abstract applyDefault(result: any, key: string | number | symbol): void;
+  abstract validateRequired(result: any, key: string | number | symbol): void;
 
   describe(desc: string): this {
     const newConfig = { ...this.config, description: desc };
@@ -107,7 +113,7 @@ export class FlagBuilder<InitialValue, ParseResult> extends Builder<
   InitialValue,
   ParseResult
 > {
-  constructor(protected config: FlagConfig) {
+  constructor(protected config: BuilderConfig) {
     super(config);
   }
 
@@ -331,7 +337,52 @@ export class FlagBuilder<InitialValue, ParseResult> extends Builder<
     });
   }
 
-  toConfig(): FlagConfig {
+  accumulate(current: InitialValue, parsed: ParseResult): InitialValue {
+    const config = this.config;
+
+    if (config.type === "strings") {
+      // Accumulate strings into array
+      if (parsed !== null) {
+        (current as string[]).push(parsed as string);
+      }
+      return current;
+    } else if (config.type === "keyValue") {
+      // Merge key-value pairs
+      Object.assign(current as object, parsed);
+      return current;
+    } else {
+      // Direct assignment for other types
+      return parsed as unknown as InitialValue;
+    }
+  }
+
+  shouldStopParsing(): boolean {
+    return false;
+  }
+
+  isPositionalArgument(): boolean {
+    return false;
+  }
+
+  builderKind(): "flag" | "command" | "argument" {
+    return "flag";
+  }
+
+  applyDefault(result: any, key: string | number | symbol): void {
+    const config = this.config;
+    if (config.default !== undefined && typeof config.default !== "function") {
+      result[key] = config.default;
+    }
+  }
+
+  validateRequired(result: any, key: string | number | symbol): void {
+    const config = this.config;
+    if (config.required === true) {
+      throw new Error(`Required flag missing: ${config.names[0]}`);
+    }
+  }
+
+  toConfig(): BuilderConfig {
     return this.config;
   }
 }
@@ -422,6 +473,32 @@ class CommandBuilder<InitialValue, ParseResult> extends Builder<
     });
   }
 
+  accumulate(current: InitialValue, parsed: ParseResult): InitialValue {
+    // Commands always replace the value
+    return parsed as unknown as InitialValue;
+  }
+
+  shouldStopParsing(): boolean {
+    // Stop parsing if this is a restArgs command
+    return this.config.type === "restArgs";
+  }
+
+  isPositionalArgument(): boolean {
+    return false;
+  }
+
+  builderKind(): "flag" | "command" | "argument" {
+    return "command";
+  }
+
+  applyDefault(result: any, key: string | number | symbol): void {
+    // Commands don't have default values
+  }
+
+  validateRequired(result: any, key: string | number | symbol): void {
+    // Commands don't have required validation
+  }
+
   toConfig(): CommandConfig {
     return this.config;
   }
@@ -484,6 +561,34 @@ class ArgumentBuilder<InitialValue, ParseResult> extends Builder<
     });
   }
 
+  accumulate(current: InitialValue, parsed: ParseResult): InitialValue {
+    // Arguments always replace the value
+    return parsed as unknown as InitialValue;
+  }
+
+  shouldStopParsing(): boolean {
+    return false;
+  }
+
+  isPositionalArgument(): boolean {
+    return true;
+  }
+
+  builderKind(): "flag" | "command" | "argument" {
+    return "argument";
+  }
+
+  applyDefault(result: any, key: string | number | symbol): void {
+    // Arguments don't have default values
+  }
+
+  validateRequired(result: any, key: string | number | symbol): void {
+    const config = this.config;
+    if (config.required === true) {
+      throw new Error(`Required argument missing`);
+    }
+  }
+
   toConfig(): ArgumentConfig {
     return this.config;
   }
@@ -536,14 +641,14 @@ class FlagsParser<T extends Record<string, any>> {
     const flags: Array<[string, any]> = [];
     const commands: Array<[string, any]> = [];
 
-    for (const [key, flagBuilder] of Object.entries(this.schema)) {
-      if (flagBuilder instanceof CommandBuilder) {
-        commands.push([key, flagBuilder]);
-      } else if (flagBuilder instanceof FlagBuilder) {
-        flags.push([key, flagBuilder]);
-      } else if (flagBuilder instanceof ArgumentBuilder) {
-        // Skip arguments in help for now
+    for (const [key, builder] of Object.entries(this.schema)) {
+      const kind = builder.builderKind();
+      if (kind === "flag") {
+        flags.push([key, builder]);
+      } else if (kind === "command") {
+        commands.push([key, builder]);
       }
+      // Skip arguments in help for now
     }
 
     // Options header and details
@@ -585,19 +690,23 @@ class FlagsParser<T extends Record<string, any>> {
 
   parse(args: string[]): ParseResultType<T> {
     const result: any = {};
-    const builders: Array<{ key: keyof T; builder: Builder<any, any> }> = [];
+    const builders: Array<{
+      key: keyof T;
+      builder: Builder<any, any>;
+      used: boolean;
+    }> = [];
 
     // Initialize values using builder.initialValue()
     for (const [key, builder] of Object.entries(this.schema)) {
       result[key] = builder.initialValue();
-      builders.push({ key, builder });
+      builders.push({ key, builder, used: false });
     }
 
     // Parse arguments using builder.test()
     let i = 0;
     let currentArgumentIndex = 0;
-    const argumentBuilders = builders.filter(
-      ({ builder }) => builder instanceof ArgumentBuilder,
+    const argumentBuilders = builders.filter(({ builder }) =>
+      builder.isPositionalArgument(),
     );
 
     while (i < args.length) {
@@ -605,51 +714,34 @@ class FlagsParser<T extends Record<string, any>> {
       let matched = false;
 
       // Try to match with each builder
-      for (const { key, builder } of builders) {
+      for (const builderEntry of builders) {
+        const { key, builder } = builderEntry;
         const match = builder.test(arg, i, args);
 
         if (match !== null) {
-          // Handle different builder types
-          if (builder instanceof FlagBuilder) {
-            const config = builder.toConfig();
-
-            if (config.type === "strings") {
-              // Accumulate strings
-              if (match.parsed !== null) {
-                result[key].push(match.parsed);
-              }
-            } else if (config.type === "keyValue") {
-              // Merge key-value pairs
-              Object.assign(result[key], match.parsed);
-            } else {
-              // Direct assignment for other types
-              result[key] = match.parsed;
-            }
-            matched = true;
-          } else if (builder instanceof CommandBuilder) {
-            const config = builder.toConfig();
-
-            if (config.type === "restArgs") {
-              // Assign rest args and stop processing
-              result[key] = match.parsed;
-              i = args.length; // Exit loop
-              matched = true;
-              break;
-            } else {
-              result[key] = match.parsed;
-              matched = true;
-            }
-          } else if (builder instanceof ArgumentBuilder) {
-            // Only match arguments in order
+          // Special handling for positional arguments - only match in order
+          if (builder.isPositionalArgument()) {
             if (
               currentArgumentIndex < argumentBuilders.length &&
               argumentBuilders[currentArgumentIndex].key === key
             ) {
-              result[key] = match.parsed;
+              result[key] = builder.accumulate(result[key], match.parsed);
               currentArgumentIndex++;
+              builderEntry.used = true;
               matched = true;
             }
             // If not the right position, continue to next builder
+          } else {
+            // Use accumulate method for all other builders
+            result[key] = builder.accumulate(result[key], match.parsed);
+            builderEntry.used = true;
+            matched = true;
+
+            // Check if we should stop parsing (e.g., restArgs commands)
+            if (builder.shouldStopParsing()) {
+              i = args.length; // Exit loop
+              break;
+            }
           }
 
           // Advance index by consumed args if matched
@@ -661,53 +753,17 @@ class FlagsParser<T extends Record<string, any>> {
       }
 
       if (!matched) {
-        // Check if it's a flag (starts with -)
-        if (arg.startsWith("-")) {
-          const flagName = arg.includes("=")
-            ? arg.substring(0, arg.indexOf("="))
-            : arg;
-          throw new Error(`Unknown flag: ${flagName}`);
-        } else {
-          // It's an unexpected positional argument
-          throw new Error(`Unexpected argument: ${arg}`);
-        }
+        throw new Error(`Unexpected argument: ${arg}`);
       }
     }
 
     // Apply default values and validate required
-    for (const [key, builder] of Object.entries(this.schema)) {
-      if (builder instanceof FlagBuilder) {
-        const config = builder.toConfig();
+    for (const builderEntry of builders) {
+      const { key, builder, used } = builderEntry;
 
-        if (
-          config.default !== undefined &&
-          typeof config.default !== "function"
-        ) {
-          if (config.type === "string" && result[key] === null) {
-            result[key] = config.default;
-          } else if (config.type === "number" && result[key] === null) {
-            result[key] = config.default;
-          }
-        }
-
-        if (config.required === true) {
-          if (config.type === "boolean" && result[key] === false) {
-            throw new Error(`Required flag missing: ${config.names[0]}`);
-          } else if (
-            (config.type === "string" || config.type === "number") &&
-            result[key] === null
-          ) {
-            throw new Error(`Required flag missing: ${config.names[0]}`);
-          } else if (config.type === "strings" && result[key].length === 0) {
-            throw new Error(`Required flag missing: ${config.names[0]}`);
-          }
-        }
-      } else if (builder instanceof ArgumentBuilder) {
-        const config = builder.toConfig();
-
-        if (config.required === true && result[key] === null) {
-          throw new Error(`Required argument missing`);
-        }
+      if (!used) {
+        builder.applyDefault(result, key);
+        builder.validateRequired(result, key);
       }
     }
 
