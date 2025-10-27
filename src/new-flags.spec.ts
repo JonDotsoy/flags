@@ -26,7 +26,7 @@ describe("new-flags", () => {
       expect(matchSpace).toEqual({
         index: 0,
         args: ["--name", "value"],
-        parsed: "value"
+        parsed: "value",
       });
 
       // When: Testing if an argument matches the flag with = syntax
@@ -36,7 +36,7 @@ describe("new-flags", () => {
       expect(matchEquals).toEqual({
         index: 0,
         args: ["--name=value"],
-        parsed: "value"
+        parsed: "value",
       });
 
       // When: Testing if an argument does not match
@@ -134,8 +134,6 @@ describe("new-flags", () => {
       // The actual accumulation logic is handled by the FlagsParser
     });
 
-
-
     it("should test command arguments correctly", () => {
       // Given: A command builder with restArgs
       const runCommand = command("run").restArgs();
@@ -147,7 +145,7 @@ describe("new-flags", () => {
       expect(match).toEqual({
         index: 0,
         args: ["run", "arg1", "arg2"],
-        parsed: ["arg1", "arg2"]
+        parsed: ["arg1", "arg2"],
       });
 
       // When: Testing if argument does not match
@@ -156,8 +154,6 @@ describe("new-flags", () => {
       // Then: test should return null for non-matching command
       expect(noMatch).toBe(null);
     });
-
-
 
     it("should test argument correctly", () => {
       // Given: An argument builder
@@ -170,7 +166,7 @@ describe("new-flags", () => {
       expect(match).toEqual({
         index: 0,
         args: ["value"],
-        parsed: "value"
+        parsed: "value",
       });
 
       // When: Testing if argument is a flag
@@ -191,7 +187,7 @@ describe("new-flags", () => {
       expect(matchLong).toEqual({
         index: 0,
         args: ["--verbose"],
-        parsed: true
+        parsed: true,
       });
 
       // When: Testing with short flag
@@ -201,7 +197,7 @@ describe("new-flags", () => {
       expect(matchShort).toEqual({
         index: 0,
         args: ["-v"],
-        parsed: true
+        parsed: true,
       });
     });
 
@@ -216,7 +212,7 @@ describe("new-flags", () => {
       expect(matchSpace).toEqual({
         index: 0,
         args: ["--port", "3000"],
-        parsed: 3000
+        parsed: 3000,
       });
 
       // When: Testing with = syntax
@@ -226,7 +222,7 @@ describe("new-flags", () => {
       expect(matchEquals).toEqual({
         index: 0,
         args: ["--port=3000"],
-        parsed: 3000
+        parsed: 3000,
       });
 
       // When: Testing flag without value
@@ -236,7 +232,7 @@ describe("new-flags", () => {
       expect(matchNoValue).toEqual({
         index: 0,
         args: ["--port"],
-        parsed: null
+        parsed: null,
       });
     });
 
@@ -245,33 +241,42 @@ describe("new-flags", () => {
       const configFlag = flag("--config").keyValue();
 
       // When: Testing with name value syntax (3 args total)
-      const matchNameValue = configFlag.test("--config", 0, ["--config", "host", "localhost"]);
+      const matchNameValue = configFlag.test("--config", 0, [
+        "--config",
+        "host",
+        "localhost",
+      ]);
 
       // Then: test should return match info with 3 arguments consumed
       expect(matchNameValue).toEqual({
         index: 0,
         args: ["--config", "host", "localhost"],
-        parsed: { host: "localhost" }
+        parsed: { host: "localhost" },
       });
 
       // When: Testing with name=value syntax (2 args total)
-      const matchNameEquals = configFlag.test("--config", 0, ["--config", "host=localhost"]);
+      const matchNameEquals = configFlag.test("--config", 0, [
+        "--config",
+        "host=localhost",
+      ]);
 
       // Then: test should return match info with 2 arguments consumed
       expect(matchNameEquals).toEqual({
         index: 0,
         args: ["--config", "host=localhost"],
-        parsed: { host: "localhost" }
+        parsed: { host: "localhost" },
       });
 
       // When: Testing with --flag=name=value syntax (1 arg total)
-      const matchAllEquals = configFlag.test("--config=host=localhost", 0, ["--config=host=localhost"]);
+      const matchAllEquals = configFlag.test("--config=host=localhost", 0, [
+        "--config=host=localhost",
+      ]);
 
       // Then: test should return match info with 1 argument consumed
       expect(matchAllEquals).toEqual({
         index: 0,
         args: ["--config=host=localhost"],
-        parsed: { host: "localhost" }
+        parsed: { host: "localhost" },
       });
     });
 
@@ -286,12 +291,41 @@ describe("new-flags", () => {
       expect(match).toEqual({
         index: 0,
         args: ["user"],
-        parsed: true
+        parsed: true,
       });
     });
   });
 
   describe("Builder inheritance", () => {
+    it("should verify FlagBuilder, CommandBuilder, and ArgumentBuilder extend Builder with correct generic types", () => {
+      // Given: A boolean flag builder
+      const booleanFlag = flag("--test");
+
+      // Then: It should extend Builder<boolean, boolean>
+      expectTypeOf(booleanFlag.initialValue()).toEqualTypeOf<boolean>();
+
+      // Given: A string flag builder
+      const stringFlag = flag("--name").string();
+
+      // Then: It should extend Builder<string | null, string | null>
+      expectTypeOf(stringFlag.initialValue()).toEqualTypeOf<string | null>();
+
+      // Given: A required string flag builder
+      const requiredStringFlag = flag("--name").string().required();
+
+      // Then: It should extend Builder<string | null, string> (ParseResult changes to non-null)
+      expectTypeOf(requiredStringFlag.initialValue()).toEqualTypeOf<
+        string | null
+      >();
+      const testResult = requiredStringFlag.test("--name", 0, [
+        "--name",
+        "value",
+      ]);
+      if (testResult) {
+        expectTypeOf(testResult.parsed).toEqualTypeOf<string>();
+      }
+    });
+
     it("should verify FlagBuilder, CommandBuilder, and ArgumentBuilder extend Builder", () => {
       // Given: Instances of each builder type
       const flagBuilder = flag("--test");
@@ -1706,5 +1740,109 @@ describe("key-value pattern", () => {
         port: "3000",
       },
     });
+  });
+});
+
+describe("Type transformations with Builder generics", () => {
+  it("should transform FlagBuilder types when calling required() on string flag", () => {
+    // Given: A string flag that starts as FlagBuilder<string | null, string | null>
+    const optionalFlag = flag("--name").string();
+
+    // Then: Initial value should be string | null
+    expectTypeOf(optionalFlag.initialValue()).toEqualTypeOf<string | null>();
+
+    // When: Calling required() to transform to FlagBuilder<string | null, string>
+    const requiredFlag = optionalFlag.required();
+
+    // Then: Initial value should still be string | null (InitialValue doesn't change)
+    expectTypeOf(requiredFlag.initialValue()).toEqualTypeOf<string | null>();
+
+    // Then: ParseResult should be string (non-null)
+    const testResult = requiredFlag.test("--name", 0, ["--name", "value"]);
+    if (testResult) {
+      expectTypeOf(testResult.parsed).toEqualTypeOf<string>();
+    }
+  });
+
+  it("should transform FlagBuilder types when calling default() on number flag", () => {
+    // Given: A number flag that starts as FlagBuilder<number | null, number | null>
+    const optionalFlag = flag("--port").number();
+
+    // Then: Initial value should be number | null
+    expectTypeOf(optionalFlag.initialValue()).toEqualTypeOf<number | null>();
+
+    // When: Calling default(3000) to transform to FlagBuilder<number, number>
+    const flagWithDefault = optionalFlag.default(3000);
+
+    // Then: Initial value should be number (non-null because of default)
+    expectTypeOf(flagWithDefault.initialValue()).toEqualTypeOf<number>();
+
+    // Then: ParseResult should be number (non-null)
+    const testResult = flagWithDefault.test("--port", 0, ["--port", "8080"]);
+    if (testResult) {
+      expectTypeOf(testResult.parsed).toEqualTypeOf<number | null>();
+    }
+  });
+
+  it("should transform CommandBuilder types when calling restArgs()", () => {
+    // Given: A boolean command that starts as CommandBuilder<boolean, boolean>
+    const booleanCommand = command("run");
+
+    // Then: Initial value should be boolean
+    expectTypeOf(booleanCommand.initialValue()).toEqualTypeOf<boolean>();
+
+    // When: Calling restArgs() to transform to CommandBuilder<string[] | null, string[] | null>
+    const restArgsCommand = booleanCommand.restArgs();
+
+    // Then: Initial value should be string[] | null
+    expectTypeOf(restArgsCommand.initialValue()).toEqualTypeOf<
+      string[] | null
+    >();
+
+    // Then: ParseResult should be string[] | null
+    const testResult = restArgsCommand.test("run", 0, ["run", "arg1", "arg2"]);
+    if (testResult) {
+      expectTypeOf(testResult.parsed).toEqualTypeOf<string[] | null>();
+    }
+  });
+
+  it("should transform ArgumentBuilder types when calling required()", () => {
+    // Given: An optional argument that starts as ArgumentBuilder<string | null, string | null>
+    const optionalArg = argument();
+
+    // Then: Initial value should be string | null
+    expectTypeOf(optionalArg.initialValue()).toEqualTypeOf<string | null>();
+
+    // When: Calling required() to transform to ArgumentBuilder<string | null, string>
+    const requiredArg = optionalArg.required();
+
+    // Then: Initial value should still be string | null
+    expectTypeOf(requiredArg.initialValue()).toEqualTypeOf<string | null>();
+
+    // Then: ParseResult should be string (non-null)
+    const testResult = requiredArg.test("value", 0, ["value"]);
+    if (testResult) {
+      expectTypeOf(testResult.parsed).toEqualTypeOf<string>();
+    }
+  });
+
+  it("should chain type transformations correctly", () => {
+    // Given: A flag that goes through multiple transformations
+    const flag1 = flag("--port");
+    expectTypeOf(flag1.initialValue()).toEqualTypeOf<boolean>();
+
+    const flag2 = flag1.number();
+    expectTypeOf(flag2.initialValue()).toEqualTypeOf<number | null>();
+
+    const flag3 = flag2.describe("Port number");
+    expectTypeOf(flag3.initialValue()).toEqualTypeOf<number | null>();
+
+    const flag4 = flag3.required();
+    expectTypeOf(flag4.initialValue()).toEqualTypeOf<number | null>();
+
+    const testResult = flag4.test("--port", 0, ["--port", "3000"]);
+    if (testResult) {
+      expectTypeOf(testResult.parsed).toEqualTypeOf<number>();
+    }
   });
 });

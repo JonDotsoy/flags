@@ -36,26 +36,26 @@ type InferFlagType<T> = T extends {
   default?: infer D;
 }
   ? U extends "boolean"
-  ? boolean
-  : U extends "string"
-  ? R extends true
-  ? string
-  : D extends string
-  ? string
-  : string | null
-  : U extends "strings"
-  ? string[]
-  : U extends "number"
-  ? R extends true
-  ? number
-  : D extends number
-  ? number
-  : number | null
-  : U extends "keyValue"
-  ? Record<string, string>
-  : U extends "restArgs"
-  ? string[] | null
-  : never
+    ? boolean
+    : U extends "string"
+      ? R extends true
+        ? string
+        : D extends string
+          ? string
+          : string | null
+      : U extends "strings"
+        ? string[]
+        : U extends "number"
+          ? R extends true
+            ? number
+            : D extends number
+              ? number
+              : number | null
+          : U extends "keyValue"
+            ? Record<string, string>
+            : U extends "restArgs"
+              ? string[] | null
+              : never
   : never;
 
 type InferParseResult<T> = T extends {
@@ -64,30 +64,30 @@ type InferParseResult<T> = T extends {
   default?: infer D;
 }
   ? U extends "boolean"
-  ? boolean
-  : U extends "string"
-  ? R extends true
-  ? string
-  : D extends string
-  ? string
-  : string | null
-  : U extends "strings"
-  ? string | null
-  : U extends "number"
-  ? R extends true
-  ? number
-  : D extends number
-  ? number
-  : number | null
-  : U extends "keyValue"
-  ? Record<string, string>
-  : U extends "restArgs"
-  ? string[] | null
-  : never
+    ? boolean
+    : U extends "string"
+      ? R extends true
+        ? string
+        : D extends string
+          ? string
+          : string | null
+      : U extends "strings"
+        ? string | null
+        : U extends "number"
+          ? R extends true
+            ? number
+            : D extends number
+              ? number
+              : number | null
+          : U extends "keyValue"
+            ? Record<string, string>
+            : U extends "restArgs"
+              ? string[] | null
+              : never
   : never;
 
 export abstract class Builder<InitialValue, ParseResult> {
-  constructor(protected config: BaseConfig) { }
+  constructor(protected config: BaseConfig) {}
 
   abstract toConfig(): BaseConfig;
   abstract initialValue(): InitialValue;
@@ -103,10 +103,11 @@ export abstract class Builder<InitialValue, ParseResult> {
   }
 }
 
-export class FlagBuilder<
-  T extends FlagConfig = FlagConfig<"boolean">,
-> extends Builder<InferFlagType<T>, InferParseResult<T>> {
-  constructor(protected config: T) {
+export class FlagBuilder<InitialValue, ParseResult> extends Builder<
+  InitialValue,
+  ParseResult
+> {
+  constructor(protected config: FlagConfig) {
     super(config);
   }
 
@@ -118,33 +119,33 @@ export class FlagBuilder<
     return this.config.type;
   }
 
-  initialValue(): InferFlagType<T> {
+  initialValue(): InitialValue {
     const config = this.config;
 
     if (config.default !== undefined && typeof config.default !== "function") {
-      return config.default as InferFlagType<T>;
+      return config.default as InitialValue;
     }
 
     if (config.type === "boolean") {
-      return false as InferFlagType<T>;
+      return false as InitialValue;
     } else if (config.type === "string") {
-      return null as InferFlagType<T>;
+      return null as InitialValue;
     } else if (config.type === "strings") {
-      return [] as InferFlagType<T>;
+      return [] as InitialValue;
     } else if (config.type === "number") {
-      return null as InferFlagType<T>;
+      return null as InitialValue;
     } else if (config.type === "keyValue") {
-      return {} as InferFlagType<T>;
+      return {} as InitialValue;
     }
 
-    return null as InferFlagType<T>;
+    return null as InitialValue;
   }
 
   test(
     arg: string,
     index: number,
     args: string[],
-  ): null | { index: number; args: string[]; parsed: InferParseResult<T> } {
+  ): null | { index: number; args: string[]; parsed: ParseResult } {
     const config = this.config;
 
     // Check if arg matches any of the flag names
@@ -206,40 +207,37 @@ export class FlagBuilder<
     return null;
   }
 
-  private parse(arg: string, index: number, args: string[]): InferParseResult<T> {
+  private parse(arg: string, index: number, args: string[]): ParseResult {
     const config = this.config;
 
     // Extract flag name and value
-    let flagName: string;
     let value: string | null;
 
     if (arg.includes("=")) {
       const equalIndex = arg.indexOf("=");
-      flagName = arg.substring(0, equalIndex);
       value = arg.substring(equalIndex + 1);
     } else {
-      flagName = arg;
       value = null;
     }
 
     if (config.type === "boolean") {
-      return true as InferParseResult<T>;
+      return true as ParseResult;
     } else if (config.type === "string") {
       if (value !== null) {
-        return value as InferParseResult<T>;
+        return value as ParseResult;
       } else if (index + 1 < args.length && !args[index + 1].startsWith("-")) {
-        return args[index + 1] as InferParseResult<T>;
+        return args[index + 1] as ParseResult;
       } else {
-        return null as InferParseResult<T>;
+        return null as ParseResult;
       }
     } else if (config.type === "strings") {
       // For strings type, return single value to be accumulated
       if (value !== null) {
-        return value as InferParseResult<T>;
+        return value as ParseResult;
       } else if (index + 1 < args.length && !args[index + 1].startsWith("-")) {
-        return args[index + 1] as InferParseResult<T>;
+        return args[index + 1] as ParseResult;
       }
-      return null as InferParseResult<T>;
+      return null as ParseResult;
     } else if (config.type === "number") {
       let numValue: string | null = null;
       if (value !== null) {
@@ -247,7 +245,7 @@ export class FlagBuilder<
       } else if (index + 1 < args.length && !args[index + 1].startsWith("-")) {
         numValue = args[index + 1];
       }
-      return (numValue !== null ? Number(numValue) : null) as InferParseResult<T>;
+      return (numValue !== null ? Number(numValue) : null) as ParseResult;
     } else if (config.type === "keyValue") {
       let kvPair: string | null = null;
 
@@ -276,99 +274,80 @@ export class FlagBuilder<
         }
       }
 
-      return result as InferParseResult<T>;
+      return result as ParseResult;
     }
 
-    return null as InferParseResult<T>;
+    return null as ParseResult;
   }
 
-  boolean(): FlagBuilder<FlagConfig<"boolean">> {
+  boolean(): FlagBuilder<boolean, boolean> {
     return new FlagBuilder({
       ...this.config,
       type: "boolean",
-    } as FlagConfig<"boolean">);
+    });
   }
 
-  string(): FlagBuilder<FlagConfig<"string">> {
+  string(): FlagBuilder<string | null, string | null> {
     return new FlagBuilder({
       ...this.config,
       type: "string",
-    } as FlagConfig<"string">);
+    });
   }
 
-  strings(): FlagBuilder<FlagConfig<"strings">> {
+  strings(): FlagBuilder<string[], string | null> {
     return new FlagBuilder({
       ...this.config,
       type: "strings",
-    } as FlagConfig<"strings">);
+    });
   }
 
-  number(): FlagBuilder<FlagConfig<"number">> {
+  number(): FlagBuilder<number | null, number | null> {
     return new FlagBuilder({
       ...this.config,
       type: "number",
-    } as FlagConfig<"number">);
+    });
   }
 
-  keyValue(): FlagBuilder<FlagConfig<"keyValue">> {
+  keyValue(): FlagBuilder<Record<string, string>, Record<string, string>> {
     return new FlagBuilder({
       ...this.config,
       type: "keyValue",
-    } as FlagConfig<"keyValue">);
+    });
   }
 
-  required<R extends true = true>(): FlagBuilder<
-    FlagConfig<T["type"], R, T["default"]>
-  > {
+  required(): FlagBuilder<InitialValue, Exclude<ParseResult, null>> {
     return new FlagBuilder({
       ...this.config,
-      required: true as R,
-    } as FlagConfig<T["type"], R, T["default"]>);
+      required: true,
+    });
   }
 
-  default<
-    D extends T["type"] extends "number"
-    ? number
-    : T["type"] extends "string"
-    ? string
-    : T["type"] extends "keyValue"
-    ? Record<string, string>
-    : never,
-  >(
-    value: D,
-  ): FlagBuilder<
-    FlagConfig<
-      T["type"],
-      T["required"] extends boolean ? T["required"] : false,
-      D
-    >
-  > {
+  default(
+    value: Exclude<InitialValue, null>,
+  ): FlagBuilder<Exclude<InitialValue, null>, ParseResult> {
     return new FlagBuilder({
       ...this.config,
       default: value,
-    } as FlagConfig<
-      T["type"],
-      T["required"] extends boolean ? T["required"] : false,
-      D
-    >);
+    });
   }
 
-  toConfig(): T {
+  toConfig(): FlagConfig {
     return this.config;
   }
 }
 
-export function flag(...names: string[]): FlagBuilder<FlagConfig<"boolean">> {
+export function flag(...names: string[]): FlagBuilder<boolean, boolean> {
   return new FlagBuilder({
     names,
     type: "boolean",
   });
 }
 
-class CommandBuilder<
-  T extends CommandConfig = CommandConfig<"boolean">,
-> extends Builder<InferFlagType<T>, InferParseResult<T>> {
-  constructor(protected config: T) {
+class CommandBuilder<InitialValue, ParseResult> extends Builder<
+  InitialValue,
+  ParseResult
+> {
+  constructor(protected config: CommandConfig) {
     super(config);
   }
 
@@ -380,23 +359,23 @@ class CommandBuilder<
     return this.config.type;
   }
 
-  initialValue(): InferFlagType<T> {
+  initialValue(): InitialValue {
     const config = this.config;
 
     if (config.type === "boolean") {
-      return false as InferFlagType<T>;
+      return false as InitialValue;
     } else if (config.type === "restArgs") {
-      return null as InferFlagType<T>;
+      return null as InitialValue;
     }
 
-    return null as InferFlagType<T>;
+    return null as InitialValue;
   }
 
   test(
     arg: string,
     index: number,
     args: string[],
-  ): null | { index: number; args: string[]; parsed: InferParseResult<T> } {
+  ): null | { index: number; args: string[]; parsed: ParseResult } {
     if (arg !== this.config.name) {
       return null;
     }
@@ -416,41 +395,39 @@ class CommandBuilder<
     return { index, args: [arg], parsed };
   }
 
-  private parse(arg: string, index: number, args: string[]): InferParseResult<T> {
+  private parse(arg: string, index: number, args: string[]): ParseResult {
     const config = this.config;
 
     if (config.type === "boolean") {
-      return true as InferParseResult<T>;
+      return true as ParseResult;
     } else if (config.type === "restArgs") {
       const restArgs = args.slice(index + 1);
-      return (restArgs.length > 0 ? restArgs : []) as InferParseResult<T>;
+      return (restArgs.length > 0 ? restArgs : []) as ParseResult;
     }
 
-    return null as InferParseResult<T>;
+    return null as ParseResult;
   }
 
-  boolean(): CommandBuilder<CommandConfig<"boolean">> {
+  boolean(): CommandBuilder<boolean, boolean> {
     return new CommandBuilder({
       ...this.config,
       type: "boolean",
-    } as CommandConfig<"boolean">);
+    });
   }
 
-  restArgs(): CommandBuilder<CommandConfig<"restArgs">> {
+  restArgs(): CommandBuilder<string[] | null, string[] | null> {
     return new CommandBuilder({
       ...this.config,
       type: "restArgs",
-    } as CommandConfig<"restArgs">);
+    });
   }
 
-  toConfig(): T {
+  toConfig(): CommandConfig {
     return this.config;
   }
 }
 
-export function command(
-  name: string,
-): CommandBuilder<CommandConfig<"boolean">> {
+export function command(name: string): CommandBuilder<boolean, boolean> {
   return new CommandBuilder({
     kind: "command",
     name,
@@ -458,10 +435,11 @@ export function command(
   });
 }
 
-class ArgumentBuilder<
-  T extends ArgumentConfig = ArgumentConfig<"string">,
-> extends Builder<InferFlagType<T>, InferParseResult<T>> {
-  constructor(protected config: T) {
+class ArgumentBuilder<InitialValue, ParseResult> extends Builder<
+  InitialValue,
+  ParseResult
+> {
+  constructor(protected config: ArgumentConfig) {
     super(config);
   }
 
@@ -469,15 +447,15 @@ class ArgumentBuilder<
     return this.config.type;
   }
 
-  initialValue(): InferFlagType<T> {
-    return null as InferFlagType<T>;
+  initialValue(): InitialValue {
+    return null as InitialValue;
   }
 
   test(
     arg: string,
     index: number,
     args: string[],
-  ): null | { index: number; args: string[]; parsed: InferParseResult<T> } {
+  ): null | { index: number; args: string[]; parsed: ParseResult } {
     // Arguments match any non-flag, non-command value
     if (arg.startsWith("-")) {
       return null;
@@ -488,56 +466,48 @@ class ArgumentBuilder<
     return { index, args: [arg], parsed };
   }
 
-  private parse(arg: string, index: number, args: string[]): InferParseResult<T> {
-    return arg as InferParseResult<T>;
+  private parse(arg: string, index: number, args: string[]): ParseResult {
+    return arg as ParseResult;
   }
 
-  string(): ArgumentBuilder<ArgumentConfig<"string">> {
+  string(): ArgumentBuilder<string | null, string | null> {
     return new ArgumentBuilder({
       ...this.config,
       type: "string",
-    } as ArgumentConfig<"string">);
+    });
   }
 
-  required<R extends true = true>(): ArgumentBuilder<
-    ArgumentConfig<T["type"], R, T["default"]>
-  > {
+  required(): ArgumentBuilder<InitialValue, Exclude<ParseResult, null>> {
     return new ArgumentBuilder({
       ...this.config,
-      required: true as R,
-    } as ArgumentConfig<T["type"], R, T["default"]>);
+      required: true,
+    });
   }
 
-  toConfig(): T {
+  toConfig(): ArgumentConfig {
     return this.config;
   }
 }
 
-export function argument(): ArgumentBuilder<ArgumentConfig<"string">> {
+export function argument(): ArgumentBuilder<string | null, string | null> {
   return new ArgumentBuilder({
     kind: "argument",
     type: "string",
   });
 }
 
-type ExtractConfig<T> =
-  T extends FlagBuilder<infer C>
-  ? C
-  : T extends CommandBuilder<infer C>
-  ? C
-  : T extends ArgumentBuilder<infer C>
-  ? C
-  : T;
+type ExtractFinalType<T> =
+  T extends Builder<infer IV, infer PR> ? (IV extends null ? PR : IV) : never;
 
-type ParseResult<T extends Record<string, any>> = {
-  [K in keyof T]: InferFlagType<ExtractConfig<T[K]>>;
+type ParseResultType<T extends Record<string, any>> = {
+  [K in keyof T]: ExtractFinalType<T[K]>;
 };
 
 class FlagsParser<T extends Record<string, any>> {
   private _programName: string = "cli";
   private _description?: string;
 
-  constructor(private schema: T) { }
+  constructor(private schema: T) {}
 
   programName(name: string): this {
     this._programName = name;
@@ -579,7 +549,7 @@ class FlagsParser<T extends Record<string, any>> {
     // Options header and details
     if (flags.length > 0) {
       lines.push("Options:");
-      for (const [key, flagBuilder] of flags) {
+      for (const [_key, flagBuilder] of flags) {
         const config = flagBuilder.toConfig();
         const names = config.names.join(", ");
         const type = config.type === "boolean" ? "" : `<${config.type}>`;
@@ -600,7 +570,7 @@ class FlagsParser<T extends Record<string, any>> {
         lines.push("");
       }
       lines.push("Commands:");
-      for (const [key, commandBuilder] of commands) {
+      for (const [_key, commandBuilder] of commands) {
         const config = commandBuilder.toConfig();
         const name = config.name;
         const description = config.description || "";
@@ -613,179 +583,101 @@ class FlagsParser<T extends Record<string, any>> {
     return lines.join("\n");
   }
 
-  parse(args: string[]): ParseResult<T> {
+  parse(args: string[]): ParseResultType<T> {
     const result: any = {};
-    const flagMap = new Map<string, { key: keyof T; config: any }>();
-    const commandMap = new Map<string, { key: keyof T; config: any }>();
-    const argumentKeys: Array<{ key: keyof T; config: any }> = [];
+    const builders: Array<{ key: keyof T; builder: Builder<any, any> }> = [];
 
-    // Build maps and initialize values
+    // Initialize values using builder.initialValue()
     for (const [key, builder] of Object.entries(this.schema)) {
-      let config: any;
-
-      if (builder instanceof FlagBuilder) {
-        config = builder.toConfig();
-        for (const name of config.names) {
-          flagMap.set(name, { key, config });
-        }
-        // Initialize flag defaults
-        if (config.type === "boolean") {
-          result[key] = false;
-        } else if (config.type === "string") {
-          result[key] = null;
-        } else if (config.type === "strings") {
-          result[key] = [];
-        } else if (config.type === "number") {
-          result[key] = null;
-        } else if (config.type === "keyValue") {
-          // Initialize with default value if provided, otherwise empty object
-          result[key] =
-            config.default !== undefined &&
-              typeof config.default === "object" &&
-              config.default !== null
-              ? { ...config.default }
-              : {};
-        }
-      } else if (builder instanceof CommandBuilder) {
-        config = builder.toConfig();
-        commandMap.set(config.name, { key, config });
-        // Initialize command defaults
-        if (config.type === "boolean") {
-          result[key] = false;
-        } else if (config.type === "restArgs") {
-          result[key] = null;
-        }
-      } else if (builder instanceof ArgumentBuilder) {
-        config = builder.toConfig();
-        argumentKeys.push({ key, config });
-        // Initialize argument defaults
-        result[key] = null;
-      }
+      result[key] = builder.initialValue();
+      builders.push({ key, builder });
     }
 
-    // Parse arguments
+    // Parse arguments using builder.test()
+    let i = 0;
     let currentArgumentIndex = 0;
-    let captureRestArgs: keyof T | null = null;
+    const argumentBuilders = builders.filter(
+      ({ builder }) => builder instanceof ArgumentBuilder,
+    );
 
-    for (let i = 0; i < args.length; i++) {
+    while (i < args.length) {
       const arg = args[i];
+      let matched = false;
 
-      // If we're capturing rest args, add everything
-      if (captureRestArgs !== null) {
-        result[captureRestArgs].push(arg);
-        continue;
+      // Try to match with each builder
+      for (const { key, builder } of builders) {
+        const match = builder.test(arg, i, args);
+
+        if (match !== null) {
+          // Handle different builder types
+          if (builder instanceof FlagBuilder) {
+            const config = builder.toConfig();
+
+            if (config.type === "strings") {
+              // Accumulate strings
+              if (match.parsed !== null) {
+                result[key].push(match.parsed);
+              }
+            } else if (config.type === "keyValue") {
+              // Merge key-value pairs
+              Object.assign(result[key], match.parsed);
+            } else {
+              // Direct assignment for other types
+              result[key] = match.parsed;
+            }
+            matched = true;
+          } else if (builder instanceof CommandBuilder) {
+            const config = builder.toConfig();
+
+            if (config.type === "restArgs") {
+              // Assign rest args and stop processing
+              result[key] = match.parsed;
+              i = args.length; // Exit loop
+              matched = true;
+              break;
+            } else {
+              result[key] = match.parsed;
+              matched = true;
+            }
+          } else if (builder instanceof ArgumentBuilder) {
+            // Only match arguments in order
+            if (
+              currentArgumentIndex < argumentBuilders.length &&
+              argumentBuilders[currentArgumentIndex].key === key
+            ) {
+              result[key] = match.parsed;
+              currentArgumentIndex++;
+              matched = true;
+            }
+            // If not the right position, continue to next builder
+          }
+
+          // Advance index by consumed args if matched
+          if (matched) {
+            i += match.args.length;
+            break;
+          }
+        }
       }
 
-      // Check if it's a flag
-      if (arg.startsWith("-")) {
-        // Split only on the first = to preserve value with = in it
-        let flagName: string;
-        let value: string | null;
-
-        if (arg.includes("=")) {
-          const equalIndex = arg.indexOf("=");
-          flagName = arg.substring(0, equalIndex);
-          value = arg.substring(equalIndex + 1);
-        } else {
-          flagName = arg;
-          value = null;
-        }
-
-        const flagInfo = flagMap.get(flagName);
-
-        if (!flagInfo) {
+      if (!matched) {
+        // Check if it's a flag (starts with -)
+        if (arg.startsWith("-")) {
+          const flagName = arg.includes("=")
+            ? arg.substring(0, arg.indexOf("="))
+            : arg;
           throw new Error(`Unknown flag: ${flagName}`);
-        }
-
-        const { key, config } = flagInfo;
-
-        if (config.type === "boolean") {
-          result[key] = true;
-        } else if (config.type === "string") {
-          if (value !== null) {
-            result[key] = value;
-          } else if (i + 1 < args.length && !args[i + 1].startsWith("-")) {
-            result[key] = args[++i];
-          } else {
-            result[key] = null;
-          }
-        } else if (config.type === "strings") {
-          if (value !== null) {
-            result[key].push(value);
-          } else if (i + 1 < args.length && !args[i + 1].startsWith("-")) {
-            result[key].push(args[++i]);
-          }
-        } else if (config.type === "number") {
-          let numValue: string | null = null;
-          if (value !== null) {
-            numValue = value;
-          } else if (i + 1 < args.length && !args[i + 1].startsWith("-")) {
-            numValue = args[++i];
-          }
-          result[key] = numValue !== null ? Number(numValue) : null;
-        } else if (config.type === "keyValue") {
-          // Handle key-value pattern: --arg name value, --arg name=value, --arg=name=value
-          let kvPair: string | null = null;
-
-          if (value !== null) {
-            // Format: --arg=name=value
-            kvPair = value;
-          } else if (i + 1 < args.length && !args[i + 1].startsWith("-")) {
-            // Format: --arg name value or --arg name=value
-            kvPair = args[++i];
-          }
-
-          if (kvPair !== null) {
-            if (kvPair.includes("=")) {
-              // Format: name=value (split only on first =)
-              const equalIndex = kvPair.indexOf("=");
-              const k = kvPair.substring(0, equalIndex);
-              const v = kvPair.substring(equalIndex + 1);
-              result[key][k] = v;
-            } else {
-              // Format: name value (need to get next arg)
-              const k = kvPair;
-              if (i + 1 < args.length && !args[i + 1].startsWith("-")) {
-                const v = args[++i];
-                result[key][k] = v;
-              } else {
-                result[key][k] = "";
-              }
-            }
-          }
-        }
-      } else {
-        // Check if it's a command
-        const commandInfo = commandMap.get(arg);
-        if (commandInfo) {
-          const { key, config } = commandInfo;
-          if (config.type === "boolean") {
-            result[key] = true;
-          } else if (config.type === "restArgs") {
-            const restArgs = args.slice(i + 1);
-            result[key] = restArgs.length > 0 ? restArgs : [];
-            captureRestArgs = key;
-            break; // Stop processing after capturing rest args
-          }
         } else {
-          // It's a positional argument
-          if (currentArgumentIndex < argumentKeys.length) {
-            const { key } = argumentKeys[currentArgumentIndex];
-            result[key] = arg;
-            currentArgumentIndex++;
-          } else {
-            throw new Error(`Unexpected argument: ${arg}`);
-          }
+          // It's an unexpected positional argument
+          throw new Error(`Unexpected argument: ${arg}`);
         }
       }
     }
 
     // Apply default values and validate required
     for (const [key, builder] of Object.entries(this.schema)) {
-      let config: any;
-
       if (builder instanceof FlagBuilder) {
-        config = builder.toConfig();
+        const config = builder.toConfig();
 
         if (
           config.default !== undefined &&
@@ -811,7 +703,7 @@ class FlagsParser<T extends Record<string, any>> {
           }
         }
       } else if (builder instanceof ArgumentBuilder) {
-        config = builder.toConfig();
+        const config = builder.toConfig();
 
         if (config.required === true && result[key] === null) {
           throw new Error(`Required argument missing`);
@@ -819,7 +711,7 @@ class FlagsParser<T extends Record<string, any>> {
       }
     }
 
-    return result as ParseResult<T>;
+    return result as ParseResultType<T>;
   }
 }
 
