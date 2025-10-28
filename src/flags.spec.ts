@@ -2955,3 +2955,229 @@ describe("Legacy flags.spec.ts compatibility tests", () => {
     });
   });
 });
+
+describe("Edge cases - valores que empiezan con --", () => {
+  it("should parse string flag with value starting with --", () => {
+    // Given: A parser with a strings flag
+    const parser = flags({
+      foo: flag("-f", "--flag").strings(),
+    });
+
+    // When: Parsing arguments ["-f", "--taz"]
+    const result = parser.parse(["-f", "--taz"]);
+
+    // Then: The result type should be { foo: string[] }
+    expectTypeOf(result).toEqualTypeOf<{ foo: string[] }>();
+
+    // Then: foo should contain ["--taz"]
+    expect(result).toEqual({ foo: ["--taz"] });
+  });
+
+  it("should parse string flag with comma-separated value starting with --", () => {
+    // Given: A parser with a strings flag
+    const parser = flags({
+      foo: flag("-f", "--flag").strings(),
+    });
+
+    // When: Parsing arguments ["-f", "--taz,bliz"]
+    const result = parser.parse(["-f", "--taz,bliz"]);
+
+    // Then: The result type should be { foo: string[] }
+    expectTypeOf(result).toEqualTypeOf<{ foo: string[] }>();
+
+    // Then: foo should contain ["--taz,bliz"] (not split by comma)
+    expect(result).toEqual({ foo: ["--taz,bliz"] });
+  });
+
+  it("should parse keyValue flag with key starting with -- in space syntax", () => {
+    // Given: A parser with a keyValue flag
+    const parser = flags({
+      foo: flag("-f", "--flag").keyValue(),
+    });
+
+    // When: Parsing arguments ["-f", "--taz=bliz"]
+    const result = parser.parse(["-f", "--taz=bliz"]);
+
+    // Then: The result type should be { foo: Record<string, string> }
+    expectTypeOf(result).toEqualTypeOf<{ foo: Record<string, string> }>();
+
+    // Then: foo should contain { "--taz": "bliz" }
+    expect(result).toEqual({ foo: { "--taz": "bliz" } });
+  });
+
+  it("should parse keyValue flag with = syntax and key starting with --", () => {
+    // Given: A parser with a keyValue flag
+    const parser = flags({
+      foo: flag("-f", "--flag").keyValue(),
+    });
+
+    // When: Parsing arguments ["-f=--taz=bliz"]
+    const result = parser.parse(["-f=--taz=bliz"]);
+
+    // Then: The result type should be { foo: Record<string, string> }
+    expectTypeOf(result).toEqualTypeOf<{ foo: Record<string, string> }>();
+
+    // Then: foo should contain { "--taz": "bliz" }
+    // Note: Using = syntax DOES work for keys starting with --
+    expect(result).toEqual({ foo: { "--taz": "bliz" } });
+  });
+
+  it("should document workaround for keyValue with keys starting with -- using = syntax", () => {
+    // Given: A parser with a keyValue flag
+    const parser = flags({
+      foo: flag("-f", "--flag").keyValue(),
+    });
+
+    // When: Using = syntax to pass keys starting with --
+    const result1 = parser.parse(["-f=--key1=value1"]);
+    const result2 = parser.parse(["--flag=--key2=value2"]);
+
+    // Then: Both should work correctly
+    expect(result1).toEqual({ foo: { "--key1": "value1" } });
+    expect(result2).toEqual({ foo: { "--key2": "value2" } });
+
+    // When: Combining multiple keyValue pairs
+    const result3 = parser.parse([
+      "-f=--key1=value1",
+      "-f=--key2=value2",
+      "-f=normalkey=value3",
+    ]);
+
+    // Then: All should be merged correctly
+    expect(result3).toEqual({
+      foo: {
+        "--key1": "value1",
+        "--key2": "value2",
+        normalkey: "value3",
+      },
+    });
+  });
+
+  it("should parse keyValue flag with three-argument syntax and key starting with --", () => {
+    // Given: A parser with a keyValue flag
+    const parser = flags({
+      foo: flag("-f", "--flag").keyValue(),
+    });
+
+    // When: Parsing arguments ["-f", "--taz", "=bliz"]
+    const result = parser.parse(["-f", "--taz", "=bliz"]);
+
+    // Then: The result type should be { foo: Record<string, string> }
+    expectTypeOf(result).toEqualTypeOf<{ foo: Record<string, string> }>();
+
+    // Then: foo should contain { "--taz": "=bliz" }
+    expect(result).toEqual({ foo: { "--taz": "=bliz" } });
+  });
+
+  it("should parse multiple strings flags with values starting with --", () => {
+    // Given: A parser with a strings flag
+    const parser = flags({
+      foo: flag("-f", "--flag").strings(),
+    });
+
+    // When: Parsing arguments ["-f", "--taz", "-f", "--bliz"]
+    const result = parser.parse(["-f", "--taz", "-f", "--bliz"]);
+
+    // Then: The result type should be { foo: string[] }
+    expectTypeOf(result).toEqualTypeOf<{ foo: string[] }>();
+
+    // Then: foo should contain ["--taz", "--bliz"]
+    expect(result).toEqual({ foo: ["--taz", "--bliz"] });
+  });
+
+  it("should parse string flag with value starting with - (single dash)", () => {
+    // Given: A parser with a string flag
+    const parser = flags({
+      foo: flag("-f", "--flag").string(),
+    });
+
+    // When: Parsing arguments ["-f", "-bar"]
+    const result = parser.parse(["-f", "-bar"]);
+
+    // Then: The result type should be { foo: string | null }
+    expectTypeOf(result).toEqualTypeOf<{ foo: string | null }>();
+
+    // Then: foo should be "-bar"
+    expect(result).toEqual({ foo: "-bar" });
+  });
+
+  it("should parse number flag with negative number value", () => {
+    // Given: A parser with a number flag
+    const parser = flags({
+      temp: flag("-t", "--temp").number(),
+    });
+
+    // When: Parsing arguments ["-t", "-10"]
+    const result = parser.parse(["-t", "-10"]);
+
+    // Then: The result type should be { temp: number | null }
+    expectTypeOf(result).toEqualTypeOf<{ temp: number | null }>();
+
+    // Then: temp should be -10
+    expect(result).toEqual({ temp: -10 });
+  });
+
+  it("should parse number flag with negative decimal value", () => {
+    // Given: A parser with a number flag
+    const parser = flags({
+      value: flag("-v", "--value").number(),
+    });
+
+    // When: Parsing arguments ["--value", "-3.14"]
+    const result = parser.parse(["--value", "-3.14"]);
+
+    // Then: The result type should be { value: number | null }
+    expectTypeOf(result).toEqualTypeOf<{ value: number | null }>();
+
+    // Then: value should be -3.14
+    expect(result).toEqual({ value: -3.14 });
+  });
+
+  it("should parse keyValue with value containing equals sign", () => {
+    // Given: A parser with a keyValue flag
+    const parser = flags({
+      config: flag("-c", "--config").keyValue(),
+    });
+
+    // When: Parsing arguments ["-c", "url=http://example.com?foo=bar"]
+    const result = parser.parse(["-c", "url=http://example.com?foo=bar"]);
+
+    // Then: The result type should be { config: Record<string, string> }
+    expectTypeOf(result).toEqualTypeOf<{ config: Record<string, string> }>();
+
+    // Then: config should contain { "url": "http://example.com?foo=bar" }
+    expect(result).toEqual({ config: { url: "http://example.com?foo=bar" } });
+  });
+
+  it("should parse keyValue with empty value", () => {
+    // Given: A parser with a keyValue flag
+    const parser = flags({
+      config: flag("-c", "--config").keyValue(),
+    });
+
+    // When: Parsing arguments ["-c", "key="]
+    const result = parser.parse(["-c", "key="]);
+
+    // Then: The result type should be { config: Record<string, string> }
+    expectTypeOf(result).toEqualTypeOf<{ config: Record<string, string> }>();
+
+    // Then: config should contain { "key": "" }
+    expect(result).toEqual({ config: { key: "" } });
+  });
+
+  it("should parse keyValue with key only (no value)", () => {
+    // Given: A parser with a keyValue flag
+    const parser = flags({
+      config: flag("-c", "--config").keyValue(),
+    });
+
+    // When: Parsing arguments ["-c", "key"]
+    const result = parser.parse(["-c", "key"]);
+
+    // Then: The result type should be { config: Record<string, string> }
+    expectTypeOf(result).toEqualTypeOf<{ config: Record<string, string> }>();
+
+    // Then: config should contain { "key": "" }
+    expect(result).toEqual({ config: { key: "" } });
+  });
+});
