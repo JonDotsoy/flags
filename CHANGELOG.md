@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.0.3](https://github.com/JonDotsoy/flags/compare/flags-v3.0.2...flags-v3.0.3) (2025-10-28)
+
+
+### Features
+
+* **flags:** Improve flag parsing for string and number types ([a0ce693](https://github.com/JonDotsoy/flags/commit/a0ce69305e6aa90d32cb74bb91754ca6998d524d))
+
+
+### Miscellaneous Chores
+
+* release 3.0.3 ([921193b](https://github.com/JonDotsoy/flags/commit/921193b9d1b14ee1f4c8da65d833c732b8bedd2e))
+
 ## [3.0.2](https://github.com/JonDotsoy/flags/compare/flags-v3.0.1...flags-v3.0.2) (2025-10-28)
 
 
