@@ -1,4 +1,4 @@
-# <picture><source media="(prefers-color-scheme: dark)" srcset="./docs/assets/flags-brand-light.png"><img alt="flags" src="./docs/assets/flags-brand.png" title="flags"></picture>
+# ![> flags{args}](./docs/assets/flags-brand.png "flags")
 
 A powerful and type-safe JavaScript/TypeScript command-line arguments parser with a fluent builder API.
 
