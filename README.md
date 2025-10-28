@@ -1,4 +1,4 @@
-# ![> flags{args}](./docs/assets/flags-brand.png "flags")
+# <span style="color: gray">></span> flags{args}
 
 A powerful and type-safe JavaScript/TypeScript command-line arguments parser with a fluent builder API.
 

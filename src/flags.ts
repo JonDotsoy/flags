@@ -145,8 +145,9 @@ export class FlagBuilder<InitialValue, ParseResult> extends Builder<
           config.type === "strings" ||
           config.type === "number"
         ) {
-          // Check if there's a next argument that's not a flag
-          if (index + 1 < args.length && !args[index + 1].startsWith("-")) {
+          // Check if there's a next argument
+          // Accept any value, even if it starts with "-"
+          if (index + 1 < args.length) {
             consumedArgs = [arg, args[index + 1]];
           } else {
             consumedArgs = [arg];
@@ -207,7 +208,7 @@ export class FlagBuilder<InitialValue, ParseResult> extends Builder<
     } else if (config.type === "string") {
       if (value !== null) {
         return value as ParseResult;
-      } else if (index + 1 < args.length && !args[index + 1].startsWith("-")) {
+      } else if (index + 1 < args.length) {
         return args[index + 1] as ParseResult;
       } else {
         return null as ParseResult;
@@ -216,7 +217,7 @@ export class FlagBuilder<InitialValue, ParseResult> extends Builder<
       // For strings type, return single value to be accumulated
       if (value !== null) {
         return value as ParseResult;
-      } else if (index + 1 < args.length && !args[index + 1].startsWith("-")) {
+      } else if (index + 1 < args.length) {
         return args[index + 1] as ParseResult;
       }
       return null as ParseResult;
@@ -224,7 +225,7 @@ export class FlagBuilder<InitialValue, ParseResult> extends Builder<
       let numValue: string | null = null;
       if (value !== null) {
         numValue = value;
-      } else if (index + 1 < args.length && !args[index + 1].startsWith("-")) {
+      } else if (index + 1 < args.length) {
         numValue = args[index + 1];
       }
       return (numValue !== null ? Number(numValue) : null) as ParseResult;

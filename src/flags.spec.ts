@@ -2937,5 +2937,21 @@ describe("Legacy flags.spec.ts compatibility tests", () => {
       expect(nameConfig.description).toBe("Set name");
       expect(portConfig.description).toBeUndefined();
     });
+
+    it("should parse string flag value starting with -- as a value", () => {
+      // Given: A parser with a string flag
+      const parser = flags({
+        foo: flag("-f").string(),
+      });
+
+      // When: Parsing arguments ["-f", "--verbose"]
+      const result = parser.parse(["-f", "--verbose"]);
+
+      // Then: The result type should be { foo: string | null }
+      expectTypeOf(result).toEqualTypeOf<{ foo: string | null }>();
+
+      // Then: foo should be "--verbose"
+      expect(result).toEqual({ foo: "--verbose" });
+    });
   });
 });
