@@ -40,6 +40,7 @@ type BuilderConfig<
   type: T;
   required?: R;
   default?: D;
+  valueDelimiter?: string;
 };
 
 type CommandConfig<T = "boolean" | "restArgs"> = BaseConfig & {
@@ -49,7 +50,7 @@ type CommandConfig<T = "boolean" | "restArgs"> = BaseConfig & {
 };
 
 type ArgumentConfig<
-  T = "string" | "restArgs",
+  T = "string" | "restArgs" | "match",
   R extends boolean = boolean,
   D = any,
 > = BaseConfig & {
@@ -57,6 +58,13 @@ type ArgumentConfig<
   type: T;
   required?: R;
   default?: D;
+  matchPattern?: RegExp;
+  refineFunction?: (
+    arg: string,
+    index: number,
+    args: string[],
+  ) => null | { index: number; args: string[]; parsed: any };
+  transformFunction?: (arg: string, index: number, args: string[]) => any;
 };
 
 export abstract class Builder<InitialValue, ParseResult> {
@@ -126,6 +134,15 @@ export class FlagBuilder<InitialValue, ParseResult> extends Builder<
 
     // Check if arg matches any of the flag names
     for (const name of config.names) {
+      // Check for valueDelimiter match (e.g., "pr:foo" matches flag "pr" with delimiter ":")
+      if (
+        config.valueDelimiter &&
+        arg.startsWith(name + config.valueDelimiter)
+      ) {
+        const parsed = this.parse(arg, index, args);
+        return { index, args: [arg], parsed };
+      }
+
       if (arg === name || arg.startsWith(name + "=")) {
         // Parse the value and determine consumed arguments
         const parsed = this.parse(arg, index, args);
@@ -157,18 +174,12 @@ export class FlagBuilder<InitialValue, ParseResult> extends Builder<
           if (arg.includes("=")) {
             // --config=name=value (1 arg)
             consumedArgs = [arg];
-          } else if (
-            index + 1 < args.length &&
-            !args[index + 1].startsWith("-")
-          ) {
+          } else if (index + 1 < args.length) {
             const nextArg = args[index + 1];
             if (nextArg.includes("=")) {
               // --config name=value (2 args)
               consumedArgs = [arg, nextArg];
-            } else if (
-              index + 2 < args.length &&
-              !args[index + 2].startsWith("-")
-            ) {
+            } else if (index + 2 < args.length) {
               // --config name value (3 args)
               consumedArgs = [arg, nextArg, args[index + 2]];
             } else {
@@ -192,6 +203,19 @@ export class FlagBuilder<InitialValue, ParseResult> extends Builder<
 
     // Extract flag name and value
     let value: string | null;
+
+    // Check for valueDelimiter first
+    if (config.valueDelimiter) {
+      for (const name of config.names) {
+        if (arg.startsWith(name + config.valueDelimiter)) {
+          value = arg.substring(name.length + config.valueDelimiter.length);
+
+          if (config.type === "string") {
+            return (value || null) as ParseResult;
+          }
+        }
+      }
+    }
 
     if (arg.includes("=")) {
       const equalIndex = arg.indexOf("=");
@@ -234,7 +258,7 @@ export class FlagBuilder<InitialValue, ParseResult> extends Builder<
 
       if (value !== null) {
         kvPair = value;
-      } else if (index + 1 < args.length && !args[index + 1].startsWith("-")) {
+      } else if (index + 1 < args.length) {
         kvPair = args[index + 1];
       }
 
@@ -248,7 +272,7 @@ export class FlagBuilder<InitialValue, ParseResult> extends Builder<
           result[k] = v;
         } else {
           const k = kvPair;
-          if (index + 2 < args.length && !args[index + 2].startsWith("-")) {
+          if (index + 2 < args.length) {
             const v = args[index + 2];
             result[k] = v;
           } else {
@@ -270,10 +294,13 @@ export class FlagBuilder<InitialValue, ParseResult> extends Builder<
     });
   }
 
-  string(): FlagBuilder<string | null, string | null> {
+  string(options?: {
+    valueDelimiter?: string;
+  }): FlagBuilder<string | null, string | null> {
     return new FlagBuilder({
       ...this.config,
       type: "string",
+      valueDelimiter: options?.valueDelimiter,
     });
   }
 
@@ -518,13 +545,17 @@ class ArgumentBuilder<InitialValue, ParseResult> extends Builder<
     index: number,
     args: string[],
   ): null | { index: number; args: string[]; parsed: ParseResult } {
+    // If there's a custom refine function, use it
+    if (this.config.refineFunction) {
+      return this.config.refineFunction(arg, index, args);
+    }
+
     // Arguments match any non-flag, non-command value
     if (arg.startsWith("-")) {
       return null;
     }
 
     const config = this.config;
-    const parsed = this.parse(arg, index, args);
 
     if (config.type === "restArgs") {
       // restArgs arguments consume all remaining non-flag arguments
@@ -536,7 +567,15 @@ class ArgumentBuilder<InitialValue, ParseResult> extends Builder<
           break;
         }
       }
+      const parsed = this.parse(arg, index, args);
       return { index, args: consumedArgs, parsed };
+    }
+
+    const parsed = this.parse(arg, index, args);
+
+    // For match type, if parsed is null, don't match
+    if (config.type === "match" && parsed === null) {
+      return null;
     }
 
     // Positional arguments consume 1 argument
@@ -558,13 +597,40 @@ class ArgumentBuilder<InitialValue, ParseResult> extends Builder<
       return (restArgs.length > 0 ? restArgs : []) as ParseResult;
     }
 
-    return arg as ParseResult;
+    if (config.type === "match" && config.matchPattern) {
+      const match = arg.match(config.matchPattern);
+      if (match && match.groups) {
+        return match.groups as ParseResult;
+      }
+      return null as ParseResult;
+    }
+
+    let result: any = arg;
+
+    // Apply transform function if provided
+    if (config.transformFunction) {
+      result = config.transformFunction(arg, index, args);
+    }
+
+    return result as ParseResult;
   }
 
   string(): ArgumentBuilder<string | null, string | null> {
     return new ArgumentBuilder({
       ...this.config,
       type: "string",
+      refineFunction: (arg: string, index: number, args: string[]) => {
+        // Arguments match any non-flag value
+        if (arg.startsWith("-")) {
+          return null;
+        }
+
+        return {
+          index,
+          args: [arg],
+          parsed: arg,
+        };
+      },
     });
   }
 
@@ -572,6 +638,69 @@ class ArgumentBuilder<InitialValue, ParseResult> extends Builder<
     return new ArgumentBuilder({
       ...this.config,
       type: "restArgs",
+      refineFunction: (arg: string, index: number, args: string[]) => {
+        // Arguments match any non-flag value
+        if (arg.startsWith("-")) {
+          return null;
+        }
+
+        // restArgs arguments consume all remaining non-flag arguments
+        const consumedArgs: string[] = [];
+        for (let i = index; i < args.length; i++) {
+          if (!args[i].startsWith("-")) {
+            consumedArgs.push(args[i]);
+          } else {
+            break;
+          }
+        }
+
+        return {
+          index,
+          args: consumedArgs,
+          parsed: consumedArgs.length > 0 ? consumedArgs : [],
+        };
+      },
+    });
+  }
+
+  match(
+    pattern: RegExp,
+  ): ArgumentBuilder<
+    Record<string, string> | null,
+    Record<string, string> | null
+  > {
+    return new ArgumentBuilder({
+      ...this.config,
+      type: "match",
+      refineFunction: (arg: string, index: number, args: string[]) => {
+        const match = arg.match(pattern);
+        if (match && match.groups) {
+          return { index, args: [arg], parsed: match.groups };
+        }
+        return null;
+      },
+    });
+  }
+
+  refine<T>(
+    fn: (
+      arg: string,
+      index: number,
+      args: string[],
+    ) => null | { index: number; args: string[]; parsed: T },
+  ): ArgumentBuilder<T | null, T | null> {
+    return new ArgumentBuilder({
+      ...this.config,
+      refineFunction: fn,
+    });
+  }
+
+  transform<T>(
+    fn: (arg: string, index: number, args: string[]) => T,
+  ): ArgumentBuilder<T | null, T | null> {
+    return new ArgumentBuilder({
+      ...this.config,
+      transformFunction: fn,
     });
   }
 
@@ -887,12 +1016,22 @@ class FlagsParser<T extends Record<string, any>> {
           const match = builder.test(arg, i, args);
 
           if (match !== null) {
-            // Special handling for positional arguments - only match in order
+            // Special handling for positional arguments
             if (builder.isPositionalArgument()) {
-              if (
+              // Check if this is a match-type argument (can match out of order)
+              const config = builder.toConfig() as ArgumentConfig;
+              const isMatchType = config.type === "match";
+
+              if (isMatchType) {
+                // Match-type arguments can match out of order
+                result[key] = builder.accumulate(result[key], match.parsed);
+                builderEntry.used = true;
+                matched = true;
+              } else if (
                 currentArgumentIndex < argumentBuilders.length &&
                 argumentBuilders[currentArgumentIndex].key === key
               ) {
+                // Regular positional arguments must match in order
                 result[key] = builder.accumulate(result[key], match.parsed);
                 currentArgumentIndex++;
                 builderEntry.used = true;
@@ -982,4 +1121,148 @@ export function flags<T extends Record<string, any>>(
   schema: T,
 ): FlagsParser<T> {
   return new FlagsParser(schema);
+}
+
+// NewArgumentBuilder types and implementation
+export type RefineContext = {
+  args: string[];
+  index: number;
+  value: any;
+} | null;
+
+export type Refine = (
+  arg: string,
+  index: number,
+  args: string[],
+  context: RefineContext,
+) => RefineContext;
+
+export type ResultParser<ParseResult> = {
+  args: string[];
+  index: number;
+  value: ParseResult;
+};
+
+export class NewArgumentBuilder<InitialValue, ParseResult> {
+  private refiners: Refine[];
+  private initial: InitialValue;
+
+  constructor(initial: InitialValue, refiners: Refine[]) {
+    this.initial = initial;
+    this.refiners = refiners;
+  }
+
+  setInitial<T>(initial: T): NewArgumentBuilder<T, ParseResult> {
+    return new NewArgumentBuilder<T, ParseResult>(initial, this.refiners);
+  }
+
+  getInitial() {
+    return this.initial;
+  }
+
+  refine<U>(refine: Refine): NewArgumentBuilder<InitialValue, U> {
+    return new NewArgumentBuilder<InitialValue, U>(this.initial, [
+      ...this.refiners,
+      refine,
+    ]);
+  }
+
+  parse(startIndex: number, args: string[]): null | ResultParser<ParseResult> {
+    if (args.length === 0 || startIndex >= args.length) {
+      return null;
+    }
+
+    let context: RefineContext = null;
+    const arg = args[startIndex];
+
+    // Apply each refiner in sequence
+    for (const refiner of this.refiners) {
+      const result = refiner(arg, startIndex, args, context);
+
+      if (result === null) {
+        return null;
+      }
+
+      // Extract value from array if needed before passing to next refiner
+      let processedValue = result.value;
+      if (Array.isArray(processedValue) && processedValue.length > 0) {
+        processedValue = processedValue[processedValue.length - 1];
+      }
+
+      context = {
+        ...result,
+        value: processedValue,
+      };
+    }
+
+    // If no refiners or all passed, return the final context
+    if (context) {
+      // Extract the consumed args from the original args array
+      const consumedArgs = args.slice(startIndex, context.index);
+
+      return {
+        args: consumedArgs,
+        index: startIndex,
+        value: context.value,
+      };
+    }
+
+    return null;
+  }
+
+  static create() {
+    return new NewArgumentBuilder(null, []);
+  }
+}
+
+// NewFlagsParser implementation
+export class NewFlagsParser<
+  T extends Record<string, NewArgumentBuilder<any, any>>,
+> {
+  constructor(private schema: T) {}
+
+  parse(args: string[]): any {
+    const result: any = {};
+    const usedIndices = new Set<number>();
+
+    // Initialize all values with their initial values
+    for (const [key, builder] of Object.entries(this.schema)) {
+      const initial = builder.getInitial();
+      result[key] = initial;
+    }
+
+    // Try to parse each argument with each builder
+    for (let i = 0; i < args.length; i++) {
+      if (usedIndices.has(i)) {
+        continue;
+      }
+
+      let matched = false;
+
+      for (const [key, builder] of Object.entries(this.schema)) {
+        const parseResult = builder.parse(i, args);
+
+        if (parseResult !== null) {
+          // Mark all consumed indices as used
+          for (
+            let j = parseResult.index;
+            j < parseResult.index + parseResult.args.length;
+            j++
+          ) {
+            usedIndices.add(j);
+          }
+
+          result[key] = parseResult.value;
+          matched = true;
+          break;
+        }
+      }
+
+      if (!matched) {
+        throw new UnexpectedArgumentError(args[i]);
+      }
+    }
+
+    return result;
+  }
 }

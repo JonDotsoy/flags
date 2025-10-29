@@ -71,4 +71,28 @@ describe("flags parser", () => {
     test(`should parse `, ['tar'], ` arguments with `, {
         arg: () => argument().transform((arg: string, index: number, args: string[]) => arg.toUpperCase())
     }, ` and return `, { arg: "TAR" });
+    test(`should parse `, ['tar', 'biz', 'foo', 'faz'], ` arguments with `, {
+        arg: () => argument().refine((arg: string, index: number, args: string[]) => {
+            if (arg !== 'tar') return null;
+
+            // Consume all remaining non-flag arguments after 'tar'
+            const consumedArgs: string[] = [];
+            for (let i = index + 1; i < args.length; i++) {
+                if (!args[i].startsWith("-")) {
+                    consumedArgs.push(args[i]);
+                } else {
+                    break;
+                }
+            }
+
+            return {
+                index,
+                args: [arg, ...consumedArgs],
+                parsed: consumedArgs
+            };
+        })
+    }, ` and return `, { arg: ['biz', 'foo', 'faz'] });
+
+    test(`should parse `, ['-l=-l', '-l=red', "foo"], ` arguments with `, { labels: () => flag("-l").strings(), arg: () => argument() }, ` and return `, { labels: ['-l', 'red'], arg: "foo" });
+    // test(`should parse `, ['-l=-l', '-l=red', "foo"], ` arguments with `, { arg: () => argument(), labels: () => flag("-l").strings() }, ` and return `, { labels: [], arg: "foo" });
 });
