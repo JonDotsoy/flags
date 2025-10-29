@@ -27,23 +27,21 @@ export class RequiredArgumentMissingError extends FlagsParseError {
   }
 }
 
-export function flag(...names: string[]): NewFlagBuilder<boolean, boolean> {
-  return NewFlagBuilder.createFlag(...names);
+export function flag(...names: string[]): FlagBuilder<boolean, boolean> {
+  return FlagBuilder.createFlag(...names);
 }
 
-export function argument(): NewArgumentBuilder<string | null, string | null> {
-  return NewArgumentBuilder.create().string();
+export function argument(): ArgumentBuilder<string | null, string | null> {
+  return ArgumentBuilder.create().string();
 }
 
 export function flags<
   T extends Record<
     string,
-    | NewArgumentBuilder<any, any>
-    | NewFlagBuilder<any, any>
-    | NewCommandBuilder<any, any>
+    ArgumentBuilder<any, any> | FlagBuilder<any, any> | CommandBuilder<any, any>
   >,
->(schema: T): NewFlagsParser<T> {
-  return new NewFlagsParser(schema);
+>(schema: T): FlagsParser<T> {
+  return new FlagsParser(schema);
 }
 
 // NewArgumentBuilder types and implementation
@@ -66,7 +64,7 @@ export type ResultParser<ParseResult> = {
   value: ParseResult;
 };
 
-export class NewArgumentBuilder<InitialValue, ParseResult> {
+export class ArgumentBuilder<InitialValue, ParseResult> {
   private refiners: Refine[];
   private initial: InitialValue;
   protected description?: string;
@@ -76,22 +74,22 @@ export class NewArgumentBuilder<InitialValue, ParseResult> {
     this.refiners = refiners;
   }
 
-  setInitial<T>(initial: T): NewArgumentBuilder<T, ParseResult> {
-    return new NewArgumentBuilder<T, ParseResult>(initial, this.refiners);
+  setInitial<T>(initial: T): ArgumentBuilder<T, ParseResult> {
+    return new ArgumentBuilder<T, ParseResult>(initial, this.refiners);
   }
 
   getInitial() {
     return this.initial;
   }
 
-  refine<U>(refine: Refine): NewArgumentBuilder<InitialValue, U> {
-    return new NewArgumentBuilder<InitialValue, U>(this.initial, [
+  refine<U>(refine: Refine): ArgumentBuilder<InitialValue, U> {
+    return new ArgumentBuilder<InitialValue, U>(this.initial, [
       ...this.refiners,
       refine,
     ]);
   }
 
-  string(): NewArgumentBuilder<string | null, string | null> {
+  string(): ArgumentBuilder<string | null, string | null> {
     const refiner: Refine = (arg, index, args, context) => {
       // Arguments match any non-flag value
       if (arg.startsWith("-")) {
@@ -105,12 +103,10 @@ export class NewArgumentBuilder<InitialValue, ParseResult> {
       };
     };
 
-    return new NewArgumentBuilder<string | null, string | null>(null, [
-      refiner,
-    ]);
+    return new ArgumentBuilder<string | null, string | null>(null, [refiner]);
   }
 
-  restArgs(): NewArgumentBuilder<string[] | null, string[] | null> {
+  restArgs(): ArgumentBuilder<string[] | null, string[] | null> {
     const refiner: Refine = (arg, index, args, context) => {
       // Arguments match any non-flag value
       if (arg.startsWith("-")) {
@@ -134,14 +130,14 @@ export class NewArgumentBuilder<InitialValue, ParseResult> {
       };
     };
 
-    return new NewArgumentBuilder<string[] | null, string[] | null>(null, [
+    return new ArgumentBuilder<string[] | null, string[] | null>(null, [
       refiner,
     ]);
   }
 
   match(
     pattern: RegExp,
-  ): NewArgumentBuilder<
+  ): ArgumentBuilder<
     Record<string, string> | null,
     Record<string, string> | null
   > {
@@ -157,7 +153,7 @@ export class NewArgumentBuilder<InitialValue, ParseResult> {
       return null;
     };
 
-    return new NewArgumentBuilder<
+    return new ArgumentBuilder<
       Record<string, string> | null,
       Record<string, string> | null
     >(null, [refiner]);
@@ -165,7 +161,7 @@ export class NewArgumentBuilder<InitialValue, ParseResult> {
 
   transform<T>(
     fn: (arg: string, index: number, args: string[]) => T,
-  ): NewArgumentBuilder<T | null, T | null> {
+  ): ArgumentBuilder<T | null, T | null> {
     const refiner: Refine = (arg, index, args, context) => {
       if (arg.startsWith("-")) {
         return null;
@@ -179,10 +175,10 @@ export class NewArgumentBuilder<InitialValue, ParseResult> {
       };
     };
 
-    return new NewArgumentBuilder<T | null, T | null>(null, [refiner]);
+    return new ArgumentBuilder<T | null, T | null>(null, [refiner]);
   }
 
-  required(): NewArgumentBuilder<InitialValue, Exclude<ParseResult, null>> {
+  required(): ArgumentBuilder<InitialValue, Exclude<ParseResult, null>> {
     // For now, just return the same builder
     // Required validation would need to be handled in the parser
     return this as any;
@@ -256,15 +252,15 @@ export class NewArgumentBuilder<InitialValue, ParseResult> {
   }
 
   static create() {
-    return new NewArgumentBuilder(null, []);
+    return new ArgumentBuilder(null, []);
   }
 }
 
 // NewFlagBuilder implementation
-export class NewFlagBuilder<
+export class FlagBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
   InitialValue,
-  ParseResult,
-> extends NewArgumentBuilder<InitialValue, ParseResult> {
+  ParseResult
+> {
   private flagNames: string[];
   private isRequired: boolean = false;
 
@@ -277,8 +273,8 @@ export class NewFlagBuilder<
     return this.flagNames;
   }
 
-  override setInitial<T>(initial: T): NewFlagBuilder<T, ParseResult> {
-    const builder = new NewFlagBuilder<T, ParseResult>(
+  override setInitial<T>(initial: T): FlagBuilder<T, ParseResult> {
+    const builder = new FlagBuilder<T, ParseResult>(
       this.flagNames,
       initial,
       (this as any).refiners,
@@ -288,8 +284,8 @@ export class NewFlagBuilder<
     return builder;
   }
 
-  override refine<U>(refine: Refine): NewFlagBuilder<InitialValue, U> {
-    const builder = new NewFlagBuilder<InitialValue, U>(
+  override refine<U>(refine: Refine): FlagBuilder<InitialValue, U> {
+    const builder = new FlagBuilder<InitialValue, U>(
       this.flagNames,
       this.getInitial(),
       [...(this as any).refiners, refine],
@@ -363,8 +359,8 @@ export class NewFlagBuilder<
 
   string(options?: {
     valueDelimiter?: string;
-  }): NewFlagBuilder<string | null, string | null> {
-    const builder = new NewFlagBuilder<string | null, string | null>(
+  }): FlagBuilder<string | null, string | null> {
+    const builder = new FlagBuilder<string | null, string | null>(
       this.flagNames,
       null,
       [],
@@ -419,8 +415,8 @@ export class NewFlagBuilder<
     });
   }
 
-  strings(): NewFlagBuilder<string[], string | null> {
-    const builder = new NewFlagBuilder<string[], string | null>(
+  strings(): FlagBuilder<string[], string | null> {
+    const builder = new FlagBuilder<string[], string | null>(
       this.flagNames,
       [],
       [],
@@ -457,8 +453,8 @@ export class NewFlagBuilder<
     });
   }
 
-  number(): NewFlagBuilder<number | null, number | null> {
-    const builder = new NewFlagBuilder<number | null, number | null>(
+  number(): FlagBuilder<number | null, number | null> {
+    const builder = new FlagBuilder<number | null, number | null>(
       this.flagNames,
       null,
       [],
@@ -493,7 +489,7 @@ export class NewFlagBuilder<
     });
   }
 
-  keyValue(): NewFlagBuilder<Record<string, string>, Record<string, string>> {
+  keyValue(): FlagBuilder<Record<string, string>, Record<string, string>> {
     const refiner: Refine = (arg, index, args, context) => {
       for (const name of this.flagNames) {
         if (arg === name || arg.startsWith(name + "=")) {
@@ -546,7 +542,7 @@ export class NewFlagBuilder<
       return null;
     };
 
-    const builder = new NewFlagBuilder<
+    const builder = new FlagBuilder<
       Record<string, string>,
       Record<string, string>
     >(this.flagNames, {}, [refiner]);
@@ -555,7 +551,7 @@ export class NewFlagBuilder<
     return builder;
   }
 
-  restArgs(): NewFlagBuilder<string[] | null, string[] | null> {
+  restArgs(): FlagBuilder<string[] | null, string[] | null> {
     const refiner: Refine = (arg, index, args, context) => {
       for (const name of this.flagNames) {
         if (arg === name) {
@@ -570,7 +566,7 @@ export class NewFlagBuilder<
       return null;
     };
 
-    const builder = new NewFlagBuilder<string[] | null, string[] | null>(
+    const builder = new FlagBuilder<string[] | null, string[] | null>(
       this.flagNames,
       null,
       [refiner],
@@ -580,11 +576,8 @@ export class NewFlagBuilder<
     return builder;
   }
 
-  required(): NewFlagBuilder<InitialValue, Exclude<ParseResult, null>> {
-    const builder = new NewFlagBuilder<
-      InitialValue,
-      Exclude<ParseResult, null>
-    >(
+  required(): FlagBuilder<InitialValue, Exclude<ParseResult, null>> {
+    const builder = new FlagBuilder<InitialValue, Exclude<ParseResult, null>>(
       this.flagNames,
       this.getInitial() as InitialValue,
       (this as any).refiners,
@@ -596,27 +589,28 @@ export class NewFlagBuilder<
 
   default(
     value: Exclude<InitialValue, null>,
-  ): NewFlagBuilder<Exclude<InitialValue, null>, ParseResult> {
-    const builder = new NewFlagBuilder<
-      Exclude<InitialValue, null>,
-      ParseResult
-    >(this.flagNames, value, (this as any).refiners);
+  ): FlagBuilder<Exclude<InitialValue, null>, ParseResult> {
+    const builder = new FlagBuilder<Exclude<InitialValue, null>, ParseResult>(
+      this.flagNames,
+      value,
+      (this as any).refiners,
+    );
     builder.description = this.description;
     builder.isRequired = this.isRequired;
     return builder;
   }
 
   static createFlag(...names: string[]) {
-    const builder = new NewFlagBuilder<boolean, boolean>(names, false, []);
+    const builder = new FlagBuilder<boolean, boolean>(names, false, []);
     return builder.boolean();
   }
 }
 
 // NewCommandBuilder implementation
-export class NewCommandBuilder<
+export class CommandBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
   InitialValue,
-  ParseResult,
-> extends NewArgumentBuilder<InitialValue, ParseResult> {
+  ParseResult
+> {
   private commandName: string;
 
   constructor(name: string, initial: InitialValue, refiners: Refine[]) {
@@ -628,8 +622,8 @@ export class NewCommandBuilder<
     return this.commandName;
   }
 
-  override setInitial<T>(initial: T): NewCommandBuilder<T, ParseResult> {
-    const builder = new NewCommandBuilder<T, ParseResult>(
+  override setInitial<T>(initial: T): CommandBuilder<T, ParseResult> {
+    const builder = new CommandBuilder<T, ParseResult>(
       this.commandName,
       initial,
       (this as any).refiners,
@@ -638,8 +632,8 @@ export class NewCommandBuilder<
     return builder;
   }
 
-  override refine<U>(refine: Refine): NewCommandBuilder<InitialValue, U> {
-    const builder = new NewCommandBuilder<InitialValue, U>(
+  override refine<U>(refine: Refine): CommandBuilder<InitialValue, U> {
+    const builder = new CommandBuilder<InitialValue, U>(
       this.commandName,
       this.getInitial(),
       [...(this as any).refiners, refine],
@@ -662,7 +656,7 @@ export class NewCommandBuilder<
     };
   }
 
-  boolean(): NewCommandBuilder<boolean, boolean> {
+  boolean(): CommandBuilder<boolean, boolean> {
     const refiner: Refine = (arg, index, args, context) => {
       // Commands should not start with dashes
       if (arg.startsWith("-")) {
@@ -680,7 +674,7 @@ export class NewCommandBuilder<
       };
     };
 
-    const builder = new NewCommandBuilder<boolean, boolean>(
+    const builder = new CommandBuilder<boolean, boolean>(
       this.commandName,
       false,
       [refiner],
@@ -689,7 +683,7 @@ export class NewCommandBuilder<
     return builder;
   }
 
-  restArgs(): NewCommandBuilder<string[] | null, string[] | null> {
+  restArgs(): CommandBuilder<string[] | null, string[] | null> {
     const refiner: Refine = (arg, index, args, context) => {
       // Commands should not start with dashes
       if (arg.startsWith("-")) {
@@ -708,7 +702,7 @@ export class NewCommandBuilder<
       };
     };
 
-    const builder = new NewCommandBuilder<string[] | null, string[] | null>(
+    const builder = new CommandBuilder<string[] | null, string[] | null>(
       this.commandName,
       null,
       [refiner],
@@ -718,19 +712,17 @@ export class NewCommandBuilder<
   }
 
   static createCommand(name: string) {
-    const builder = new NewCommandBuilder<boolean, boolean>(name, false, []);
+    const builder = new CommandBuilder<boolean, boolean>(name, false, []);
     return builder.boolean();
   }
 }
 
-export function command(name: string): NewCommandBuilder<boolean, boolean> {
-  return NewCommandBuilder.createCommand(name);
+export function command(name: string): CommandBuilder<boolean, boolean> {
+  return CommandBuilder.createCommand(name);
 }
 
 // NewFlagsParser implementation
-export class NewFlagsParser<
-  T extends Record<string, NewArgumentBuilder<any, any>>,
-> {
+export class FlagsParser<T extends Record<string, ArgumentBuilder<any, any>>> {
   private _programName: string = "cli";
   private _description?: string;
 
@@ -800,7 +792,7 @@ export class NewFlagsParser<
       const config = builder.toConfig();
       if (config.kind === "command") {
         commands.push([key, config]);
-      } else if (builder instanceof NewFlagBuilder) {
+      } else if (builder instanceof FlagBuilder) {
         flags.push([key, config]);
       }
     }
@@ -941,7 +933,7 @@ export class NewFlagsParser<
   }
 
   parse(args: string[]): {
-    [K in keyof T]: T[K] extends NewArgumentBuilder<infer I, infer P>
+    [K in keyof T]: T[K] extends ArgumentBuilder<infer I, infer P>
       ? I extends null
         ? P
         : I
@@ -957,7 +949,7 @@ export class NewFlagsParser<
       result[key] = initial;
 
       // Track required flags
-      if (builder instanceof NewFlagBuilder && (builder as any).isRequired) {
+      if (builder instanceof FlagBuilder && (builder as any).isRequired) {
         requiredFlags.set(key, builder.getNames());
       }
     }
@@ -973,7 +965,7 @@ export class NewFlagsParser<
       // Check if previous arg was a command/flag with restArgs
       if (i > 0 && !insideRestArgs) {
         for (const builder of Object.values(this.schema)) {
-          if (builder instanceof NewCommandBuilder) {
+          if (builder instanceof CommandBuilder) {
             const config = builder.toConfig();
             if (args[i - 1] === config.name) {
               // Check if this command has restArgs by trying to parse
@@ -1007,7 +999,7 @@ export class NewFlagsParser<
           let found = false;
 
           for (const builder of Object.values(this.schema)) {
-            if (builder instanceof NewFlagBuilder) {
+            if (builder instanceof FlagBuilder) {
               const names = builder.getNames();
               if (names.includes(flagName)) {
                 // Check if it's a boolean flag by checking initial value
@@ -1053,7 +1045,7 @@ export class NewFlagsParser<
       for (const [key, builder] of Object.entries(this.schema)) {
         // Skip arguments that already have a value (unless they're arrays or objects that accumulate)
         if (
-          !(builder instanceof NewFlagBuilder) &&
+          !(builder instanceof FlagBuilder) &&
           result[key] !== null &&
           result[key] !== builder.getInitial() &&
           !Array.isArray(result[key])

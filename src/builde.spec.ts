@@ -1,8 +1,8 @@
 import { test, it, expect, describe } from "bun:test";
 import {
-  NewArgumentBuilder as Builder,
+  ArgumentBuilder as Builder,
   type Refine,
-  NewFlagsParser as FlagsParser,
+  FlagsParser as FlagsParser,
 } from "./flags";
 
 type Context = {
