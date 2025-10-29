@@ -27,1100 +27,23 @@ export class RequiredArgumentMissingError extends FlagsParseError {
   }
 }
 
-type BaseConfig = {
-  description?: string;
-};
-
-type BuilderConfig<
-  T = "boolean" | "string" | "strings" | "number" | "keyValue" | "restArgs",
-  R extends boolean = boolean,
-  D = any,
-> = BaseConfig & {
-  names: string[];
-  type: T;
-  required?: R;
-  default?: D;
-  valueDelimiter?: string;
-};
-
-type CommandConfig<T = "boolean" | "restArgs"> = BaseConfig & {
-  kind: "command";
-  name: string;
-  type: T;
-};
-
-type ArgumentConfig<
-  T = "string" | "restArgs" | "match",
-  R extends boolean = boolean,
-  D = any,
-> = BaseConfig & {
-  kind: "argument";
-  type: T;
-  required?: R;
-  default?: D;
-  matchPattern?: RegExp;
-  refineFunction?: (
-    arg: string,
-    index: number,
-    args: string[],
-  ) => null | { index: number; args: string[]; parsed: any };
-  transformFunction?: (arg: string, index: number, args: string[]) => any;
-};
-
-export abstract class Builder<InitialValue, ParseResult> {
-  constructor(protected config: BaseConfig) {}
-
-  abstract toConfig(): BaseConfig;
-  abstract initialValue(): InitialValue;
-  abstract test(
-    arg: string,
-    index: number,
-    args: string[],
-  ): null | { index: number; args: string[]; parsed: ParseResult };
-  abstract accumulate(current: InitialValue, parsed: ParseResult): InitialValue;
-  abstract shouldStopParsing(): boolean;
-  abstract isPositionalArgument(): boolean;
-  abstract builderKind(): "flag" | "command" | "argument";
-  abstract applyDefault(result: any, key: string | number | symbol): void;
-  abstract validateRequired(result: any, key: string | number | symbol): void;
-
-  describe(desc: string): this {
-    const newConfig = { ...this.config, description: desc };
-    return new (this.constructor as any)(newConfig);
-  }
+export function flag(...names: string[]): NewFlagBuilder<boolean, boolean> {
+  return NewFlagBuilder.createFlag(...names);
 }
 
-export class FlagBuilder<InitialValue, ParseResult> extends Builder<
-  InitialValue,
-  ParseResult
-> {
-  constructor(protected config: BuilderConfig) {
-    super(config);
-  }
-
-  get names() {
-    return this.config.names;
-  }
-
-  get type() {
-    return this.config.type;
-  }
-
-  initialValue(): InitialValue {
-    const config = this.config;
-
-    if (config.default !== undefined && typeof config.default !== "function") {
-      return config.default as InitialValue;
-    }
-
-    const initialValues: Record<string, any> = {
-      boolean: false,
-      string: null,
-      strings: [],
-      number: null,
-      keyValue: {},
-      restArgs: null,
-    };
-
-    return (initialValues[config.type] ?? null) as InitialValue;
-  }
-
-  test(
-    arg: string,
-    index: number,
-    args: string[],
-  ): null | { index: number; args: string[]; parsed: ParseResult } {
-    const config = this.config;
-
-    // Check if arg matches any of the flag names
-    for (const name of config.names) {
-      // Check for valueDelimiter match (e.g., "pr:foo" matches flag "pr" with delimiter ":")
-      if (
-        config.valueDelimiter &&
-        arg.startsWith(name + config.valueDelimiter)
-      ) {
-        const parsed = this.parse(arg, index, args);
-        return { index, args: [arg], parsed };
-      }
-
-      if (arg === name || arg.startsWith(name + "=")) {
-        // Parse the value and determine consumed arguments
-        const parsed = this.parse(arg, index, args);
-        let consumedArgs: string[] = [arg];
-
-        if (config.type === "boolean") {
-          // Boolean flags only consume 1 argument
-          consumedArgs = [arg];
-        } else if (config.type === "restArgs") {
-          // restArgs flags consume all remaining arguments
-          consumedArgs = args.slice(index);
-        } else if (arg.includes("=")) {
-          // Flags with = syntax consume 1 argument
-          consumedArgs = [arg];
-        } else if (
-          config.type === "string" ||
-          config.type === "strings" ||
-          config.type === "number"
-        ) {
-          // Check if there's a next argument
-          // Accept any value, even if it starts with "-"
-          if (index + 1 < args.length) {
-            consumedArgs = [arg, args[index + 1]];
-          } else {
-            consumedArgs = [arg];
-          }
-        } else if (config.type === "keyValue") {
-          // KeyValue can consume 1, 2, or 3 arguments
-          if (arg.includes("=")) {
-            // --config=name=value (1 arg)
-            consumedArgs = [arg];
-          } else if (index + 1 < args.length) {
-            const nextArg = args[index + 1];
-            if (nextArg.includes("=")) {
-              // --config name=value (2 args)
-              consumedArgs = [arg, nextArg];
-            } else if (index + 2 < args.length) {
-              // --config name value (3 args)
-              consumedArgs = [arg, nextArg, args[index + 2]];
-            } else {
-              // --config name (2 args, value will be empty)
-              consumedArgs = [arg, nextArg];
-            }
-          } else {
-            consumedArgs = [arg];
-          }
-        }
-
-        return { index, args: consumedArgs, parsed };
-      }
-    }
-
-    return null;
-  }
-
-  private parse(arg: string, index: number, args: string[]): ParseResult {
-    const config = this.config;
-
-    // Extract flag name and value
-    let value: string | null;
-
-    // Check for valueDelimiter first
-    if (config.valueDelimiter) {
-      for (const name of config.names) {
-        if (arg.startsWith(name + config.valueDelimiter)) {
-          value = arg.substring(name.length + config.valueDelimiter.length);
-
-          if (config.type === "string") {
-            return (value || null) as ParseResult;
-          }
-        }
-      }
-    }
-
-    if (arg.includes("=")) {
-      const equalIndex = arg.indexOf("=");
-      value = arg.substring(equalIndex + 1);
-    } else {
-      value = null;
-    }
-
-    if (config.type === "boolean") {
-      return true as ParseResult;
-    } else if (config.type === "restArgs") {
-      const restArgs = args.slice(index + 1);
-      return (restArgs.length > 0 ? restArgs : []) as ParseResult;
-    } else if (config.type === "string") {
-      if (value !== null) {
-        return value as ParseResult;
-      } else if (index + 1 < args.length) {
-        return args[index + 1] as ParseResult;
-      } else {
-        return null as ParseResult;
-      }
-    } else if (config.type === "strings") {
-      // For strings type, return single value to be accumulated
-      if (value !== null) {
-        return value as ParseResult;
-      } else if (index + 1 < args.length) {
-        return args[index + 1] as ParseResult;
-      }
-      return null as ParseResult;
-    } else if (config.type === "number") {
-      let numValue: string | null = null;
-      if (value !== null) {
-        numValue = value;
-      } else if (index + 1 < args.length) {
-        numValue = args[index + 1];
-      }
-      return (numValue !== null ? Number(numValue) : null) as ParseResult;
-    } else if (config.type === "keyValue") {
-      let kvPair: string | null = null;
-
-      if (value !== null) {
-        kvPair = value;
-      } else if (index + 1 < args.length) {
-        kvPair = args[index + 1];
-      }
-
-      const result: Record<string, string> = {};
-
-      if (kvPair !== null) {
-        if (kvPair.includes("=")) {
-          const equalIndex = kvPair.indexOf("=");
-          const k = kvPair.substring(0, equalIndex);
-          const v = kvPair.substring(equalIndex + 1);
-          result[k] = v;
-        } else {
-          const k = kvPair;
-          if (index + 2 < args.length) {
-            const v = args[index + 2];
-            result[k] = v;
-          } else {
-            result[k] = "";
-          }
-        }
-      }
-
-      return result as ParseResult;
-    }
-
-    return null as ParseResult;
-  }
-
-  boolean(): FlagBuilder<boolean, boolean> {
-    return new FlagBuilder({
-      ...this.config,
-      type: "boolean",
-    });
-  }
-
-  string(options?: {
-    valueDelimiter?: string;
-  }): FlagBuilder<string | null, string | null> {
-    return new FlagBuilder({
-      ...this.config,
-      type: "string",
-      valueDelimiter: options?.valueDelimiter,
-    });
-  }
-
-  strings(): FlagBuilder<string[], string | null> {
-    return new FlagBuilder({
-      ...this.config,
-      type: "strings",
-    });
-  }
-
-  number(): FlagBuilder<number | null, number | null> {
-    return new FlagBuilder({
-      ...this.config,
-      type: "number",
-    });
-  }
-
-  keyValue(): FlagBuilder<Record<string, string>, Record<string, string>> {
-    return new FlagBuilder({
-      ...this.config,
-      type: "keyValue",
-    });
-  }
-
-  restArgs(): FlagBuilder<string[] | null, string[] | null> {
-    return new FlagBuilder({
-      ...this.config,
-      type: "restArgs",
-    });
-  }
-
-  required(): FlagBuilder<InitialValue, Exclude<ParseResult, null>> {
-    return new FlagBuilder({
-      ...this.config,
-      required: true,
-    });
-  }
-
-  default(
-    value: Exclude<InitialValue, null>,
-  ): FlagBuilder<Exclude<InitialValue, null>, ParseResult> {
-    return new FlagBuilder({
-      ...this.config,
-      default: value,
-    });
-  }
-
-  accumulate(current: InitialValue, parsed: ParseResult): InitialValue {
-    const config = this.config;
-
-    if (config.type === "strings") {
-      // Accumulate strings into array
-      if (parsed !== null) {
-        (current as string[]).push(parsed as string);
-      }
-      return current;
-    } else if (config.type === "keyValue") {
-      // Merge key-value pairs
-      Object.assign(current as object, parsed);
-      return current;
-    } else {
-      // Direct assignment for other types
-      return parsed as unknown as InitialValue;
-    }
-  }
-
-  shouldStopParsing(): boolean {
-    // Stop parsing if this is a restArgs flag
-    return this.config.type === "restArgs";
-  }
-
-  isPositionalArgument(): boolean {
-    return false;
-  }
-
-  builderKind(): "flag" | "command" | "argument" {
-    return "flag";
-  }
-
-  applyDefault(result: any, key: string | number | symbol): void {
-    const config = this.config;
-    if (config.default !== undefined && typeof config.default !== "function") {
-      result[key] = config.default;
-    }
-  }
-
-  validateRequired(result: any, key: string | number | symbol): void {
-    const config = this.config;
-    if (config.required === true) {
-      throw new RequiredFlagMissingError(config.names[0]);
-    }
-  }
-
-  toConfig(): BuilderConfig {
-    return this.config;
-  }
+export function argument(): NewArgumentBuilder<string | null, string | null> {
+  return NewArgumentBuilder.create().string();
 }
 
-export function flag(...names: string[]): FlagBuilder<boolean, boolean> {
-  return new FlagBuilder({
-    names,
-    type: "boolean",
-  });
-}
-
-class CommandBuilder<InitialValue, ParseResult> extends Builder<
-  InitialValue,
-  ParseResult
-> {
-  constructor(protected config: CommandConfig) {
-    super(config);
-  }
-
-  get name() {
-    return this.config.name;
-  }
-
-  get type() {
-    return this.config.type;
-  }
-
-  initialValue(): InitialValue {
-    const config = this.config;
-
-    if (config.type === "boolean") {
-      return false as InitialValue;
-    } else if (config.type === "restArgs") {
-      return null as InitialValue;
-    }
-
-    return null as InitialValue;
-  }
-
-  test(
-    arg: string,
-    index: number,
-    args: string[],
-  ): null | { index: number; args: string[]; parsed: ParseResult } {
-    if (arg !== this.config.name) {
-      return null;
-    }
-
-    const config = this.config;
-    const parsed = this.parse(arg, index, args);
-
-    if (config.type === "boolean") {
-      // Boolean commands consume 1 argument
-      return { index, args: [arg], parsed };
-    } else if (config.type === "restArgs") {
-      // restArgs commands consume all remaining arguments
-      const consumedArgs = args.slice(index);
-      return { index, args: consumedArgs, parsed };
-    }
-
-    return { index, args: [arg], parsed };
-  }
-
-  private parse(arg: string, index: number, args: string[]): ParseResult {
-    const config = this.config;
-
-    if (config.type === "boolean") {
-      return true as ParseResult;
-    } else if (config.type === "restArgs") {
-      const restArgs = args.slice(index + 1);
-      return (restArgs.length > 0 ? restArgs : []) as ParseResult;
-    }
-
-    return null as ParseResult;
-  }
-
-  boolean(): CommandBuilder<boolean, boolean> {
-    return new CommandBuilder({
-      ...this.config,
-      type: "boolean",
-    });
-  }
-
-  restArgs(): CommandBuilder<string[] | null, string[] | null> {
-    return new CommandBuilder({
-      ...this.config,
-      type: "restArgs",
-    });
-  }
-
-  accumulate(current: InitialValue, parsed: ParseResult): InitialValue {
-    // Commands always replace the value
-    return parsed as unknown as InitialValue;
-  }
-
-  shouldStopParsing(): boolean {
-    // Stop parsing if this is a restArgs command
-    return this.config.type === "restArgs";
-  }
-
-  isPositionalArgument(): boolean {
-    return false;
-  }
-
-  builderKind(): "flag" | "command" | "argument" {
-    return "command";
-  }
-
-  applyDefault(result: any, key: string | number | symbol): void {
-    // Commands don't have default values
-  }
-
-  validateRequired(result: any, key: string | number | symbol): void {
-    // Commands don't have required validation
-  }
-
-  toConfig(): CommandConfig {
-    return this.config;
-  }
-}
-
-export function command(name: string): CommandBuilder<boolean, boolean> {
-  return new CommandBuilder({
-    kind: "command",
-    name,
-    type: "boolean",
-  });
-}
-
-class ArgumentBuilder<InitialValue, ParseResult> extends Builder<
-  InitialValue,
-  ParseResult
-> {
-  constructor(protected config: ArgumentConfig) {
-    super(config);
-  }
-
-  get type() {
-    return this.config.type;
-  }
-
-  initialValue(): InitialValue {
-    return null as InitialValue;
-  }
-
-  test(
-    arg: string,
-    index: number,
-    args: string[],
-  ): null | { index: number; args: string[]; parsed: ParseResult } {
-    // If there's a custom refine function, use it
-    if (this.config.refineFunction) {
-      return this.config.refineFunction(arg, index, args);
-    }
-
-    // Arguments match any non-flag, non-command value
-    if (arg.startsWith("-")) {
-      return null;
-    }
-
-    const config = this.config;
-
-    if (config.type === "restArgs") {
-      // restArgs arguments consume all remaining non-flag arguments
-      const consumedArgs: string[] = [];
-      for (let i = index; i < args.length; i++) {
-        if (!args[i].startsWith("-")) {
-          consumedArgs.push(args[i]);
-        } else {
-          break;
-        }
-      }
-      const parsed = this.parse(arg, index, args);
-      return { index, args: consumedArgs, parsed };
-    }
-
-    const parsed = this.parse(arg, index, args);
-
-    // For match type, if parsed is null, don't match
-    if (config.type === "match" && parsed === null) {
-      return null;
-    }
-
-    // Positional arguments consume 1 argument
-    return { index, args: [arg], parsed };
-  }
-
-  private parse(arg: string, index: number, args: string[]): ParseResult {
-    const config = this.config;
-
-    if (config.type === "restArgs") {
-      const restArgs: string[] = [];
-      for (let i = index; i < args.length; i++) {
-        if (!args[i].startsWith("-")) {
-          restArgs.push(args[i]);
-        } else {
-          break;
-        }
-      }
-      return (restArgs.length > 0 ? restArgs : []) as ParseResult;
-    }
-
-    if (config.type === "match" && config.matchPattern) {
-      const match = arg.match(config.matchPattern);
-      if (match && match.groups) {
-        return match.groups as ParseResult;
-      }
-      return null as ParseResult;
-    }
-
-    let result: any = arg;
-
-    // Apply transform function if provided
-    if (config.transformFunction) {
-      result = config.transformFunction(arg, index, args);
-    }
-
-    return result as ParseResult;
-  }
-
-  string(): ArgumentBuilder<string | null, string | null> {
-    return new ArgumentBuilder({
-      ...this.config,
-      type: "string",
-      refineFunction: (arg: string, index: number, args: string[]) => {
-        // Arguments match any non-flag value
-        if (arg.startsWith("-")) {
-          return null;
-        }
-
-        return {
-          index,
-          args: [arg],
-          parsed: arg,
-        };
-      },
-    });
-  }
-
-  restArgs(): ArgumentBuilder<string[] | null, string[] | null> {
-    return new ArgumentBuilder({
-      ...this.config,
-      type: "restArgs",
-      refineFunction: (arg: string, index: number, args: string[]) => {
-        // Arguments match any non-flag value
-        if (arg.startsWith("-")) {
-          return null;
-        }
-
-        // restArgs arguments consume all remaining non-flag arguments
-        const consumedArgs: string[] = [];
-        for (let i = index; i < args.length; i++) {
-          if (!args[i].startsWith("-")) {
-            consumedArgs.push(args[i]);
-          } else {
-            break;
-          }
-        }
-
-        return {
-          index,
-          args: consumedArgs,
-          parsed: consumedArgs.length > 0 ? consumedArgs : [],
-        };
-      },
-    });
-  }
-
-  match(
-    pattern: RegExp,
-  ): ArgumentBuilder<
-    Record<string, string> | null,
-    Record<string, string> | null
-  > {
-    return new ArgumentBuilder({
-      ...this.config,
-      type: "match",
-      refineFunction: (arg: string, index: number, args: string[]) => {
-        const match = arg.match(pattern);
-        if (match && match.groups) {
-          return { index, args: [arg], parsed: match.groups };
-        }
-        return null;
-      },
-    });
-  }
-
-  refine<T>(
-    fn: (
-      arg: string,
-      index: number,
-      args: string[],
-    ) => null | { index: number; args: string[]; parsed: T },
-  ): ArgumentBuilder<T | null, T | null> {
-    return new ArgumentBuilder({
-      ...this.config,
-      refineFunction: fn,
-    });
-  }
-
-  transform<T>(
-    fn: (arg: string, index: number, args: string[]) => T,
-  ): ArgumentBuilder<T | null, T | null> {
-    return new ArgumentBuilder({
-      ...this.config,
-      transformFunction: fn,
-    });
-  }
-
-  required(): ArgumentBuilder<InitialValue, Exclude<ParseResult, null>> {
-    return new ArgumentBuilder({
-      ...this.config,
-      required: true,
-    });
-  }
-
-  accumulate(current: InitialValue, parsed: ParseResult): InitialValue {
-    // Arguments always replace the value
-    return parsed as unknown as InitialValue;
-  }
-
-  shouldStopParsing(): boolean {
-    // Stop parsing if this is a restArgs argument
-    return this.config.type === "restArgs";
-  }
-
-  isPositionalArgument(): boolean {
-    return true;
-  }
-
-  builderKind(): "flag" | "command" | "argument" {
-    return "argument";
-  }
-
-  applyDefault(result: any, key: string | number | symbol): void {
-    // Arguments don't have default values
-  }
-
-  validateRequired(result: any, key: string | number | symbol): void {
-    const config = this.config;
-    if (config.required === true) {
-      throw new RequiredArgumentMissingError();
-    }
-  }
-
-  toConfig(): ArgumentConfig {
-    return this.config;
-  }
-}
-
-export function argument(): ArgumentBuilder<string | null, string | null> {
-  return new ArgumentBuilder({
-    kind: "argument",
-    type: "string",
-  });
-}
-
-type ExtractFinalType<T> =
-  T extends Builder<infer IV, infer PR> ? (IV extends null ? PR : IV) : never;
-
-type ParseResultType<T extends Record<string, any>> = {
-  [K in keyof T]: ExtractFinalType<T[K]>;
-};
-
-class FlagsParser<T extends Record<string, any>> {
-  private _programName: string = "cli";
-  private _description?: string;
-
-  constructor(private schema: T) {}
-
-  programName(name: string): this {
-    this._programName = name;
-    return this;
-  }
-
-  describe(description: string): this {
-    this._description = description;
-    return this;
-  }
-
-  helpMessage({
-    terminalWidth,
-    noColor,
-  }: { terminalWidth?: number; noColor?: boolean } = {}): string {
-    const lines: string[] = [];
-
-    // Get terminal width (default to 80 if not available)
-    const width =
-      terminalWidth ??
-      (typeof process !== "undefined" && process.stdout?.columns
-        ? process.stdout.columns
-        : 80);
-
-    // Helper function to strip ANSI codes for length calculation
-    const stripAnsi = (str: string): string => {
-      return str.replace(/\x1b\[[0-9;]*m/g, "");
-    };
-
-    // Helper function to remove ANSI codes if noColor is true
-    const processText = (text: string): string => {
-      return noColor ? stripAnsi(text) : text;
-    };
-
-    // Helper function to wrap text
-    const wrapText = (text: string, width: number): string[] => {
-      if (!text) return [""];
-
-      const words = text.split(/\s+/);
-      const wrappedLines: string[] = [];
-      let currentLine = "";
-
-      for (const word of words) {
-        const currentLineVisible = stripAnsi(currentLine).length;
-        const wordVisible = stripAnsi(word).length;
-
-        if (currentLine.length === 0) {
-          currentLine = word;
-        } else if (currentLineVisible + 1 + wordVisible <= width) {
-          currentLine += " " + word;
-        } else {
-          wrappedLines.push(currentLine);
-          currentLine = word;
-        }
-      }
-
-      if (currentLine.length > 0) {
-        wrappedLines.push(currentLine);
-      }
-
-      return wrappedLines.length > 0 ? wrappedLines : [""];
-    };
-
-    // Usage line
-    lines.push(`Usage: ${this._programName}`);
-    lines.push("");
-
-    // Description if provided
-    if (this._description) {
-      const wrappedDescription = wrapText(
-        processText(this._description),
-        width,
-      );
-      for (const line of wrappedDescription) {
-        lines.push(line);
-      }
-      lines.push("");
-    }
-
-    // Separate flags and commands
-    const flags: Array<[string, any]> = [];
-    const commands: Array<[string, any]> = [];
-
-    for (const [key, builder] of Object.entries(this.schema)) {
-      const kind = builder.builderKind();
-      if (kind === "flag") {
-        flags.push([key, builder]);
-      } else if (kind === "command") {
-        commands.push([key, builder]);
-      }
-      // Skip arguments in help for now
-    }
-
-    // Calculate the maximum length for both flags and commands
-    let maxLength = 22; // Minimum width
-
-    // Check flags
-    for (const [_key, flagBuilder] of flags) {
-      const config = flagBuilder.toConfig();
-      const names = config.names.join(", ");
-      const type = config.type === "boolean" ? "" : `<${config.type}>`;
-      const flagLine = `${names}${type ? " " + type : ""}`;
-      maxLength = Math.max(maxLength, flagLine.length);
-    }
-
-    // Check commands
-    for (const [_key, commandBuilder] of commands) {
-      const config = commandBuilder.toConfig();
-      maxLength = Math.max(maxLength, config.name.length);
-    }
-
-    // Calculate description column width
-    const leftColumnWidth = 2 + maxLength + 3; // indent + maxLength + padding
-    const descriptionWidth = Math.max(width - leftColumnWidth, 30);
-
-    // Options header and details
-    if (flags.length > 0) {
-      lines.push("Options:");
-      for (const [_key, flagBuilder] of flags) {
-        const config = flagBuilder.toConfig();
-        const names = config.names.join(", ");
-        const type = config.type === "boolean" ? "" : `<${config.type}>`;
-        const required = config.required === true ? "(required)" : "";
-        const description = config.description || "";
-
-        const flagLine = `${names}${type ? " " + type : ""}`;
-        const padding = " ".repeat(
-          Math.max(maxLength - flagLine.length + 3, 3),
-        );
-
-        const requiredPart = required ? `${required} ` : "";
-        const fullDescription = `${requiredPart}${processText(description)}`;
-
-        // Wrap description text
-        const wrappedLines = wrapText(fullDescription, descriptionWidth);
-
-        // First line with flag
-        lines.push(`  ${flagLine}${padding}${wrappedLines[0]}`);
-
-        // Subsequent lines with proper indentation
-        for (let i = 1; i < wrappedLines.length; i++) {
-          const indent = " ".repeat(leftColumnWidth);
-          lines.push(`${indent}${wrappedLines[i]}`);
-        }
-      }
-    }
-
-    // Commands header and details
-    if (commands.length > 0) {
-      if (flags.length > 0) {
-        lines.push("");
-      }
-
-      lines.push("Commands:");
-      for (const [_key, commandBuilder] of commands) {
-        const config = commandBuilder.toConfig();
-        const name = config.name;
-        const description = config.description || "";
-
-        const padding = " ".repeat(Math.max(maxLength - name.length + 3, 3));
-
-        // Wrap description text
-        const wrappedLines = wrapText(
-          processText(description),
-          descriptionWidth,
-        );
-
-        // First line with command
-        lines.push(`  ${name}${padding}${wrappedLines[0]}`);
-
-        // Subsequent lines with proper indentation
-        for (let i = 1; i < wrappedLines.length; i++) {
-          const indent = " ".repeat(leftColumnWidth);
-          lines.push(`${indent}${wrappedLines[i]}`);
-        }
-      }
-    }
-
-    return lines.join("\n");
-  }
-
-  parse(args: string[]): ParseResultType<T> {
-    const result: any = {};
-    const builders: Array<{
-      key: keyof T;
-      builder: Builder<any, any>;
-      used: boolean;
-    }> = [];
-
-    // Initialize values using builder.initialValue()
-    for (const [key, builder] of Object.entries(this.schema)) {
-      result[key] = builder.initialValue();
-      builders.push({ key, builder, used: false });
-    }
-
-    // Build a map of single-letter boolean flags for expansion
-    const singleLetterBooleanFlags = new Map<string, boolean>();
-    for (const { builder } of builders) {
-      if (builder.builderKind() === "flag") {
-        const flagBuilder = builder as FlagBuilder<any, any>;
-        if (flagBuilder.type === "boolean") {
-          for (const name of flagBuilder.names) {
-            // Only consider single-letter flags (e.g., -a, -b, not --all)
-            if (name.length === 2 && name.startsWith("-") && name[1] !== "-") {
-              singleLetterBooleanFlags.set(name[1], true);
-            }
-          }
-        }
-      }
-    }
-
-    // Parse arguments using builder.test()
-    let i = 0;
-    let currentArgumentIndex = 0;
-    const argumentBuilders = builders.filter(({ builder }) =>
-      builder.isPositionalArgument(),
-    );
-
-    while (i < args.length) {
-      const arg = args[i];
-      let matched = false;
-
-      // Try to expand combined flags before matching
-      const expandedFlags = this.tryExpandCombinedFlag(
-        arg,
-        singleLetterBooleanFlags,
-      );
-
-      if (expandedFlags.length > 1) {
-        // This is a combined flag that was expanded
-        // Process each expanded flag
-        for (const expandedFlag of expandedFlags) {
-          for (const builderEntry of builders) {
-            const { key, builder } = builderEntry;
-            const match = builder.test(expandedFlag, i, [expandedFlag]);
-
-            if (match !== null && !builder.isPositionalArgument()) {
-              result[key] = builder.accumulate(result[key], match.parsed);
-              builderEntry.used = true;
-              break;
-            }
-          }
-        }
-        matched = true;
-        i++;
-      } else {
-        // Try to match with each builder
-        for (const builderEntry of builders) {
-          const { key, builder } = builderEntry;
-          const match = builder.test(arg, i, args);
-
-          if (match !== null) {
-            // Special handling for positional arguments
-            if (builder.isPositionalArgument()) {
-              // Check if this is a match-type argument (can match out of order)
-              const config = builder.toConfig() as ArgumentConfig;
-              const isMatchType = config.type === "match";
-
-              if (isMatchType) {
-                // Match-type arguments can match out of order
-                result[key] = builder.accumulate(result[key], match.parsed);
-                builderEntry.used = true;
-                matched = true;
-              } else if (
-                currentArgumentIndex < argumentBuilders.length &&
-                argumentBuilders[currentArgumentIndex].key === key
-              ) {
-                // Regular positional arguments must match in order
-                result[key] = builder.accumulate(result[key], match.parsed);
-                currentArgumentIndex++;
-                builderEntry.used = true;
-                matched = true;
-              }
-              // If not the right position, continue to next builder
-            } else {
-              // Use accumulate method for all other builders
-              result[key] = builder.accumulate(result[key], match.parsed);
-              builderEntry.used = true;
-              matched = true;
-
-              // Check if we should stop parsing (e.g., restArgs commands)
-              if (builder.shouldStopParsing()) {
-                i = args.length; // Exit loop
-                break;
-              }
-            }
-
-            // Advance index by consumed args if matched
-            if (matched) {
-              i += match.args.length;
-              break;
-            }
-          }
-        }
-      }
-
-      if (!matched) {
-        throw new UnexpectedArgumentError(arg);
-      }
-    }
-
-    // Apply default values and validate required
-    for (const builderEntry of builders) {
-      const { key, builder, used } = builderEntry;
-
-      if (!used) {
-        builder.applyDefault(result, key);
-        builder.validateRequired(result, key);
-      }
-    }
-
-    return result as ParseResultType<T>;
-  }
-
-  private tryExpandCombinedFlag(
-    arg: string,
-    singleLetterBooleanFlags: Map<string, boolean>,
-  ): string[] {
-    // Check if this is a potential combined flag: starts with single dash,
-    // has multiple characters, no equals sign, and not a double dash
-    if (
-      arg.startsWith("-") &&
-      !arg.startsWith("--") &&
-      !arg.includes("=") &&
-      arg.length > 2
-    ) {
-      // Try to expand as combined flags
-      const letters = arg.slice(1); // Remove the leading dash
-      let canExpand = true;
-
-      // Check if all letters are single-letter boolean flags
-      for (const letter of letters) {
-        if (!singleLetterBooleanFlags.has(letter)) {
-          canExpand = false;
-          break;
-        }
-      }
-
-      if (canExpand) {
-        // Expand into individual flags
-        const expanded: string[] = [];
-        for (const letter of letters) {
-          expanded.push(`-${letter}`);
-        }
-        return expanded;
-      }
-    }
-
-    // Cannot expand or not a combined flag, return as single element array
-    return [arg];
-  }
-}
-
-export function flags<T extends Record<string, any>>(
-  schema: T,
-): FlagsParser<T> {
-  return new FlagsParser(schema);
+export function flags<
+  T extends Record<
+    string,
+    | NewArgumentBuilder<any, any>
+    | NewFlagBuilder<any, any>
+    | NewCommandBuilder<any, any>
+  >,
+>(schema: T): NewFlagsParser<T> {
+  return new NewFlagsParser(schema);
 }
 
 // NewArgumentBuilder types and implementation
@@ -1146,6 +69,7 @@ export type ResultParser<ParseResult> = {
 export class NewArgumentBuilder<InitialValue, ParseResult> {
   private refiners: Refine[];
   private initial: InitialValue;
+  protected description?: string;
 
   constructor(initial: InitialValue, refiners: Refine[]) {
     this.initial = initial;
@@ -1167,6 +91,136 @@ export class NewArgumentBuilder<InitialValue, ParseResult> {
     ]);
   }
 
+  string(): NewArgumentBuilder<string | null, string | null> {
+    const refiner: Refine = (arg, index, args, context) => {
+      // Arguments match any non-flag value
+      if (arg.startsWith("-")) {
+        return null;
+      }
+
+      return {
+        args: [arg],
+        index: index + 1,
+        value: arg,
+      };
+    };
+
+    return new NewArgumentBuilder<string | null, string | null>(null, [
+      refiner,
+    ]);
+  }
+
+  restArgs(): NewArgumentBuilder<string[] | null, string[] | null> {
+    const refiner: Refine = (arg, index, args, context) => {
+      // Arguments match any non-flag value
+      if (arg.startsWith("-")) {
+        return null;
+      }
+
+      // restArgs arguments consume all remaining non-flag arguments
+      const consumedArgs: string[] = [];
+      for (let i = index; i < args.length; i++) {
+        if (!args[i].startsWith("-")) {
+          consumedArgs.push(args[i]);
+        } else {
+          break;
+        }
+      }
+
+      return {
+        args: consumedArgs,
+        index: index + consumedArgs.length,
+        value: consumedArgs.length > 0 ? consumedArgs : [],
+      };
+    };
+
+    return new NewArgumentBuilder<string[] | null, string[] | null>(null, [
+      refiner,
+    ]);
+  }
+
+  match(
+    pattern: RegExp,
+  ): NewArgumentBuilder<
+    Record<string, string> | null,
+    Record<string, string> | null
+  > {
+    const refiner: Refine = (arg, index, args, context) => {
+      const match = arg.match(pattern);
+      if (match && match.groups) {
+        return {
+          args: [arg],
+          index: index + 1,
+          value: match.groups,
+        };
+      }
+      return null;
+    };
+
+    return new NewArgumentBuilder<
+      Record<string, string> | null,
+      Record<string, string> | null
+    >(null, [refiner]);
+  }
+
+  transform<T>(
+    fn: (arg: string, index: number, args: string[]) => T,
+  ): NewArgumentBuilder<T | null, T | null> {
+    const refiner: Refine = (arg, index, args, context) => {
+      if (arg.startsWith("-")) {
+        return null;
+      }
+
+      const transformed = fn(arg, index, args);
+      return {
+        args: [arg],
+        index: index + 1,
+        value: transformed,
+      };
+    };
+
+    return new NewArgumentBuilder<T | null, T | null>(null, [refiner]);
+  }
+
+  required(): NewArgumentBuilder<InitialValue, Exclude<ParseResult, null>> {
+    // For now, just return the same builder
+    // Required validation would need to be handled in the parser
+    return this as any;
+  }
+
+  describe(desc: string): this {
+    this.description = desc;
+    return this;
+  }
+
+  initialValue(): InitialValue {
+    return this.initial;
+  }
+
+  test(
+    arg: string,
+    index: number,
+    args: string[],
+  ): null | { index: number; args: string[]; parsed: ParseResult } {
+    const result = this.parse(index, args);
+    if (result === null) {
+      return null;
+    }
+    return {
+      index: result.index,
+      args: result.args,
+      parsed: result.value,
+    };
+  }
+
+  toConfig(): any {
+    return {
+      kind: "argument",
+      type: "string",
+      description: this.description,
+    };
+  }
+
   parse(startIndex: number, args: string[]): null | ResultParser<ParseResult> {
     if (args.length === 0 || startIndex >= args.length) {
       return null;
@@ -1183,16 +237,7 @@ export class NewArgumentBuilder<InitialValue, ParseResult> {
         return null;
       }
 
-      // Extract value from array if needed before passing to next refiner
-      let processedValue = result.value;
-      if (Array.isArray(processedValue) && processedValue.length > 0) {
-        processedValue = processedValue[processedValue.length - 1];
-      }
-
-      context = {
-        ...result,
-        value: processedValue,
-      };
+      context = result;
     }
 
     // If no refiners or all passed, return the final context
@@ -1215,32 +260,820 @@ export class NewArgumentBuilder<InitialValue, ParseResult> {
   }
 }
 
+// NewFlagBuilder implementation
+export class NewFlagBuilder<
+  InitialValue,
+  ParseResult,
+> extends NewArgumentBuilder<InitialValue, ParseResult> {
+  private flagNames: string[];
+  private isRequired: boolean = false;
+
+  constructor(names: string[], initial: InitialValue, refiners: Refine[]) {
+    super(initial, refiners);
+    this.flagNames = names;
+  }
+
+  getNames() {
+    return this.flagNames;
+  }
+
+  override setInitial<T>(initial: T): NewFlagBuilder<T, ParseResult> {
+    const builder = new NewFlagBuilder<T, ParseResult>(
+      this.flagNames,
+      initial,
+      (this as any).refiners,
+    );
+    builder.description = this.description;
+    builder.isRequired = this.isRequired;
+    return builder;
+  }
+
+  override refine<U>(refine: Refine): NewFlagBuilder<InitialValue, U> {
+    const builder = new NewFlagBuilder<InitialValue, U>(
+      this.flagNames,
+      this.getInitial(),
+      [...(this as any).refiners, refine],
+    );
+    builder.description = this.description;
+    builder.isRequired = this.isRequired;
+    return builder;
+  }
+
+  override describe(desc: string): this {
+    this.description = desc;
+    return this;
+  }
+
+  override toConfig(): any {
+    const initial = this.getInitial();
+    let type = "boolean";
+
+    // Determine type by testing with the first flag name
+    const testFlagName = this.flagNames[0] || "--test";
+
+    if (Array.isArray(initial)) {
+      type = "strings";
+    } else if (typeof initial === "object" && initial !== null) {
+      type = "keyValue";
+    } else if (typeof initial === "number") {
+      type = "number";
+    } else if (typeof initial === "string") {
+      type = "string";
+    } else if (initial === null && (this as any).refiners?.length > 0) {
+      // Test the refiners to determine type
+      const testResult = this.parse(0, [testFlagName, "123"]);
+      if (testResult && typeof testResult.value === "number") {
+        type = "number";
+      } else if (testResult && typeof testResult.value === "string") {
+        type = "string";
+      } else if (testResult && Array.isArray(testResult.value)) {
+        type = "strings";
+      } else if (
+        testResult &&
+        typeof testResult.value === "object" &&
+        testResult.value !== null
+      ) {
+        type = "keyValue";
+      }
+    }
+
+    return {
+      names: this.flagNames,
+      type,
+      description: this.description,
+      required: this.isRequired,
+    };
+  }
+
+  boolean(): NewFlagBuilder<boolean, boolean> {
+    const refiner: Refine = (arg, index, args, context) => {
+      // Check if arg matches any of the flag names
+      for (const name of this.flagNames) {
+        if (arg === name) {
+          return {
+            args: [arg],
+            index: index + 1,
+            value: true,
+          };
+        }
+      }
+      return null;
+    };
+
+    const builder = new NewFlagBuilder<boolean, boolean>(
+      this.flagNames,
+      false,
+      [refiner],
+    );
+    builder.description = this.description;
+    builder.isRequired = this.isRequired;
+    return builder;
+  }
+
+  string(options?: {
+    valueDelimiter?: string;
+  }): NewFlagBuilder<string | null, string | null> {
+    const refiner: Refine = (arg, index, args, context) => {
+      for (const name of this.flagNames) {
+        // Check for valueDelimiter match
+        if (
+          options?.valueDelimiter &&
+          arg.startsWith(name + options.valueDelimiter)
+        ) {
+          const value = arg.substring(
+            name.length + options.valueDelimiter.length,
+          );
+          return {
+            args: [arg],
+            index: index + 1,
+            value: value || null,
+          };
+        }
+
+        // Check for = syntax
+        if (arg.startsWith(name + "=")) {
+          const value = arg.substring(name.length + 1);
+          return {
+            args: [arg],
+            index: index + 1,
+            value: value || null,
+          };
+        }
+
+        // Check for flag name followed by value
+        if (arg === name) {
+          if (index + 1 < args.length) {
+            return {
+              args: [arg, args[index + 1]],
+              index: index + 2,
+              value: args[index + 1],
+            };
+          }
+          return {
+            args: [arg],
+            index: index + 1,
+            value: null,
+          };
+        }
+      }
+      return null;
+    };
+
+    const builder = new NewFlagBuilder<string | null, string | null>(
+      this.flagNames,
+      null,
+      [refiner],
+    );
+    builder.description = this.description;
+    builder.isRequired = this.isRequired;
+    return builder;
+  }
+
+  strings(): NewFlagBuilder<string[], string | null> {
+    const refiner: Refine = (arg, index, args, context) => {
+      for (const name of this.flagNames) {
+        let value: string | null = null;
+
+        // Check for = syntax
+        if (arg.startsWith(name + "=")) {
+          value = arg.substring(name.length + 1);
+        } else if (arg === name && index + 1 < args.length) {
+          value = args[index + 1];
+        }
+
+        if (arg === name || arg.startsWith(name + "=")) {
+          const consumedArgs = arg.startsWith(name + "=")
+            ? [arg]
+            : [arg, args[index + 1]];
+
+          // Return the single value, not the accumulated array
+          // The parser will handle accumulation
+          return {
+            args: consumedArgs,
+            index: index + consumedArgs.length,
+            value: value !== null ? [value] : [],
+          };
+        }
+      }
+      return null;
+    };
+
+    const builder = new NewFlagBuilder<string[], string | null>(
+      this.flagNames,
+      [],
+      [refiner],
+    );
+    builder.description = this.description;
+    builder.isRequired = this.isRequired;
+    return builder;
+  }
+
+  number(): NewFlagBuilder<number | null, number | null> {
+    const refiner: Refine = (arg, index, args, context) => {
+      for (const name of this.flagNames) {
+        let numValue: string | null = null;
+
+        // Check for = syntax
+        if (arg.startsWith(name + "=")) {
+          numValue = arg.substring(name.length + 1);
+        } else if (arg === name && index + 1 < args.length) {
+          numValue = args[index + 1];
+        }
+
+        if (arg === name || arg.startsWith(name + "=")) {
+          const consumedArgs = arg.startsWith(name + "=")
+            ? [arg]
+            : [arg, args[index + 1]];
+
+          return {
+            args: consumedArgs,
+            index: index + consumedArgs.length,
+            value: numValue !== null ? Number(numValue) : null,
+          };
+        }
+      }
+      return null;
+    };
+
+    const builder = new NewFlagBuilder<number | null, number | null>(
+      this.flagNames,
+      null,
+      [refiner],
+    );
+    builder.description = this.description;
+    builder.isRequired = this.isRequired;
+    return builder;
+  }
+
+  keyValue(): NewFlagBuilder<Record<string, string>, Record<string, string>> {
+    const refiner: Refine = (arg, index, args, context) => {
+      for (const name of this.flagNames) {
+        if (arg === name || arg.startsWith(name + "=")) {
+          let kvPair: string | null = null;
+
+          // Check for = syntax
+          if (arg.startsWith(name + "=")) {
+            kvPair = arg.substring(name.length + 1);
+          } else if (index + 1 < args.length) {
+            kvPair = args[index + 1];
+          }
+
+          const currentObj = context?.value || {};
+          const result: Record<string, string> = { ...currentObj };
+
+          if (kvPair !== null) {
+            if (kvPair.includes("=")) {
+              const equalIndex = kvPair.indexOf("=");
+              const k = kvPair.substring(0, equalIndex);
+              const v = kvPair.substring(equalIndex + 1);
+              result[k] = v;
+            } else {
+              const k = kvPair;
+              if (index + 2 < args.length && !args[index + 2].startsWith("-")) {
+                const v = args[index + 2];
+                result[k] = v;
+              } else {
+                result[k] = "";
+              }
+            }
+          }
+
+          const consumedArgs = arg.startsWith(name + "=")
+            ? [arg]
+            : kvPair && kvPair.includes("=")
+              ? [arg, kvPair]
+              : index + 2 < args.length && !args[index + 2].startsWith("-")
+                ? [arg, kvPair!, args[index + 2]]
+                : kvPair !== null
+                  ? [arg, kvPair]
+                  : [arg];
+
+          return {
+            args: consumedArgs,
+            index: index + consumedArgs.length,
+            value: result,
+          };
+        }
+      }
+      return null;
+    };
+
+    const builder = new NewFlagBuilder<
+      Record<string, string>,
+      Record<string, string>
+    >(this.flagNames, {}, [refiner]);
+    builder.description = this.description;
+    builder.isRequired = this.isRequired;
+    return builder;
+  }
+
+  restArgs(): NewFlagBuilder<string[] | null, string[] | null> {
+    const refiner: Refine = (arg, index, args, context) => {
+      for (const name of this.flagNames) {
+        if (arg === name) {
+          const restArgs = args.slice(index + 1);
+          return {
+            args: args.slice(index),
+            index: args.length,
+            value: restArgs.length > 0 ? restArgs : [],
+          };
+        }
+      }
+      return null;
+    };
+
+    const builder = new NewFlagBuilder<string[] | null, string[] | null>(
+      this.flagNames,
+      null,
+      [refiner],
+    );
+    builder.description = this.description;
+    builder.isRequired = this.isRequired;
+    return builder;
+  }
+
+  required(): NewFlagBuilder<InitialValue, Exclude<ParseResult, null>> {
+    const builder = new NewFlagBuilder<
+      InitialValue,
+      Exclude<ParseResult, null>
+    >(
+      this.flagNames,
+      this.getInitial() as InitialValue,
+      (this as any).refiners,
+    );
+    builder.description = this.description;
+    builder.isRequired = true;
+    return builder as any;
+  }
+
+  default(
+    value: Exclude<InitialValue, null>,
+  ): NewFlagBuilder<Exclude<InitialValue, null>, ParseResult> {
+    const builder = new NewFlagBuilder<
+      Exclude<InitialValue, null>,
+      ParseResult
+    >(this.flagNames, value, (this as any).refiners);
+    builder.description = this.description;
+    builder.isRequired = this.isRequired;
+    return builder;
+  }
+
+  static createFlag(...names: string[]) {
+    const builder = new NewFlagBuilder<boolean, boolean>(names, false, []);
+    return builder.boolean();
+  }
+}
+
+// NewCommandBuilder implementation
+export class NewCommandBuilder<
+  InitialValue,
+  ParseResult,
+> extends NewArgumentBuilder<InitialValue, ParseResult> {
+  private commandName: string;
+
+  constructor(name: string, initial: InitialValue, refiners: Refine[]) {
+    super(initial, refiners);
+    this.commandName = name;
+  }
+
+  getName() {
+    return this.commandName;
+  }
+
+  override setInitial<T>(initial: T): NewCommandBuilder<T, ParseResult> {
+    const builder = new NewCommandBuilder<T, ParseResult>(
+      this.commandName,
+      initial,
+      (this as any).refiners,
+    );
+    builder.description = this.description;
+    return builder;
+  }
+
+  override refine<U>(refine: Refine): NewCommandBuilder<InitialValue, U> {
+    const builder = new NewCommandBuilder<InitialValue, U>(
+      this.commandName,
+      this.getInitial(),
+      [...(this as any).refiners, refine],
+    );
+    builder.description = this.description;
+    return builder;
+  }
+
+  override describe(desc: string): this {
+    this.description = desc;
+    return this;
+  }
+
+  override toConfig(): any {
+    return {
+      kind: "command",
+      name: this.commandName,
+      type: "boolean",
+      description: this.description,
+    };
+  }
+
+  boolean(): NewCommandBuilder<boolean, boolean> {
+    const refiner: Refine = (arg, index, args, context) => {
+      // Commands should not start with dashes
+      if (arg.startsWith("-")) {
+        return null;
+      }
+
+      if (arg !== this.commandName) {
+        return null;
+      }
+
+      return {
+        args: [arg],
+        index: index + 1,
+        value: true,
+      };
+    };
+
+    const builder = new NewCommandBuilder<boolean, boolean>(
+      this.commandName,
+      false,
+      [refiner],
+    );
+    builder.description = this.description;
+    return builder;
+  }
+
+  restArgs(): NewCommandBuilder<string[] | null, string[] | null> {
+    const refiner: Refine = (arg, index, args, context) => {
+      // Commands should not start with dashes
+      if (arg.startsWith("-")) {
+        return null;
+      }
+
+      if (arg !== this.commandName) {
+        return null;
+      }
+
+      const restArgs = args.slice(index + 1);
+      return {
+        args: args.slice(index),
+        index: args.length,
+        value: restArgs.length > 0 ? restArgs : [],
+      };
+    };
+
+    const builder = new NewCommandBuilder<string[] | null, string[] | null>(
+      this.commandName,
+      null,
+      [refiner],
+    );
+    builder.description = this.description;
+    return builder;
+  }
+
+  static createCommand(name: string) {
+    const builder = new NewCommandBuilder<boolean, boolean>(name, false, []);
+    return builder.boolean();
+  }
+}
+
+export function command(name: string): NewCommandBuilder<boolean, boolean> {
+  return NewCommandBuilder.createCommand(name);
+}
+
 // NewFlagsParser implementation
 export class NewFlagsParser<
   T extends Record<string, NewArgumentBuilder<any, any>>,
 > {
+  private _programName: string = "cli";
+  private _description?: string;
+
   constructor(private schema: T) {}
 
-  parse(args: string[]): any {
+  programName(name: string): this {
+    this._programName = name;
+    return this;
+  }
+
+  describe(description: string): this {
+    this._description = description;
+    return this;
+  }
+
+  helpMessage({
+    terminalWidth = 80,
+    noColor = false,
+  }: { terminalWidth?: number; noColor?: boolean } = {}): string {
+    const stripAnsi = (str: string) => {
+      return str.replace(/\x1b\[[0-9;]*m/g, "");
+    };
+
+    const wrapText = (
+      text: string,
+      width: number,
+      indent: number = 0,
+    ): string => {
+      const indentStr = " ".repeat(indent);
+      const words = text.split(/\s+/);
+      const lines: string[] = [];
+      let currentLine = indentStr;
+
+      for (const word of words) {
+        const cleanWord = stripAnsi(word);
+        const cleanLine = stripAnsi(currentLine);
+
+        if (cleanLine.length + cleanWord.length + 1 <= width) {
+          currentLine += (currentLine === indentStr ? "" : " ") + word;
+        } else {
+          if (currentLine !== indentStr) {
+            lines.push(currentLine);
+          }
+          currentLine = indentStr + word;
+        }
+      }
+
+      if (currentLine !== indentStr) {
+        lines.push(currentLine);
+      }
+
+      return lines.join("\n");
+    };
+
+    let help = `Usage: ${this._programName}\n\n`;
+
+    if (this._description) {
+      const desc = noColor ? stripAnsi(this._description) : this._description;
+      help += wrapText(desc, terminalWidth) + "\n\n";
+    }
+
+    // Separate flags and commands
+    const flags: Array<[string, any]> = [];
+    const commands: Array<[string, any]> = [];
+
+    for (const [key, builder] of Object.entries(this.schema)) {
+      const config = builder.toConfig();
+      if (config.kind === "command") {
+        commands.push([key, config]);
+      } else if (builder instanceof NewFlagBuilder) {
+        flags.push([key, config]);
+      }
+    }
+
+    // Generate flags section
+    if (flags.length > 0) {
+      help += "Options:\n";
+
+      for (const [key, config] of flags) {
+        const names = config.names?.join(", ") || "";
+        const typeStr =
+          config.type === "string"
+            ? " <string>"
+            : config.type === "number"
+              ? " <number>"
+              : config.type === "strings"
+                ? " <strings>"
+                : "";
+        const requiredStr = config.required ? " (required)" : "";
+        const desc = config.description || "";
+
+        const flagLine = `  ${names}${typeStr}`;
+        const descIndent = 28;
+
+        // Build the full description with required marker
+        const fullDesc =
+          requiredStr + (desc ? (requiredStr ? " " : "") + desc : "");
+
+        if (fullDesc) {
+          const cleanFlagLine = stripAnsi(flagLine);
+          const cleanDesc = noColor ? stripAnsi(fullDesc) : fullDesc;
+
+          if (cleanFlagLine.length < descIndent) {
+            const padding = " ".repeat(descIndent - cleanFlagLine.length);
+
+            // Wrap description text
+            const descWords = cleanDesc.split(/\s+/);
+            const descLines: string[] = [];
+            let currentLine = "";
+
+            for (const word of descWords) {
+              const testLine = currentLine ? currentLine + " " + word : word;
+              if (stripAnsi(testLine).length <= terminalWidth - descIndent) {
+                currentLine = testLine;
+              } else {
+                if (currentLine) {
+                  descLines.push(currentLine);
+                }
+                currentLine = word;
+              }
+            }
+            if (currentLine) {
+              descLines.push(currentLine);
+            }
+
+            help += flagLine + padding + descLines[0] + "\n";
+            for (let i = 1; i < descLines.length; i++) {
+              help += " ".repeat(descIndent) + descLines[i] + "\n";
+            }
+          } else {
+            help += flagLine + "\n";
+
+            // Wrap description on new lines
+            const descWords = cleanDesc.split(/\s+/);
+            const descLines: string[] = [];
+            let currentLine = "";
+
+            for (const word of descWords) {
+              const testLine = currentLine ? currentLine + " " + word : word;
+              if (stripAnsi(testLine).length <= terminalWidth - descIndent) {
+                currentLine = testLine;
+              } else {
+                if (currentLine) {
+                  descLines.push(currentLine);
+                }
+                currentLine = word;
+              }
+            }
+            if (currentLine) {
+              descLines.push(currentLine);
+            }
+
+            for (const line of descLines) {
+              help += " ".repeat(descIndent) + line + "\n";
+            }
+          }
+        } else {
+          help += flagLine + "\n";
+        }
+      }
+
+      help += "\n";
+    }
+
+    // Generate commands section
+    if (commands.length > 0) {
+      help += "Commands:\n";
+
+      for (const [key, config] of commands) {
+        const name = config.name || key;
+        const desc = config.description || "";
+
+        const cmdLine = `  ${name}`;
+        const descIndent = 28;
+
+        if (desc) {
+          const cleanCmdLine = stripAnsi(cmdLine);
+          if (cleanCmdLine.length < descIndent) {
+            const padding = " ".repeat(descIndent - cleanCmdLine.length);
+            const wrappedDesc = wrapText(
+              noColor ? stripAnsi(desc) : desc,
+              terminalWidth - descIndent,
+              descIndent,
+            );
+            const descLines = wrappedDesc.split("\n");
+            help += cmdLine + padding + descLines[0].trim() + "\n";
+            for (let i = 1; i < descLines.length; i++) {
+              help += descLines[i] + "\n";
+            }
+          } else {
+            help += cmdLine + "\n";
+            help +=
+              wrapText(
+                noColor ? stripAnsi(desc) : desc,
+                terminalWidth - descIndent,
+                descIndent,
+              ) + "\n";
+          }
+        } else {
+          help += cmdLine + "\n";
+        }
+      }
+
+      help += "\n";
+    }
+
+    return help.trimEnd();
+  }
+
+  parse(args: string[]): {
+    [K in keyof T]: T[K] extends NewArgumentBuilder<infer I, infer P>
+      ? I extends null
+        ? P
+        : I
+      : never;
+  } {
     const result: any = {};
     const usedIndices = new Set<number>();
+    const requiredFlags: Map<string, string[]> = new Map();
 
-    // Initialize all values with their initial values
+    // Initialize all values with their initial values and track required flags
     for (const [key, builder] of Object.entries(this.schema)) {
       const initial = builder.getInitial();
       result[key] = initial;
+
+      // Track required flags
+      if (builder instanceof NewFlagBuilder && (builder as any).isRequired) {
+        requiredFlags.set(key, builder.getNames());
+      }
     }
 
-    // Try to parse each argument with each builder
+    // Expand combined short flags (e.g., -ti -> -t -i)
+    // But only if we're not inside a restArgs context
+    const expandedArgs: string[] = [];
+    let insideRestArgs = false;
+
     for (let i = 0; i < args.length; i++) {
+      const arg = args[i];
+
+      // Check if previous arg was a command/flag with restArgs
+      if (i > 0 && !insideRestArgs) {
+        for (const builder of Object.values(this.schema)) {
+          if (builder instanceof NewCommandBuilder) {
+            const config = builder.toConfig();
+            if (args[i - 1] === config.name) {
+              // Check if this command has restArgs by trying to parse
+              const testResult = builder.parse(i - 1, args);
+              if (
+                testResult &&
+                testResult.value &&
+                Array.isArray(testResult.value)
+              ) {
+                insideRestArgs = true;
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      if (
+        !insideRestArgs &&
+        arg.startsWith("-") &&
+        !arg.startsWith("--") &&
+        arg.length > 2 &&
+        !arg.includes("=")
+      ) {
+        // Check if all flags are single-letter boolean flags
+        const letters = arg.slice(1).split("");
+        let allBoolean = true;
+
+        for (const letter of letters) {
+          const flagName = `-${letter}`;
+          let found = false;
+
+          for (const builder of Object.values(this.schema)) {
+            if (builder instanceof NewFlagBuilder) {
+              const names = builder.getNames();
+              if (names.includes(flagName)) {
+                // Check if it's a boolean flag by checking initial value
+                if (builder.getInitial() === false) {
+                  found = true;
+                  break;
+                } else {
+                  allBoolean = false;
+                  break;
+                }
+              }
+            }
+          }
+
+          if (!found) {
+            allBoolean = false;
+            break;
+          }
+        }
+
+        if (allBoolean) {
+          // Expand combined flags
+          for (const letter of letters) {
+            expandedArgs.push(`-${letter}`);
+          }
+        } else {
+          expandedArgs.push(arg);
+        }
+      } else {
+        expandedArgs.push(arg);
+      }
+    }
+
+    // Try to parse each argument with each builder in schema order
+    for (let i = 0; i < expandedArgs.length; i++) {
       if (usedIndices.has(i)) {
         continue;
       }
 
       let matched = false;
 
+      // Try each builder in the order they were defined in the schema
       for (const [key, builder] of Object.entries(this.schema)) {
-        const parseResult = builder.parse(i, args);
+        // Skip arguments that already have a value (unless they're arrays or objects that accumulate)
+        if (
+          !(builder instanceof NewFlagBuilder) &&
+          result[key] !== null &&
+          result[key] !== builder.getInitial() &&
+          !Array.isArray(result[key])
+        ) {
+          continue;
+        }
+
+        const parseResult = builder.parse(i, expandedArgs);
 
         if (parseResult !== null) {
           // Mark all consumed indices as used
@@ -1252,14 +1085,40 @@ export class NewFlagsParser<
             usedIndices.add(j);
           }
 
-          result[key] = parseResult.value;
+          // For arrays, accumulate instead of replace
+          if (Array.isArray(result[key]) && Array.isArray(parseResult.value)) {
+            result[key] = [...result[key], ...parseResult.value];
+          } else if (
+            typeof result[key] === "object" &&
+            result[key] !== null &&
+            !Array.isArray(result[key]) &&
+            typeof parseResult.value === "object" &&
+            parseResult.value !== null &&
+            !Array.isArray(parseResult.value)
+          ) {
+            // For objects (like keyValue), merge instead of replace
+            result[key] = { ...result[key], ...parseResult.value };
+          } else {
+            result[key] = parseResult.value;
+          }
           matched = true;
           break;
         }
       }
 
       if (!matched) {
-        throw new UnexpectedArgumentError(args[i]);
+        throw new UnexpectedArgumentError(expandedArgs[i]);
+      }
+    }
+
+    // Validate required flags
+    for (const [key, flagNames] of requiredFlags.entries()) {
+      const value = result[key];
+      const initial = this.schema[key].getInitial();
+
+      // Check if the value is still the initial value (meaning it wasn't set)
+      if (value === initial || value === null) {
+        throw new RequiredFlagMissingError(flagNames[0]);
       }
     }
 

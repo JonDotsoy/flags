@@ -1,4 +1,4 @@
-import { flags, flag, command, argument, Builder } from "./flags";
+import { flags, flag, command, argument, NewArgumentBuilder as Builder } from "./flags";
 import { test as realTest, expect, describe } from "bun:test";
 
 type T =
@@ -66,13 +66,13 @@ describe("flags parser", () => {
     test(`should parse `, [], ` arguments with `, { command: () => flag('pr').string({ valueDelimiter: ':' }) }, ` and return `, { command: null });
     test(`should parse `, ['tar:foo'], ` arguments with `, { command1: () => argument().match(/^TAR-(?<part2>\w+)$/), command2: () => argument().match(/^(?<part1>\w+):(?<part2>\w+)$/) }, ` and return `, { command1: null, command2: { 'part1': 'tar', 'part2': 'foo' } });
     test(`should parse `, ['tar:foo'], ` arguments with `, {
-        arg: () => argument().refine((arg: string, index: number, args: string[]) => arg.startsWith("tar:") ? { index, args: [arg], parsed: arg.split(":")[1] } : null)
+        arg: () => argument().refine((arg: string, index: number, args: string[], context) => arg.startsWith("tar:") ? { index: index + 1, args: [arg], value: arg.split(":")[1] } : null)
     }, ` and return `, { arg: "foo" });
     test(`should parse `, ['tar'], ` arguments with `, {
         arg: () => argument().transform((arg: string, index: number, args: string[]) => arg.toUpperCase())
     }, ` and return `, { arg: "TAR" });
     test(`should parse `, ['tar', 'biz', 'foo', 'faz'], ` arguments with `, {
-        arg: () => argument().refine((arg: string, index: number, args: string[]) => {
+        arg: () => argument().refine((arg: string, index: number, args: string[], context) => {
             if (arg !== 'tar') return null;
 
             // Consume all remaining non-flag arguments after 'tar'
@@ -86,13 +86,15 @@ describe("flags parser", () => {
             }
 
             return {
-                index,
+                index: index + 1 + consumedArgs.length,
                 args: [arg, ...consumedArgs],
-                parsed: consumedArgs
+                value: consumedArgs
             };
         })
     }, ` and return `, { arg: ['biz', 'foo', 'faz'] });
 
     test(`should parse `, ['-l=-l', '-l=red', "foo"], ` arguments with `, { labels: () => flag("-l").strings(), arg: () => argument() }, ` and return `, { labels: ['-l', 'red'], arg: "foo" });
+    // TODO: Implement schema order priority - when argument() is defined first, it should prevent
+    // flags that appear before the consumed argument from being processed
     // test(`should parse `, ['-l=-l', '-l=red', "foo"], ` arguments with `, { arg: () => argument(), labels: () => flag("-l").strings() }, ` and return `, { labels: [], arg: "foo" });
 });

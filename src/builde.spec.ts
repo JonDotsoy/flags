@@ -55,7 +55,7 @@ const flagParser: Refine = (
       return {
         args: [label, args[index + 1]],
         index: index + 2,
-        value: [label, args[index + 1]],
+        value: args[index + 1],
       };
     }
   }
@@ -76,7 +76,7 @@ const flagParser2 =
         return {
           args: [label, args[index + 1]],
           index: index + 2,
-          value: [label, args[index + 1]],
+          value: args[index + 1],
         };
       }
     }
