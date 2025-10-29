@@ -67,7 +67,6 @@ export type ResultParser<ParseResult> = {
 export class ArgumentBuilder<InitialValue, ParseResult> {
   private refiners: Refine[];
   private initial: InitialValue;
-  protected description?: string;
   protected metadata: Record<string, any> = {};
 
   constructor(initial: InitialValue, refiners: Refine[]) {
@@ -186,7 +185,7 @@ export class ArgumentBuilder<InitialValue, ParseResult> {
   }
 
   describe(desc: string): this {
-    this.description = desc;
+    this.setMetadata("description", desc);
     return this;
   }
 
@@ -227,7 +226,6 @@ export class ArgumentBuilder<InitialValue, ParseResult> {
     return {
       kind: "argument",
       type: "string",
-      description: this.description,
       metadata: this.metadata,
     };
   }
@@ -277,7 +275,6 @@ export class FlagBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
   ParseResult
 > {
   private flagNames: string[];
-  private isRequired: boolean = false;
 
   constructor(names: string[], initial: InitialValue, refiners: Refine[]) {
     super(initial, refiners);
@@ -294,9 +291,9 @@ export class FlagBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
       initial,
       (this as any).refiners,
     );
-    builder.description = this.description;
-    builder.isRequired = this.isRequired;
-    builder.metadata = { ...this.metadata };
+    Object.keys(this.metadata).forEach(key => {
+      builder.setMetadata(key, this.getMetadata(key));
+    });
     return builder;
   }
 
@@ -306,14 +303,14 @@ export class FlagBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
       this.getInitial(),
       [...(this as any).refiners, refine],
     );
-    builder.description = this.description;
-    builder.isRequired = this.isRequired;
-    builder.metadata = { ...this.metadata };
+    Object.keys(this.metadata).forEach(key => {
+      builder.setMetadata(key, this.getMetadata(key));
+    });
     return builder;
   }
 
   override describe(desc: string): this {
-    this.description = desc;
+    this.setMetadata("description", desc);
     return this;
   }
 
@@ -353,8 +350,7 @@ export class FlagBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
     return {
       names: this.flagNames,
       type,
-      description: this.description,
-      required: this.isRequired,
+      metadata: this.metadata,
     };
   }
 
@@ -382,8 +378,9 @@ export class FlagBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
       null,
       [],
     );
-    builder.description = this.description;
-    builder.isRequired = this.isRequired;
+    Object.keys(this.metadata).forEach(key => {
+      builder.setMetadata(key, this.getMetadata(key));
+    });
 
     return builder.refine<string | null>((arg, index, args, context) => {
       for (const name of this.flagNames) {
@@ -438,8 +435,9 @@ export class FlagBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
       [],
       [],
     );
-    builder.description = this.description;
-    builder.isRequired = this.isRequired;
+    Object.keys(this.metadata).forEach(key => {
+      builder.setMetadata(key, this.getMetadata(key));
+    });
 
     return builder.refine<string | null>((arg, index, args, context) => {
       for (const name of this.flagNames) {
@@ -476,8 +474,9 @@ export class FlagBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
       null,
       [],
     );
-    builder.description = this.description;
-    builder.isRequired = this.isRequired;
+    Object.keys(this.metadata).forEach(key => {
+      builder.setMetadata(key, this.getMetadata(key));
+    });
 
     return builder.refine<number | null>((arg, index, args, context) => {
       for (const name of this.flagNames) {
@@ -563,8 +562,9 @@ export class FlagBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
       Record<string, string>,
       Record<string, string>
     >(this.flagNames, {}, [refiner]);
-    builder.description = this.description;
-    builder.isRequired = this.isRequired;
+    Object.keys(this.metadata).forEach(key => {
+      builder.setMetadata(key, this.getMetadata(key));
+    });
     return builder;
   }
 
@@ -588,8 +588,9 @@ export class FlagBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
       null,
       [refiner],
     );
-    builder.description = this.description;
-    builder.isRequired = this.isRequired;
+    Object.keys(this.metadata).forEach(key => {
+      builder.setMetadata(key, this.getMetadata(key));
+    });
     return builder;
   }
 
@@ -599,8 +600,10 @@ export class FlagBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
       this.getInitial() as InitialValue,
       (this as any).refiners,
     );
-    builder.description = this.description;
-    builder.isRequired = true;
+    Object.keys(this.metadata).forEach(key => {
+      builder.setMetadata(key, this.getMetadata(key));
+    });
+    builder.setMetadata("isRequired", true);
     return builder as any;
   }
 
@@ -612,8 +615,9 @@ export class FlagBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
       value,
       (this as any).refiners,
     );
-    builder.description = this.description;
-    builder.isRequired = this.isRequired;
+    Object.keys(this.metadata).forEach(key => {
+      builder.setMetadata(key, this.getMetadata(key));
+    });
     return builder;
   }
 
@@ -645,7 +649,9 @@ export class CommandBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
       initial,
       (this as any).refiners,
     );
-    builder.description = this.description;
+    Object.keys(this.metadata).forEach(key => {
+      builder.setMetadata(key, this.getMetadata(key));
+    });
     return builder;
   }
 
@@ -655,12 +661,14 @@ export class CommandBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
       this.getInitial(),
       [...(this as any).refiners, refine],
     );
-    builder.description = this.description;
+    Object.keys(this.metadata).forEach(key => {
+      builder.setMetadata(key, this.getMetadata(key));
+    });
     return builder;
   }
 
   override describe(desc: string): this {
-    this.description = desc;
+    this.setMetadata("description", desc);
     return this;
   }
 
@@ -669,7 +677,7 @@ export class CommandBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
       kind: "command",
       name: this.commandName,
       type: "boolean",
-      description: this.description,
+      metadata: this.metadata,
     };
   }
 
@@ -696,7 +704,10 @@ export class CommandBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
       false,
       [refiner],
     );
-    builder.description = this.description;
+    const self = this;
+    Object.keys(self.metadata).forEach(key => {
+      builder.setMetadata(key, self.getMetadata(key));
+    });
     return builder;
   }
 
@@ -724,7 +735,9 @@ export class CommandBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
       null,
       [refiner],
     );
-    builder.description = this.description;
+    Object.keys(this.metadata).forEach(key => {
+      builder.setMetadata(key, this.getMetadata(key));
+    });
     return builder;
   }
 
@@ -743,7 +756,7 @@ export class FlagsParser<T extends Record<string, ArgumentBuilder<any, any>>> {
   private _programName: string = "cli";
   private _description?: string;
 
-  constructor(private schema: T) {}
+  constructor(private schema: T) { }
 
   programName(name: string): this {
     this._programName = name;
@@ -828,8 +841,8 @@ export class FlagsParser<T extends Record<string, ArgumentBuilder<any, any>>> {
               : config.type === "strings"
                 ? " <strings>"
                 : "";
-        const requiredStr = config.required ? " (required)" : "";
-        const desc = config.description || "";
+        const requiredStr = config.metadata?.isRequired ? " (required)" : "";
+        const desc = config.metadata?.description || "";
 
         const flagLine = `  ${names}${typeStr}`;
         const descIndent = 28;
@@ -910,7 +923,7 @@ export class FlagsParser<T extends Record<string, ArgumentBuilder<any, any>>> {
 
       for (const [key, config] of commands) {
         const name = config.name || key;
-        const desc = config.description || "";
+        const desc = config.metadata?.description || "";
 
         const cmdLine = `  ${name}`;
         const descIndent = 28;
@@ -951,10 +964,10 @@ export class FlagsParser<T extends Record<string, ArgumentBuilder<any, any>>> {
 
   parse(args: string[]): {
     [K in keyof T]: T[K] extends ArgumentBuilder<infer I, infer P>
-      ? I extends null
-        ? P
-        : I
-      : never;
+    ? I extends null
+    ? P
+    : I
+    : never;
   } {
     const result: any = {};
     const usedIndices = new Set<number>();
@@ -966,7 +979,7 @@ export class FlagsParser<T extends Record<string, ArgumentBuilder<any, any>>> {
       result[key] = initial;
 
       // Track required flags
-      if (builder instanceof FlagBuilder && (builder as any).isRequired) {
+      if (builder instanceof FlagBuilder && builder.getMetadata('isRequired')) {
         requiredFlags.set(key, builder.getNames());
       }
     }

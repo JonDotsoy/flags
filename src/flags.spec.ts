@@ -354,10 +354,10 @@ describe("new-flags", () => {
       const commandConfig = commandWithDesc.toConfig();
       const argumentConfig = argumentWithDesc.toConfig();
 
-      // Then: All configs should have descriptions
-      expect(flagConfig.description).toBe("Test flag");
-      expect(commandConfig.description).toBe("Test command");
-      expect(argumentConfig.description).toBe("Test argument");
+      // Then: All configs should have descriptions in metadata
+      expect(flagConfig.metadata.description).toBe("Test flag");
+      expect(commandConfig.metadata.description).toBe("Test command");
+      expect(argumentConfig.metadata.description).toBe("Test argument");
     });
 
     it("should maintain fluent API after describe() for all builders", () => {
@@ -379,14 +379,14 @@ describe("new-flags", () => {
       const commandConfig = commandBuilder.toConfig();
       const argumentConfig = argumentBuilder.toConfig();
 
-      // Then: All configs should have descriptions and other properties
-      expect(flagConfig.description).toBe("Port number");
+      // Then: All configs should have descriptions and other properties in metadata
+      expect(flagConfig.metadata.description).toBe("Port number");
       expect(flagConfig.type).toBe("number");
-      expect(flagConfig.required).toBe(true);
+      expect(flagConfig.metadata.isRequired).toBe(true);
 
-      expect(commandConfig.description).toBe("Run command");
+      expect(commandConfig.metadata.description).toBe("Run command");
 
-      expect(argumentConfig.description).toBe("Input file");
+      expect(argumentConfig.metadata.description).toBe("Input file");
       expect(argumentConfig.type).toBe("string");
       // expect(argumentConfig.required).toBe(true);
     });
@@ -2796,12 +2796,12 @@ describe("Legacy flags.spec.ts compatibility tests", () => {
       // Then: Version should be true
       expect(result.version).toBe(true);
 
-      // Then: Config should have description
+      // Then: Config should have description in metadata
       const config = flag("--version", "-v")
         .boolean()
         .describe("Show version")
         .toConfig();
-      expect(config.description).toBe("Show version");
+      expect(config.metadata.description).toBe("Show version");
     });
 
     it("should support chained syntax: flag().string()", () => {
@@ -2837,12 +2837,12 @@ describe("Legacy flags.spec.ts compatibility tests", () => {
       // Then: Name should be "bar"
       expect(result.name).toBe("bar");
 
-      // Then: Config should have description
+      // Then: Config should have description in metadata
       const config = flag("--name", "-n")
         .string()
         .describe("Set the name")
         .toConfig();
-      expect(config.description).toBe("Set the name");
+      expect(config.metadata.description).toBe("Set the name");
     });
 
     it("should support chained syntax: flag().number().describe()", () => {
@@ -2861,12 +2861,12 @@ describe("Legacy flags.spec.ts compatibility tests", () => {
       // Then: Port should be 3000
       expect(result.port).toBe(3000);
 
-      // Then: Config should have description
+      // Then: Config should have description in metadata
       const config = flag("--port", "-p")
         .number()
         .describe("Port number")
         .toConfig();
-      expect(config.description).toBe("Port number");
+      expect(config.metadata.description).toBe("Port number");
     });
 
     it("should support chained syntax: flag().strings().describe()", () => {
@@ -2885,12 +2885,12 @@ describe("Legacy flags.spec.ts compatibility tests", () => {
       // Then: Items should contain ["a", "b"]
       expect(result.items).toEqual(["a", "b"]);
 
-      // Then: Config should have description
+      // Then: Config should have description in metadata
       const config = flag("--item")
         .strings()
         .describe("Add an item")
         .toConfig();
-      expect(config.description).toBe("Add an item");
+      expect(config.metadata.description).toBe("Add an item");
     });
 
     it("should support multiple chained flags in schema", () => {
@@ -2932,9 +2932,9 @@ describe("Legacy flags.spec.ts compatibility tests", () => {
         .toConfig();
       const portConfig = flag("--port", "-p").number().toConfig();
 
-      expect(versionConfig.description).toBe("Show version");
-      expect(nameConfig.description).toBe("Set name");
-      expect(portConfig.description).toBeUndefined();
+      expect(versionConfig.metadata.description).toBe("Show version");
+      expect(nameConfig.metadata.description).toBe("Set name");
+      expect(portConfig.metadata.description).toBeUndefined();
     });
 
     it("should parse string flag value starting with -- as a value", () => {
