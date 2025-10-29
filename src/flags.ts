@@ -345,8 +345,8 @@ export class NewFlagBuilder<
     };
   }
 
-  boolean(): NewFlagBuilder<boolean, boolean> {
-    const refiner: Refine = (arg, index, args, context) => {
+  boolean() {
+    return this.refine<boolean>((arg, index, args, context) => {
       // Check if arg matches any of the flag names
       for (const name of this.flagNames) {
         if (arg === name) {
@@ -358,22 +358,21 @@ export class NewFlagBuilder<
         }
       }
       return null;
-    };
-
-    const builder = new NewFlagBuilder<boolean, boolean>(
-      this.flagNames,
-      false,
-      [refiner],
-    );
-    builder.description = this.description;
-    builder.isRequired = this.isRequired;
-    return builder;
+    });
   }
 
   string(options?: {
     valueDelimiter?: string;
   }): NewFlagBuilder<string | null, string | null> {
-    const refiner: Refine = (arg, index, args, context) => {
+    const builder = new NewFlagBuilder<string | null, string | null>(
+      this.flagNames,
+      null,
+      [],
+    );
+    builder.description = this.description;
+    builder.isRequired = this.isRequired;
+
+    return builder.refine<string | null>((arg, index, args, context) => {
       for (const name of this.flagNames) {
         // Check for valueDelimiter match
         if (
@@ -417,20 +416,19 @@ export class NewFlagBuilder<
         }
       }
       return null;
-    };
-
-    const builder = new NewFlagBuilder<string | null, string | null>(
-      this.flagNames,
-      null,
-      [refiner],
-    );
-    builder.description = this.description;
-    builder.isRequired = this.isRequired;
-    return builder;
+    });
   }
 
   strings(): NewFlagBuilder<string[], string | null> {
-    const refiner: Refine = (arg, index, args, context) => {
+    const builder = new NewFlagBuilder<string[], string | null>(
+      this.flagNames,
+      [],
+      [],
+    );
+    builder.description = this.description;
+    builder.isRequired = this.isRequired;
+
+    return builder.refine<string | null>((arg, index, args, context) => {
       for (const name of this.flagNames) {
         let value: string | null = null;
 
@@ -456,20 +454,19 @@ export class NewFlagBuilder<
         }
       }
       return null;
-    };
-
-    const builder = new NewFlagBuilder<string[], string | null>(
-      this.flagNames,
-      [],
-      [refiner],
-    );
-    builder.description = this.description;
-    builder.isRequired = this.isRequired;
-    return builder;
+    });
   }
 
   number(): NewFlagBuilder<number | null, number | null> {
-    const refiner: Refine = (arg, index, args, context) => {
+    const builder = new NewFlagBuilder<number | null, number | null>(
+      this.flagNames,
+      null,
+      [],
+    );
+    builder.description = this.description;
+    builder.isRequired = this.isRequired;
+
+    return builder.refine<number | null>((arg, index, args, context) => {
       for (const name of this.flagNames) {
         let numValue: string | null = null;
 
@@ -493,16 +490,7 @@ export class NewFlagBuilder<
         }
       }
       return null;
-    };
-
-    const builder = new NewFlagBuilder<number | null, number | null>(
-      this.flagNames,
-      null,
-      [refiner],
-    );
-    builder.description = this.description;
-    builder.isRequired = this.isRequired;
-    return builder;
+    });
   }
 
   keyValue(): NewFlagBuilder<Record<string, string>, Record<string, string>> {
