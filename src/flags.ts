@@ -68,6 +68,7 @@ export class ArgumentBuilder<InitialValue, ParseResult> {
   private refiners: Refine[];
   private initial: InitialValue;
   protected description?: string;
+  protected metadata: Record<string, any> = {};
 
   constructor(initial: InitialValue, refiners: Refine[]) {
     this.initial = initial;
@@ -189,6 +190,19 @@ export class ArgumentBuilder<InitialValue, ParseResult> {
     return this;
   }
 
+  setMetadata(key: string, value: any): this {
+    this.metadata[key] = value;
+    return this;
+  }
+
+  getMetadata<T>(key: string): T {
+    return this.metadata[key];
+  }
+
+  hasMetadata(key: string): boolean {
+    return key in this.metadata;
+  }
+
   initialValue(): InitialValue {
     return this.initial;
   }
@@ -214,6 +228,7 @@ export class ArgumentBuilder<InitialValue, ParseResult> {
       kind: "argument",
       type: "string",
       description: this.description,
+      metadata: this.metadata,
     };
   }
 
@@ -281,6 +296,7 @@ export class FlagBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
     );
     builder.description = this.description;
     builder.isRequired = this.isRequired;
+    builder.metadata = { ...this.metadata };
     return builder;
   }
 
@@ -292,6 +308,7 @@ export class FlagBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
     );
     builder.description = this.description;
     builder.isRequired = this.isRequired;
+    builder.metadata = { ...this.metadata };
     return builder;
   }
 
