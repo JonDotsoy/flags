@@ -64,24 +64,24 @@ const flagParser: Refine = (
 
 const flagParser2 =
   (name: string): Refine =>
-  (
-    arg: string,
-    index: number,
-    args: string[],
-    context: null | Context,
-  ): null | Context => {
-    if (arg.startsWith(`--${name}`)) {
-      const label = arg.slice(2);
-      if (index + 1 < args.length) {
-        return {
-          args: [label, args[index + 1]],
-          index: index + 2,
-          value: args[index + 1],
-        };
+    (
+      arg: string,
+      index: number,
+      args: string[],
+      context: null | Context,
+    ): null | Context => {
+      if (arg.startsWith(`--${name}`)) {
+        const label = arg.slice(2);
+        if (index + 1 < args.length) {
+          return {
+            args: [label, args[index + 1]],
+            index: index + 2,
+            value: args[index + 1],
+          };
+        }
       }
-    }
-    return null;
-  };
+      return null;
+    };
 
 describe("ArgumentBuilder and FlagsParser", () => {
   it("should return null when parsing empty args without refiners", () => {
@@ -187,5 +187,35 @@ describe("ArgumentBuilder and FlagsParser", () => {
       foo: "biz",
       tar: "bar",
     });
+  });
+
+  describe("accumulate", () => {
+    const argumentRefine = (arg: string, index: number) => ({ args: [arg], index: index + 1, value: arg });
+    const arrayArgumentsAccumulator = (prev: any, value: any) => (Array.isArray(prev) ? [...prev, value] : [value]);
+
+    it("should return parsed value without accumulate function", () => {
+      const result = new Builder(null, [])
+        .refine(argumentRefine)
+        .parse(0, ["foo"]);
+
+      expect(result).toEqual({ args: ["foo"], index: 0, value: "foo" });
+    })
+
+    it("should accumulate value into array using initial value when no prevValue provided", () => {
+      const result = new Builder(null, [], arrayArgumentsAccumulator)
+        .refine(argumentRefine)
+        .parse(0, ["foo"]);
+
+      expect(result).toEqual({ args: ["foo"], index: 0, value: ["foo"] });
+    });
+
+    it("should accumulate value into array using provided prevValue", () => {
+      const result = new Builder(null, [], arrayArgumentsAccumulator)
+        .refine(argumentRefine)
+        .parse(1, ["foo", "taz"], ["foo"]);
+
+      expect(result).toEqual({ args: ["taz"], index: 1, value: ["foo", "taz"] });
+    });
+
   });
 });

@@ -94,6 +94,12 @@ describe("flags parser", () => {
     }, ` and return `, { arg: ['biz', 'foo', 'faz'] });
 
     test(`should parse `, ['-l=-l', '-l=red', "foo"], ` arguments with `, { labels: () => flag("-l").strings(), arg: () => argument() }, ` and return `, { labels: ['-l', 'red'], arg: "foo" });
+
+    // TODO: 
+    // test(`should parse `, ["foo", "tar", "biz"], ` arguments with `, { names: () => argument().strings() }, ` and return `, { names: ["foo", "tar", "biz"] });
+    // test(`should parse `, ["foo", "--verbose", "tar", "biz"], ` arguments with `, { verbose: () => flag('-V', '--verbose'), names: () => argument().strings() }, ` and return `, { verbose: true, names: ["foo", "tar", "biz"] });
+    // test(`should parse `, ["foo", "--verbose", "tar", "biz"], ` arguments with `, { names: () => argument().strings() }, ` and return `, { verbose: true, names: ["foo", "--verbose", "tar", "biz"] });
+
     // TODO: Implement schema order priority - when argument() is defined first, it should prevent
     // flags that appear before the consumed argument from being processed
     // test(`should parse `, ['-l=-l', '-l=red', "foo"], ` arguments with `, { arg: () => argument(), labels: () => flag("-l").strings() }, ` and return `, { labels: [], arg: "foo" });

@@ -58,6 +58,8 @@ export type Refine = (
   context: RefineContext,
 ) => RefineContext;
 
+export type Accumulate = (prevValue: any, currentValue: any, index: number, args: string[]) => any
+
 export type ResultParser<ParseResult> = {
   args: string[];
   index: number;
@@ -67,15 +69,25 @@ export type ResultParser<ParseResult> = {
 export class ArgumentBuilder<InitialValue, ParseResult> {
   private refiners: Refine[];
   private initial: InitialValue;
+  private accumulate?: Accumulate;
   protected metadata: Record<string, any> = {};
 
-  constructor(initial: InitialValue, refiners: Refine[]) {
+  constructor(initial: InitialValue, refiners: Refine[], accumulate?: Accumulate) {
     this.initial = initial;
     this.refiners = refiners;
+    this.accumulate = accumulate;
   }
 
   setInitial<T>(initial: T): ArgumentBuilder<T, ParseResult> {
-    return new ArgumentBuilder<T, ParseResult>(initial, this.refiners);
+    return new ArgumentBuilder<T, ParseResult>(initial, this.refiners, this.accumulate);
+  }
+
+  setAccumulate(accumulate: Accumulate): ArgumentBuilder<InitialValue, ParseResult> {
+    return new ArgumentBuilder<InitialValue, ParseResult>(this.initial, this.refiners, accumulate);
+  }
+
+  getAccumulate(): Accumulate | undefined {
+    return this.accumulate;
   }
 
   getInitial() {
@@ -86,7 +98,7 @@ export class ArgumentBuilder<InitialValue, ParseResult> {
     return new ArgumentBuilder<InitialValue, U>(this.initial, [
       ...this.refiners,
       refine,
-    ]);
+    ], this.accumulate);
   }
 
   string(): ArgumentBuilder<string | null, string | null> {
@@ -230,7 +242,7 @@ export class ArgumentBuilder<InitialValue, ParseResult> {
     };
   }
 
-  parse(startIndex: number, args: string[]): null | ResultParser<ParseResult> {
+  parse(startIndex: number, args: string[], prevValue?: any): null | ResultParser<ParseResult> {
     if (args.length === 0 || startIndex >= args.length) {
       return null;
     }
@@ -254,10 +266,18 @@ export class ArgumentBuilder<InitialValue, ParseResult> {
       // Extract the consumed args from the original args array
       const consumedArgs = args.slice(startIndex, context.index);
 
+      // Apply accumulate function if it exists
+      let finalValue = context.value;
+      if (this.accumulate) {
+        // Use prevValue if provided, otherwise use initial value
+        const prev = prevValue !== undefined ? prevValue : this.initial;
+        finalValue = this.accumulate(prev, context.value, startIndex, args);
+      }
+
       return {
         args: consumedArgs,
         index: startIndex,
-        value: context.value,
+        value: finalValue,
       };
     }
 
@@ -276,8 +296,8 @@ export class FlagBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
 > {
   private flagNames: string[];
 
-  constructor(names: string[], initial: InitialValue, refiners: Refine[]) {
-    super(initial, refiners);
+  constructor(names: string[], initial: InitialValue, refiners: Refine[], accumulate?: Accumulate) {
+    super(initial, refiners, accumulate);
     this.flagNames = names;
   }
 
@@ -290,6 +310,20 @@ export class FlagBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
       this.flagNames,
       initial,
       (this as any).refiners,
+      (this as any).accumulate,
+    );
+    Object.keys(this.metadata).forEach(key => {
+      builder.setMetadata(key, this.getMetadata(key));
+    });
+    return builder;
+  }
+
+  override setAccumulate(accumulate: Accumulate): FlagBuilder<InitialValue, ParseResult> {
+    const builder = new FlagBuilder<InitialValue, ParseResult>(
+      this.flagNames,
+      this.getInitial(),
+      (this as any).refiners,
+      accumulate,
     );
     Object.keys(this.metadata).forEach(key => {
       builder.setMetadata(key, this.getMetadata(key));
@@ -302,6 +336,7 @@ export class FlagBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
       this.flagNames,
       this.getInitial(),
       [...(this as any).refiners, refine],
+      (this as any).accumulate,
     );
     Object.keys(this.metadata).forEach(key => {
       builder.setMetadata(key, this.getMetadata(key));
@@ -377,6 +412,7 @@ export class FlagBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
       this.flagNames,
       null,
       [],
+      (this as any).accumulate,
     );
     Object.keys(this.metadata).forEach(key => {
       builder.setMetadata(key, this.getMetadata(key));
@@ -434,6 +470,7 @@ export class FlagBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
       this.flagNames,
       [],
       [],
+      (this as any).accumulate,
     );
     Object.keys(this.metadata).forEach(key => {
       builder.setMetadata(key, this.getMetadata(key));
@@ -473,6 +510,7 @@ export class FlagBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
       this.flagNames,
       null,
       [],
+      (this as any).accumulate,
     );
     Object.keys(this.metadata).forEach(key => {
       builder.setMetadata(key, this.getMetadata(key));
@@ -561,7 +599,7 @@ export class FlagBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
     const builder = new FlagBuilder<
       Record<string, string>,
       Record<string, string>
-    >(this.flagNames, {}, [refiner]);
+    >(this.flagNames, {}, [refiner], (this as any).accumulate);
     Object.keys(this.metadata).forEach(key => {
       builder.setMetadata(key, this.getMetadata(key));
     });
@@ -587,6 +625,7 @@ export class FlagBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
       this.flagNames,
       null,
       [refiner],
+      (this as any).accumulate,
     );
     Object.keys(this.metadata).forEach(key => {
       builder.setMetadata(key, this.getMetadata(key));
@@ -599,6 +638,7 @@ export class FlagBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
       this.flagNames,
       this.getInitial() as InitialValue,
       (this as any).refiners,
+      (this as any).accumulate,
     );
     Object.keys(this.metadata).forEach(key => {
       builder.setMetadata(key, this.getMetadata(key));
@@ -614,6 +654,7 @@ export class FlagBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
       this.flagNames,
       value,
       (this as any).refiners,
+      (this as any).accumulate,
     );
     Object.keys(this.metadata).forEach(key => {
       builder.setMetadata(key, this.getMetadata(key));
@@ -634,8 +675,8 @@ export class CommandBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
 > {
   private commandName: string;
 
-  constructor(name: string, initial: InitialValue, refiners: Refine[]) {
-    super(initial, refiners);
+  constructor(name: string, initial: InitialValue, refiners: Refine[], accumulate?: Accumulate) {
+    super(initial, refiners, accumulate);
     this.commandName = name;
   }
 
@@ -648,6 +689,20 @@ export class CommandBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
       this.commandName,
       initial,
       (this as any).refiners,
+      (this as any).accumulate,
+    );
+    Object.keys(this.metadata).forEach(key => {
+      builder.setMetadata(key, this.getMetadata(key));
+    });
+    return builder;
+  }
+
+  override setAccumulate(accumulate: Accumulate): CommandBuilder<InitialValue, ParseResult> {
+    const builder = new CommandBuilder<InitialValue, ParseResult>(
+      this.commandName,
+      this.getInitial(),
+      (this as any).refiners,
+      accumulate,
     );
     Object.keys(this.metadata).forEach(key => {
       builder.setMetadata(key, this.getMetadata(key));
@@ -660,6 +715,7 @@ export class CommandBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
       this.commandName,
       this.getInitial(),
       [...(this as any).refiners, refine],
+      (this as any).accumulate,
     );
     Object.keys(this.metadata).forEach(key => {
       builder.setMetadata(key, this.getMetadata(key));
@@ -703,6 +759,7 @@ export class CommandBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
       this.commandName,
       false,
       [refiner],
+      (this as any).accumulate,
     );
     const self = this;
     Object.keys(self.metadata).forEach(key => {
@@ -734,6 +791,7 @@ export class CommandBuilder<InitialValue, ParseResult> extends ArgumentBuilder<
       this.commandName,
       null,
       [refiner],
+      (this as any).accumulate,
     );
     Object.keys(this.metadata).forEach(key => {
       builder.setMetadata(key, this.getMetadata(key));
@@ -1083,7 +1141,7 @@ export class FlagsParser<T extends Record<string, ArgumentBuilder<any, any>>> {
           continue;
         }
 
-        const parseResult = builder.parse(i, expandedArgs);
+        const parseResult = builder.parse(i, expandedArgs, result[key]);
 
         if (parseResult !== null) {
           // Mark all consumed indices as used
