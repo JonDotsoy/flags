@@ -1,11 +1,15 @@
 import type { Refine } from "../../flags";
 
 export const toListRefine: Refine = (
-  currentValue: string,
+  arg: string,
   index: number,
   args: string[],
-) => ({
-  args: args.slice(index, index + 1),
-  index,
-  value: Array.isArray(currentValue) ? currentValue : [currentValue],
-});
+  context,
+) => {
+  const value = context?.value ?? arg;
+  return {
+    args: context?.args ?? args.slice(index, index + 1),
+    index,
+    value: Array.isArray(value) ? value : [value],
+  };
+};

@@ -32,13 +32,35 @@ export class CommandBuilder<T extends Spec<any, any>> extends Builder<T> {
     return new BooleanCommandBuilder<Spec<any, boolean>>(this.spec.refine(toBooleanRefine));
   }
 
+  /**
+   * Captures all remaining arguments after this command.
+   * @returns A CommandBuilder that returns an array of strings
+   */
+  restArgs() {
+    const restArgsRefine: Refine = (arg, index, args, context) => {
+      if (!context) return null;
+      
+      // Capture all remaining arguments after the command
+      const remainingArgs = args.slice(index + 1);
+      return {
+        args: args.slice(index),
+        index: index,
+        value: remainingArgs,
+      };
+    };
+    
+    return new CommandBuilder(
+      this.spec.initial(null).refine(restArgsRefine)
+    );
+  }
+
   transform<T>(transform: (value: InitialType<this["spec"]>) => T) {
     return new CommandBuilder(this.spec.refine<T>(transformRefine(transform)));
   }
 
   static create(argumentMatch: string) {
-    return new CommandBuilder(Spec.create()).refine(
+    return new CommandBuilder(Spec.create().initial(false)).refine(
       argumentMatchRefine(argumentMatch),
-    );
+    ).refine(toBooleanRefine);
   }
 }

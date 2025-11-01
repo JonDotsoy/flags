@@ -11,4 +11,9 @@ export { UnexpectedArgumentError } from "./errors/UnexpectedArgumentError.js";
 export { ArgumentBuilder } from "./builders/ArgumentBuilder.js";
 export { Builder } from "./builders/Builder.js";
 export { CommandBuilder } from "./builders/CommandBuilder.js";
+export { FlagBuilder } from "./builders/FlagBuilder.js";
 export { FlagBuilder as FlagsBuilder } from "./builders/FlagBuilder.js";
+
+export { FlagsParser } from "./FlagsParser.js";
+
+export { flag, flags, command, argument } from "./helpers.js";

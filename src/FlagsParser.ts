@@ -19,6 +19,11 @@ export class FlagsParser<T extends Record<string, Builder<any>>> {
     return this;
   }
 
+  helpMessage(): string {
+    // TODO: Implement help message generation
+    return `Usage: ${this._programName}\n\n${this._description || ""}`;
+  }
+
   // helpMessage({
   //   terminalWidth = 80,
   //   noColor = false,
@@ -197,13 +202,13 @@ export class FlagsParser<T extends Record<string, Builder<any>>> {
     // Try to parse each flag in the schema
     for (const [key, builder] of Object.entries(this.schema)) {
       let parsedValue: any = null;
-      let currentValue: any = undefined;
+      let prevValue: { current: any } | undefined = undefined;
 
       // Try to parse at each index in args
       for (let i = 0; i < args.length; i++) {
         if (usedIndices.has(i)) continue;
 
-        const parseResult = builder.parse(i, args, currentValue);
+        const parseResult = builder.parse(i, args, prevValue);
 
         if (parseResult !== null) {
           // Mark consumed indices as used
@@ -213,7 +218,7 @@ export class FlagsParser<T extends Record<string, Builder<any>>> {
           }
 
           parsedValue = parseResult.value;
-          currentValue = parseResult.value;
+          prevValue = { current: parseResult.value };
 
           // If there's an accumulate function, continue looking for more matches
           if (!builder.spec.getAccumulate()) {
