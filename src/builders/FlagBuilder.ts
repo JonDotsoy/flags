@@ -2,16 +2,14 @@ import { Builder } from "./Builder.js";
 import { Spec } from "./Spec.js";
 import type { Accumulate } from "../dtos/Accumulate.js";
 import type { Refine } from "../dtos/Refine.js";
+import { BooleanFlagBuilder } from "./BooleanFlagBuilder.js";
+import { NumberFlagBuilder } from "./NumberFlagBuilder.js";
+import { ListFlagBuilder } from "./ListFlagBuilder.js";
 import { toNumberRefine } from "./refiners/toNumberRefine.js";
 import { toListRefine } from "./refiners/toListRefine.js";
 import { listAccumulate } from "./accumulates/listAccumulate.js";
 import { argumentMatchRefine } from "./refiners/argumentMatchRefine.js";
 import { transformRefine } from "./refiners/transformRefine.js";
-
-// Forward declare for circular dependency resolution
-let BooleanFlagBuilder: any;
-let NumberFlagBuilder: any;
-let ListFlagBuilder: any;
 
 /**
  * FlagBuilder - Base builder for CLI flags with alias support
@@ -44,10 +42,7 @@ export class FlagBuilder<T extends Spec<any, any>> extends Builder<T> {
    * Convert flag to boolean type
    * Flag presence without value → true
    */
-  boolean(): any {
-    if (!BooleanFlagBuilder) {
-      BooleanFlagBuilder = require("./BooleanFlagBuilder.js").BooleanFlagBuilder;
-    }
+  boolean() {
     return new BooleanFlagBuilder(
       this.spec.refine((arg, index, args, context) => {
         if (!context) return null;
@@ -64,14 +59,11 @@ export class FlagBuilder<T extends Spec<any, any>> extends Builder<T> {
   /**
    * Convert flag value to number type
    */
-  number(): any {
+  number() {
     return this.toNumber();
   }
 
-  toNumber(): any {
-    if (!NumberFlagBuilder) {
-      NumberFlagBuilder = require("./NumberFlagBuilder.js").NumberFlagBuilder;
-    }
+  toNumber() {
     // Apply a refiner that converts context.value to number
     return new NumberFlagBuilder(
       this.spec.refine((arg, index, args, context) => {
@@ -88,14 +80,11 @@ export class FlagBuilder<T extends Spec<any, any>> extends Builder<T> {
    * Convert flag value to list/array type
    * Splits comma-separated values by default
    */
-  list(separator: string = ","): any {
+  list(separator: string = ",") {
     return this.toList(separator);
   }
 
-  toList(separator: string = ","): any {
-    if (!ListFlagBuilder) {
-      ListFlagBuilder = require("./ListFlagBuilder.js").ListFlagBuilder;
-    }
+  toList(separator: string = ",") {
     return new ListFlagBuilder(
       this.spec
         .refine(transformRefine((value: any) => {

@@ -2,11 +2,9 @@ import { Builder } from "./Builder.js";
 import { Spec } from "./Spec.js";
 import type { Accumulate } from "../dtos/Accumulate.js";
 import type { Refine } from "../dtos/Refine.js";
+import { NumberFlagBuilder } from "./NumberFlagBuilder.js";
 import { toNumberRefine } from "./refiners/toNumberRefine.js";
 import { transformRefine } from "./refiners/transformRefine.js";
-
-// Forward declare for circular dependency resolution
-let NumberFlagBuilder: any;
 
 /**
  * ListFlagBuilder - Specialized builder for list/array flags
@@ -66,14 +64,11 @@ export class ListFlagBuilder<T extends Spec<any, any>> extends Builder<T> {
    * Convert each element in the list to a number
    * This allows chaining like: .list().number() → number[]
    */
-  number(): any {
+  number() {
     return this.toNumber();
   }
 
-  toNumber(): any {
-    if (!NumberFlagBuilder) {
-      NumberFlagBuilder = require("./NumberFlagBuilder.js").NumberFlagBuilder;
-    }
+  toNumber() {
     return new NumberFlagBuilder(
       this.spec.refine(transformRefine((value: any) => {
         if (Array.isArray(value)) {

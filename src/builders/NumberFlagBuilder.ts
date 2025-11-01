@@ -2,6 +2,7 @@ import { Builder } from "./Builder.js";
 import { Spec } from "./Spec.js";
 import type { Accumulate } from "../dtos/Accumulate.js";
 import type { Refine } from "../dtos/Refine.js";
+import { ListFlagBuilder } from "./ListFlagBuilder.js";
 import { notNaNRefine } from "./refiners/notNaNRefine.js";
 import { numberGreaterThanRefine } from "./refiners/numberGreaterThanRefine.js";
 import { numberGreaterThanOrEqualRefine } from "./refiners/numberGreaterThanOrEqualRefine.js";
@@ -10,9 +11,6 @@ import { numberLessThanOrEqualRefine } from "./refiners/numberLessThanOrEqualRef
 import { numberMultipleOfRefine } from "./refiners/numberMultipleOfRefine.js";
 import { transformRefine } from "./refiners/transformRefine.js";
 import { listAccumulate } from "./accumulates/listAccumulate.js";
-
-// Forward declare for circular dependency resolution
-let ListFlagBuilder: any;
 
 /**
  * NumberFlagBuilder - Specialized builder for numeric flags
@@ -107,14 +105,11 @@ export class NumberFlagBuilder<T extends Spec<any, any>> extends Builder<T> {
    * Convert to list of numbers
    * This allows chaining like: .number().list() → number[]
    */
-  list(separator: string = ","): any {
+  list(separator: string = ",") {
     return this.toList(separator);
   }
 
-  toList(separator: string = ","): any {
-    if (!ListFlagBuilder) {
-      ListFlagBuilder = require("./ListFlagBuilder.js").ListFlagBuilder;
-    }
+  toList(separator: string = ",") {
     return new ListFlagBuilder(
       this.spec
         .refine(transformRefine((value: any) => {
