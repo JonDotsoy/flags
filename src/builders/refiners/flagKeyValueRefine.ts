@@ -10,7 +10,7 @@ import type { Refine } from "../../flags";
 export const flagKeyValueRefine: Refine = (arg, index, args, context) => {
   if (!context) return null;
   
-  // If the value contains '=', it's already in key=value format
+  // If the value from flagMatchRefine contains '=' (from --flag=key=value syntax), parse it
   if (typeof context.value === "string" && context.value.includes("=")) {
     const [key, ...valueParts] = context.value.split("=");
     const value = valueParts.join("=");
@@ -21,18 +21,7 @@ export const flagKeyValueRefine: Refine = (arg, index, args, context) => {
     };
   }
   
-  // Otherwise, we need to consume the next two arguments as key and value
-  if (index + 2 < args.length) {
-    const key = args[index + 1];
-    const value = args[index + 2];
-    return {
-      args: args.slice(index, index + 3),
-      index: index,
-      value: { [key]: value },
-    };
-  }
-  
-  // Fallback: consume next argument as key=value string
+  // Check if next argument is key=value format
   if (index + 1 < args.length) {
     const keyValue = args[index + 1];
     if (keyValue.includes("=")) {
@@ -44,6 +33,17 @@ export const flagKeyValueRefine: Refine = (arg, index, args, context) => {
         value: { [key]: value },
       };
     }
+  }
+  
+  // Otherwise, consume next two arguments as key and value
+  if (index + 2 < args.length) {
+    const key = args[index + 1];
+    const value = args[index + 2];
+    return {
+      args: args.slice(index, index + 3),
+      index: index,
+      value: { [key]: value },
+    };
   }
   
   return null;
