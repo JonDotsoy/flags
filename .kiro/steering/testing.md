@@ -1,72 +1,31 @@
----
-inclusion: fileMatch
-fileMatchPattern: ["**/*.spec.ts", "src/new-flags.ts"]
----
+## Builder
 
-## Test-Driven Development
+Los builders son clases que permiten transformar argumentos y extraer valores de ello,
 
-This project follows TDD. When adding features:
+## src/builders/Spec.ts
 
-1. Write tests in `src/new-flags.spec.ts` BEFORE implementing in `src/new-flags.ts`
-2. Validate both TypeScript type inference and runtime behavior
+Contiene la definicion para el builder, es clase inmutable, no se puede modificar una vez construida, lista los refiners
 
-## Testing Framework
+### Refinres
 
-Use Bun's test framework:
+Permite validar los valores de los argumentos, si no se cumple la validacion, retorna un null cuando no puede ser refinado.
 
-```ts
-import { describe, it, expect, expectTypeOf } from "bun:test";
-```
+Los builders para parsear argumentos usa los refines en un patron pipe para usar la lista de los refiners y valida los argumentos. Puede si en la cascada en algun momento retorna null deje de procesar en el siguiente refine
 
-## Test Structure
+## src/builders/\*Builder.ts
 
-Structure tests with Gherkin-style comments (Given/When/Then):
+Estos archivos son builders y contiene metodos de utilidad para definir los builders. Los metodos son usados para mejorar para ser mas legibles para el dev.
 
-```ts
-describe("feature name", () => {
-  it("should describe expected behavior", () => {
-    // Given: Setup the parser configuration
-    const flagsParser = flags({
-      /* config */
-    });
+Todos los builders son copias de src/builders/TemplateBuilder.ts
 
-    // When: Parse the arguments
-    const result = flagsParser.parse([
-      /* args */
-    ]);
+## src/builders/accumulates/\*Accumulate.ts
 
-    // Then: Validate TypeScript types
-    expectTypeOf(result).toEqualTypeOf<{
-      /* expected type */
-    }>();
+Estos metodos son usados para acumular los valores de los argumentos, no se usa directamente por el builder se usa para reusar los builder sobre todo acumunado valores que se le parecen.
 
-    // Then: Validate runtime values
-    expect(result).toEqual({
-      /* expected values */
-    });
-  });
-});
-```
+src/builders/accumulates/templateAccumulate.ts tiene un ejemplo de como se usa
 
-**Gherkin Guidelines:**
+## src/builders/refiners/\*Refine.ts
 
-- **Given**: Set up initial state (parser config, test data)
-- **When**: Execute the action (parse arguments, call methods)
-- **Then**: Assert outcomes (types and values)
+El refine son usado para el builder
 
-## Testing Requirements
-
-- Test type inference with `expectTypeOf()` for TypeScript correctness
-- Test runtime behavior with `expect()` for value correctness
-- Use snapshot testing for complex outputs (help messages)
-- Cover edge cases: missing flags, defaults, errors
-- Test both long (`--flag`) and short (`-f`) syntax
-- Test both space (`--flag value`) and equals (`--flag=value`) syntax
-
-## Type Checking
-
-Always verify tests pass TypeScript compilation:
-
-```bash
-bunx tsc --noEmit src/new-flags.spec.ts
-```
+src/builders/refiners/templateRefine.ts tiene un ejemplo de como se usa

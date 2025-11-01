@@ -1,4 +1,5 @@
-import { flags, flag, command, argument, ArgumentBuilder as Builder } from "./flags";
+import { flags, flag, command, argument } from "./flags";
+import { ArgumentBuilder as Builder } from "./builders/ArgumentBuilder";
 import { test as realTest, expect, describe } from "bun:test";
 
 type T =

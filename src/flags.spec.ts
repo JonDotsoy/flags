@@ -8,7 +8,7 @@ describe("new-flags", () => {
       const booleanFlag = flag("--verbose").boolean();
 
       // When: Getting the initial value
-      const initialValue = booleanFlag.initialValue();
+      const initialValue = booleanFlag.getInitial();
 
       // Then: The initial value should be false for boolean flags
       expect(initialValue).toBe(false);
@@ -64,7 +64,7 @@ describe("new-flags", () => {
       const stringFlag = flag("--host").string();
 
       // When: Getting initial value
-      const initialValue = stringFlag.initialValue();
+      const initialValue = stringFlag.getInitial();
 
       // Then: Initial value should be null
       expect(initialValue).toBe(null);
@@ -76,7 +76,7 @@ describe("new-flags", () => {
       const numberFlag = flag("--port").number();
 
       // When: Getting initial value
-      const initialValue = numberFlag.initialValue();
+      const initialValue = numberFlag.getInitial();
 
       // Then: Initial value should be null
       expect(initialValue).toBe(null);
@@ -88,7 +88,7 @@ describe("new-flags", () => {
       const stringsFlag = flag("--label").strings();
 
       // When: Getting initial value
-      const initialValue = stringsFlag.initialValue();
+      const initialValue = stringsFlag.getInitial();
 
       // Then: Initial value should be empty array
       expect(initialValue).toEqual([]);
@@ -100,7 +100,7 @@ describe("new-flags", () => {
       const kvFlag = flag("--config").keyValue();
 
       // When: Getting initial value
-      const initialValue = kvFlag.initialValue();
+      const initialValue = kvFlag.getInitial();
 
       // Then: Initial value should be empty object
       expect(initialValue).toEqual({});
@@ -112,7 +112,7 @@ describe("new-flags", () => {
       const numberFlag = flag("--port").number().default(3000);
 
       // When: Getting initial value
-      const initialValue = numberFlag.initialValue();
+      const initialValue = numberFlag.getInitial();
 
       // Then: Initial value should be the default value
       expect(initialValue).toBe(3000);
@@ -124,7 +124,7 @@ describe("new-flags", () => {
       const stringsFlag = flag("--label").strings();
 
       // When: Getting initial value
-      const initialValue = stringsFlag.initialValue();
+      const initialValue = stringsFlag.getInitial();
 
       // Then: Initial value should be empty array
       expect(initialValue).toEqual([]);
@@ -302,19 +302,19 @@ describe("new-flags", () => {
       const booleanFlag = flag("--test");
 
       // Then: It should extend Builder<boolean, boolean>
-      expectTypeOf(booleanFlag.initialValue()).toEqualTypeOf<boolean>();
+      expectTypeOf(booleanFlag.getInitial()).toEqualTypeOf<boolean>();
 
       // Given: A string flag builder
       const stringFlag = flag("--name").string();
 
       // Then: It should extend Builder<string | null, string | null>
-      expectTypeOf(stringFlag.initialValue()).toEqualTypeOf<string | null>();
+      expectTypeOf(stringFlag.getInitial()).toEqualTypeOf<string | null>();
 
       // Given: A required string flag builder
       const requiredStringFlag = flag("--name").string().required();
 
       // Then: It should extend Builder<string | null, string> (ParseResult changes to non-null)
-      expectTypeOf(requiredStringFlag.initialValue()).toEqualTypeOf<
+      expectTypeOf(requiredStringFlag.getInitial()).toEqualTypeOf<
         string | null
       >();
       const testResult = requiredStringFlag.test("--name", 0, [
@@ -2342,13 +2342,13 @@ describe("Type transformations with Builder generics", () => {
     const optionalFlag = flag("--name").string();
 
     // Then: Initial value should be string | null
-    expectTypeOf(optionalFlag.initialValue()).toEqualTypeOf<string | null>();
+    expectTypeOf(optionalFlag.getInitial()).toEqualTypeOf<string | null>();
 
     // When: Calling required() to transform to FlagBuilder<string | null, string>
     const requiredFlag = optionalFlag.required();
 
     // Then: Initial value should still be string | null (InitialValue doesn't change)
-    expectTypeOf(requiredFlag.initialValue()).toEqualTypeOf<string | null>();
+    expectTypeOf(requiredFlag.getInitial()).toEqualTypeOf<string | null>();
 
     // Then: ParseResult should be string (non-null)
     const testResult = requiredFlag.test("--name", 0, ["--name", "value"]);
@@ -2362,13 +2362,13 @@ describe("Type transformations with Builder generics", () => {
     const optionalFlag = flag("--port").number();
 
     // Then: Initial value should be number | null
-    expectTypeOf(optionalFlag.initialValue()).toEqualTypeOf<number | null>();
+    expectTypeOf(optionalFlag.getInitial()).toEqualTypeOf<number | null>();
 
     // When: Calling default(3000) to transform to FlagBuilder<number, number>
     const flagWithDefault = optionalFlag.default(3000);
 
     // Then: Initial value should be number (non-null because of default)
-    expectTypeOf(flagWithDefault.initialValue()).toEqualTypeOf<number>();
+    expectTypeOf(flagWithDefault.getInitial()).toEqualTypeOf<number>();
 
     // Then: ParseResult should be number (non-null)
     const testResult = flagWithDefault.test("--port", 0, ["--port", "8080"]);
@@ -2382,15 +2382,13 @@ describe("Type transformations with Builder generics", () => {
     const booleanCommand = command("run");
 
     // Then: Initial value should be boolean
-    expectTypeOf(booleanCommand.initialValue()).toEqualTypeOf<boolean>();
+    expectTypeOf(booleanCommand.getInitial()).toEqualTypeOf<boolean>();
 
     // When: Calling restArgs() to transform to CommandBuilder<string[] | null, string[] | null>
     const restArgsCommand = booleanCommand.restArgs();
 
     // Then: Initial value should be string[] | null
-    expectTypeOf(restArgsCommand.initialValue()).toEqualTypeOf<
-      string[] | null
-    >();
+    expectTypeOf(restArgsCommand.getInitial()).toEqualTypeOf<string[] | null>();
 
     // Then: ParseResult should be string[] | null
     const testResult = restArgsCommand.test("run", 0, ["run", "arg1", "arg2"]);
@@ -2404,13 +2402,13 @@ describe("Type transformations with Builder generics", () => {
     const optionalArg = argument();
 
     // Then: Initial value should be string | null
-    expectTypeOf(optionalArg.initialValue()).toEqualTypeOf<string | null>();
+    expectTypeOf(optionalArg.getInitial()).toEqualTypeOf<string | null>();
 
     // When: Calling required() to transform to ArgumentBuilder<string | null, string>
     const requiredArg = optionalArg.required();
 
     // Then: Initial value should still be string | null
-    expectTypeOf(requiredArg.initialValue()).toEqualTypeOf<string | null>();
+    expectTypeOf(requiredArg.getInitial()).toEqualTypeOf<string | null>();
 
     // Then: ParseResult should be string (non-null)
     const testResult = requiredArg.test("value", 0, ["value"]);
@@ -2422,16 +2420,16 @@ describe("Type transformations with Builder generics", () => {
   it("should chain type transformations correctly", () => {
     // Given: A flag that goes through multiple transformations
     const flag1 = flag("--port");
-    expectTypeOf(flag1.initialValue()).toEqualTypeOf<boolean>();
+    expectTypeOf(flag1.getInitial()).toEqualTypeOf<boolean>();
 
     const flag2 = flag1.number();
-    expectTypeOf(flag2.initialValue()).toEqualTypeOf<number | null>();
+    expectTypeOf(flag2.getInitial()).toEqualTypeOf<number | null>();
 
     const flag3 = flag2.describe("Port number");
-    expectTypeOf(flag3.initialValue()).toEqualTypeOf<number | null>();
+    expectTypeOf(flag3.getInitial()).toEqualTypeOf<number | null>();
 
     const flag4 = flag3.required();
-    expectTypeOf(flag4.initialValue()).toEqualTypeOf<number | null>();
+    expectTypeOf(flag4.getInitial()).toEqualTypeOf<number | null>();
 
     const testResult = flag4.test("--port", 0, ["--port", "3000"]);
     if (testResult) {
