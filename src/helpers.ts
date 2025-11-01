@@ -23,16 +23,17 @@ export function flag(...flagNames: string[]) {
 
 /**
  * Creates a command builder that matches the given command name.
+ * Commands default to boolean behavior (return true when present).
  * 
  * @param commandName - The command name to match
- * @returns A CommandBuilder instance
+ * @returns A BooleanCommandBuilder instance
  * 
  * @example
- * command("build").boolean()                 // Boolean command
- * command("serve").restArgs()                // Command with rest args
+ * command("build")                           // Boolean command (returns true when present)
+ * command("serve").restArgs()                // Command with rest args - note restArgs() must be added to BooleanCommandBuilder
  */
 export function command(commandName: string) {
-  return CommandBuilder.create(commandName);
+  return CommandBuilder.create(commandName).boolean();
 }
 
 /**

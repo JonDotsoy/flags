@@ -59,8 +59,8 @@ export class CommandBuilder<T extends Spec<any, any>> extends Builder<T> {
   }
 
   static create(argumentMatch: string) {
-    return new CommandBuilder(Spec.create().initial(false)).refine(
+    return new CommandBuilder(Spec.create()).refine(
       argumentMatchRefine(argumentMatch),
-    ).refine(toBooleanRefine);
+    );
   }
 }
