@@ -41,6 +41,14 @@ export class ArgumentBuilder<T extends Spec<any, any>> extends Builder<T> {
     );
   }
 
+  describe(description: string) {
+    return this.metadata({ description });
+  }
+
+  required() {
+    return this.metadata({ required: true });
+  }
+
   static create() {
     return new ArgumentBuilder(Spec.create()).refine((arg, index, args) => {
       return {

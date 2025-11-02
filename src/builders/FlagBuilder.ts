@@ -33,6 +33,14 @@ export class FlagBuilder<T extends Spec<any, any>> extends Builder<T> {
     return new FlagBuilder(this.spec.metadata(values));
   }
 
+  describe(description: string) {
+    return this.metadata({ description });
+  }
+
+  required() {
+    return this.metadata({ required: true });
+  }
+
   string() {
     return new StringFlagBuilder(
       this.spec.initial<string | null>(null).refine<string>(stringFlagRefine),

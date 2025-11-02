@@ -52,6 +52,14 @@ export class NumberFlagBuilder<T extends Spec<any, any>> extends Builder<T> {
     return new NumberFlagBuilder(this.spec.initial(value));
   }
 
+  describe(description: string) {
+    return this.metadata({ description });
+  }
+
+  required() {
+    return this.metadata({ required: true });
+  }
+
   notNaN = () => new NumberFlagBuilder(this.spec.refine(notNaNRefine));
 
   gt = (greaterThan: number) => this.greaterThan(greaterThan);

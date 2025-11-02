@@ -25,6 +25,14 @@ export class CommandBuilder<T extends Spec<any, any>> extends Builder<T> {
     return new CommandBuilder(this.spec.metadata(values));
   }
 
+  describe(description: string) {
+    return this.metadata({ description });
+  }
+
+  required() {
+    return this.metadata({ required: true });
+  }
+
   string() {
     return this;
   }

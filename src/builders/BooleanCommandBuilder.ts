@@ -20,6 +20,14 @@ export class BooleanCommandBuilder<
     return new BooleanCommandBuilder(this.spec.refine(refine));
   }
 
+  describe(description: string) {
+    return this.metadata({ description });
+  }
+
+  required() {
+    return this.metadata({ required: true });
+  }
+
   metadata(values: Record<string, any>) {
     return new BooleanCommandBuilder(this.spec.metadata(values));
   }

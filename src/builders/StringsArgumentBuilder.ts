@@ -21,4 +21,12 @@ export class StringsArgumentBuilder<
   metadata(values: Record<string, any>) {
     return new StringsArgumentBuilder(this.spec.metadata(values));
   }
+
+  describe(description: string) {
+    return this.metadata({ description });
+  }
+
+  required() {
+    return this.metadata({ required: true });
+  }
 }

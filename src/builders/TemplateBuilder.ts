@@ -19,4 +19,12 @@ export class TemplateBuilder<T extends Spec<any, any>> extends Builder<T> {
   metadata(values: Record<string, any>) {
     return new TemplateBuilder(this.spec.metadata(values));
   }
+
+  describe(description: string) {
+    return this.metadata({ description });
+  }
+
+  required() {
+    return this.metadata({ required: true });
+  }
 }

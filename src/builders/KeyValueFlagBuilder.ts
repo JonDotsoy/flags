@@ -24,6 +24,14 @@ export class KeyValueFlagBuilder<T extends Spec<any, any>> extends Builder<T> {
     return new KeyValueFlagBuilder(this.spec.metadata(values));
   }
 
+  describe(description: string) {
+    return this.metadata({ description });
+  }
+
+  required() {
+    return this.metadata({ required: true });
+  }
+
   delimiter(delimiter: string) {
     // Get the matches from metadata
     const matches = this.spec.hasMetadata("matches")

@@ -30,6 +30,14 @@ export class NumberArgumentBuilder<
     return new NumberArgumentBuilder(this.spec.metadata(values));
   }
 
+  describe(description: string) {
+    return this.metadata({ description });
+  }
+
+  required() {
+    return this.metadata({ required: true });
+  }
+
   notNaN = () => new NumberArgumentBuilder(this.spec.refine(notNaNRefine));
 
   gt = (greaterThan: number) => this.greaterThan(greaterThan);
