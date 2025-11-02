@@ -5,7 +5,9 @@ import type { Refine } from "../dtos/Refine.js";
 import { argumentMatchRefine } from "./refiners/argumentMatchRefine.js";
 import { transformRefine } from "./refiners/transformRefine.js";
 
-export class BooleanCommandBuilder<T extends Spec<any, any>> extends Builder<T> {
+export class BooleanCommandBuilder<
+  T extends Spec<any, any>,
+> extends Builder<T> {
   initial<T>(initial: T) {
     return new BooleanCommandBuilder(this.spec.initial(initial));
   }

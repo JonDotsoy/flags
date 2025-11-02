@@ -1,6 +1,7 @@
 import type { Refine, Accumulate, ResultParser, RefineContext } from "../flags";
 
-export type InitialType<T extends Spec<any, any>> = T extends Spec<infer U, any> ? U : never;
+export type InitialType<T extends Spec<any, any>> =
+  T extends Spec<infer U, any> ? U : never;
 
 /** Inmutable class */
 export class Spec<InitialValue, ParseResult> {

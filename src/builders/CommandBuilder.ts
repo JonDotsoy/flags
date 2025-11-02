@@ -29,7 +29,9 @@ export class CommandBuilder<T extends Spec<any, any>> extends Builder<T> {
   }
 
   boolean() {
-    return new BooleanCommandBuilder<Spec<any, boolean>>(this.spec.refine(toBooleanRefine));
+    return new BooleanCommandBuilder<Spec<any, boolean>>(
+      this.spec.refine(toBooleanRefine),
+    );
   }
 
   transform<T>(transform: (value: InitialType<this["spec"]>) => T) {

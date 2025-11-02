@@ -110,7 +110,9 @@ describe("CommandBuilder", () => {
     });
   });
   test("should support transform", () => {
-    const builder = CommandBuilder.create("foo").transform((value) => value.toUpperCase());
+    const builder = CommandBuilder.create("foo").transform((value) =>
+      value.toUpperCase(),
+    );
 
     const result = builder.parse(0, ["foo"]);
 
@@ -119,7 +121,7 @@ describe("CommandBuilder", () => {
       index: 0,
       value: "FOO",
     });
-  });  
+  });
   test("should support boolean method", () => {
     const builder = CommandBuilder.create("foo").boolean();
 
@@ -135,5 +137,4 @@ describe("CommandBuilder", () => {
       value: true,
     });
   });
-  
 });
