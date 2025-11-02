@@ -21,6 +21,14 @@ export class Builder<T extends Spec<any, any>> {
     return new Builder(this.spec.metadata(values));
   }
 
+  describe(description: string) {
+    return this.metadata({ description });
+  }
+
+  required() {
+    return this.metadata({ required: true });
+  }
+
   parse(startIndex: number, args: string[], prevValue?: { current: any }) {
     return this.spec.parse(startIndex, args, prevValue, this);
   }
