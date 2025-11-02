@@ -1,11 +1,19 @@
 import { test, expect, describe } from "bun:test";
 import { flagMatchRefine } from "./flagMatchRefine";
 import { Spec } from "../Spec";
+import { Builder } from "../Builder";
 
 describe("flagMatchRefine", () => {
   test("should match single alias without value", () => {
-    const refine = flagMatchRefine(["--verbose"]);
-    const result = refine("--verbose", 0, ["--verbose"], null);
+    const spec = Spec.create().metadata({ matches: ["--verbose"] });
+    const builder = new Builder(spec);
+    const result = flagMatchRefine(
+      "--verbose",
+      0,
+      ["--verbose"],
+      null,
+      builder,
+    );
 
     expect(result).toEqual({
       args: ["--verbose"],
@@ -15,8 +23,15 @@ describe("flagMatchRefine", () => {
   });
 
   test("should match single alias with value using = syntax", () => {
-    const refine = flagMatchRefine(["--verbose"]);
-    const result = refine("--verbose=foo", 0, ["--verbose=foo"], null);
+    const spec = Spec.create().metadata({ matches: ["--verbose"] });
+    const builder = new Builder(spec);
+    const result = flagMatchRefine(
+      "--verbose=foo",
+      0,
+      ["--verbose=foo"],
+      null,
+      builder,
+    );
 
     expect(result).toEqual({
       args: ["--verbose=foo"],
@@ -26,8 +41,15 @@ describe("flagMatchRefine", () => {
   });
 
   test("should match single alias with comma-separated value using = syntax", () => {
-    const refine = flagMatchRefine(["--verbose"]);
-    const result = refine("--verbose=foo,taz", 0, ["--verbose=foo,taz"], null);
+    const spec = Spec.create().metadata({ matches: ["--verbose"] });
+    const builder = new Builder(spec);
+    const result = flagMatchRefine(
+      "--verbose=foo,taz",
+      0,
+      ["--verbose=foo,taz"],
+      null,
+      builder,
+    );
 
     expect(result).toEqual({
       args: ["--verbose=foo,taz"],
@@ -37,8 +59,9 @@ describe("flagMatchRefine", () => {
   });
 
   test("should match multiple aliases - first alias", () => {
-    const refine = flagMatchRefine(["--foo", "-f"]);
-    const result = refine("--foo", 0, ["--foo"], null);
+    const spec = Spec.create().metadata({ matches: ["--foo", "-f"] });
+    const builder = new Builder(spec);
+    const result = flagMatchRefine("--foo", 0, ["--foo"], null, builder);
 
     expect(result).toEqual({
       args: ["--foo"],
@@ -48,8 +71,9 @@ describe("flagMatchRefine", () => {
   });
 
   test("should match multiple aliases - second alias", () => {
-    const refine = flagMatchRefine(["--foo", "-f"]);
-    const result = refine("-f", 0, ["-f"], null);
+    const spec = Spec.create().metadata({ matches: ["--foo", "-f"] });
+    const builder = new Builder(spec);
+    const result = flagMatchRefine("-f", 0, ["-f"], null, builder);
 
     expect(result).toEqual({
       args: ["-f"],
@@ -59,8 +83,15 @@ describe("flagMatchRefine", () => {
   });
 
   test("should match alias with value using = syntax", () => {
-    const refine = flagMatchRefine(["--foo", "-f"]);
-    const result = refine("--foo=bar", 0, ["--foo=bar"], null);
+    const spec = Spec.create().metadata({ matches: ["--foo", "-f"] });
+    const builder = new Builder(spec);
+    const result = flagMatchRefine(
+      "--foo=bar",
+      0,
+      ["--foo=bar"],
+      null,
+      builder,
+    );
 
     expect(result).toEqual({
       args: ["--foo=bar"],
@@ -70,8 +101,9 @@ describe("flagMatchRefine", () => {
   });
 
   test("should match short alias with value using = syntax", () => {
-    const refine = flagMatchRefine(["--foo", "-f"]);
-    const result = refine("-f=bar", 0, ["-f=bar"], null);
+    const spec = Spec.create().metadata({ matches: ["--foo", "-f"] });
+    const builder = new Builder(spec);
+    const result = flagMatchRefine("-f=bar", 0, ["-f=bar"], null, builder);
 
     expect(result).toEqual({
       args: ["-f=bar"],
@@ -81,19 +113,22 @@ describe("flagMatchRefine", () => {
   });
 
   test("should return null for non-matching flag", () => {
-    const refine = flagMatchRefine(["--verbose"]);
-    const result = refine("--other", 0, ["--other"], null);
+    const spec = Spec.create().metadata({ matches: ["--verbose"] });
+    const builder = new Builder(spec);
+    const result = flagMatchRefine("--other", 0, ["--other"], null, builder);
 
     expect(result).toBeNull();
   });
 
   test("should work at different index positions", () => {
-    const refine = flagMatchRefine(["--verbose"]);
-    const result = refine(
+    const spec = Spec.create().metadata({ matches: ["--verbose"] });
+    const builder = new Builder(spec);
+    const result = flagMatchRefine(
       "--verbose=value",
       2,
       ["cmd", "arg", "--verbose=value"],
       null,
+      builder,
     );
 
     expect(result).toEqual({
@@ -104,8 +139,15 @@ describe("flagMatchRefine", () => {
   });
 
   test("should handle empty value with = syntax", () => {
-    const refine = flagMatchRefine(["--verbose"]);
-    const result = refine("--verbose=", 0, ["--verbose="], null);
+    const spec = Spec.create().metadata({ matches: ["--verbose"] });
+    const builder = new Builder(spec);
+    const result = flagMatchRefine(
+      "--verbose=",
+      0,
+      ["--verbose="],
+      null,
+      builder,
+    );
 
     expect(result).toEqual({
       args: ["--verbose="],
@@ -115,8 +157,9 @@ describe("flagMatchRefine", () => {
   });
 
   test("should match flag without dashes", () => {
-    const refine = flagMatchRefine(["foo-taz"]);
-    const result = refine("foo-taz", 0, ["foo-taz"], null);
+    const spec = Spec.create().metadata({ matches: ["foo-taz"] });
+    const builder = new Builder(spec);
+    const result = flagMatchRefine("foo-taz", 0, ["foo-taz"], null, builder);
 
     expect(result).toEqual({
       args: ["foo-taz"],
@@ -126,8 +169,15 @@ describe("flagMatchRefine", () => {
   });
 
   test("should match flag without dashes with = value", () => {
-    const refine = flagMatchRefine(["foo-taz"]);
-    const result = refine("foo-taz=bar", 0, ["foo-taz=bar"], null);
+    const spec = Spec.create().metadata({ matches: ["foo-taz"] });
+    const builder = new Builder(spec);
+    const result = flagMatchRefine(
+      "foo-taz=bar",
+      0,
+      ["foo-taz=bar"],
+      null,
+      builder,
+    );
 
     expect(result).toEqual({
       args: ["foo-taz=bar"],
@@ -137,9 +187,18 @@ describe("flagMatchRefine", () => {
   });
 
   test("should support custom delimiter", () => {
-    const spec = Spec.create().metadata({ delimiter: ":" });
-    const refine = flagMatchRefine(["--verbose"], spec);
-    const result = refine("--verbose:foo", 0, ["--verbose:foo"], null);
+    const spec = Spec.create().metadata({
+      delimiter: ":",
+      matches: ["--verbose"],
+    });
+    const builder = new Builder(spec);
+    const result = flagMatchRefine(
+      "--verbose:foo",
+      0,
+      ["--verbose:foo"],
+      null,
+      builder,
+    );
 
     expect(result).toEqual({
       args: ["--verbose:foo"],
@@ -149,17 +208,29 @@ describe("flagMatchRefine", () => {
   });
 
   test("should not match with wrong delimiter", () => {
-    const spec = Spec.create().metadata({ delimiter: ":" });
-    const refine = flagMatchRefine(["--verbose"], spec);
-    const result = refine("--verbose=foo", 0, ["--verbose=foo"], null);
+    const spec = Spec.create().metadata({
+      delimiter: ":",
+      matches: ["--verbose"],
+    });
+    const builder = new Builder(spec);
+    const result = flagMatchRefine(
+      "--verbose=foo",
+      0,
+      ["--verbose=foo"],
+      null,
+      builder,
+    );
 
     expect(result).toBeNull();
   });
 
   test("should support custom delimiter with multiple aliases", () => {
-    const spec = Spec.create().metadata({ delimiter: ":" });
-    const refine = flagMatchRefine(["--foo", "-f"], spec);
-    const result = refine("-f:bar", 0, ["-f:bar"], null);
+    const spec = Spec.create().metadata({
+      delimiter: ":",
+      matches: ["--foo", "-f"],
+    });
+    const builder = new Builder(spec);
+    const result = flagMatchRefine("-f:bar", 0, ["-f:bar"], null, builder);
 
     expect(result).toEqual({
       args: ["-f:bar"],

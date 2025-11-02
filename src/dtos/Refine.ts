@@ -1,3 +1,5 @@
+import type { Builder } from "../builders/Builder.js";
+import type { Spec } from "../builders/Spec.js";
 import type { RefineContext } from "./RefineContext.js";
 
 /**
@@ -49,4 +51,5 @@ export type Refine = (
   index: number,
   args: string[],
   context: RefineContext,
+  builder: Builder<Spec<any, any>>,
 ) => RefineContext;

@@ -22,6 +22,6 @@ export class Builder<T extends Spec<any, any>> {
   }
 
   parse(startIndex: number, args: string[], prevValue?: { current: any }) {
-    return this.spec.parse(startIndex, args, prevValue);
+    return this.spec.parse(startIndex, args, prevValue, this);
   }
 }

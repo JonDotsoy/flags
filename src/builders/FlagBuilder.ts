@@ -26,15 +26,15 @@ export class FlagBuilder<T extends Spec<any, any>> extends Builder<T> {
   }
 
   string() {
-    return new StringFlagBuilder(this.spec.refine(stringFlagRefine(this.spec)));
+    return new StringFlagBuilder(this.spec.refine(stringFlagRefine));
   }
 
   number() {
-    return new NumberFlagBuilder(this.spec.refine(numberFlagRefine(this.spec)));
+    return new NumberFlagBuilder(this.spec.refine(numberFlagRefine));
   }
 
   static create(...aliases: string[]) {
     const spec = Spec.create().metadata({ matches: aliases });
-    return new FlagBuilder(spec.refine(flagMatchRefine(aliases, spec)));
+    return new FlagBuilder(spec.refine(flagMatchRefine));
   }
 }

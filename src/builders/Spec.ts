@@ -77,7 +77,8 @@ export class Spec<InitialValue, ParseResult> {
   parse(
     startIndex: number,
     args: string[],
-    prevValue?: { current: any },
+    prevValue: { current: any } | undefined,
+    builder: Builder<any>,
   ): null | ResultParser<ParseResult> {
     if (args.length === 0 || startIndex >= args.length) {
       return null;
@@ -88,7 +89,7 @@ export class Spec<InitialValue, ParseResult> {
 
     // Apply each refiner in sequence
     for (const refiner of this.#refiners) {
-      const result = refiner(arg, startIndex, args, context);
+      const result = refiner(arg, startIndex, args, context, builder);
 
       if (result === null) {
         return null;

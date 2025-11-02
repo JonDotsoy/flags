@@ -33,16 +33,13 @@ export class NumberFlagBuilder<T extends Spec<any, any>> extends Builder<T> {
 
   delimiter(delimiter: string) {
     // Get the matches from metadata
-    const matches = this.spec.hasMetadata("matches")
-      ? this.spec.getMetadata<string[]>("matches")
-      : [];
+    const matches =
+      this.spec.getMetadata<string[] | undefined>("matches") ?? [];
 
     // Re-create the builder with new delimiter
     const newSpec = Spec.create().metadata({ delimiter, matches });
-    const specWithFlag = newSpec.refine(flagMatchRefine(matches, newSpec));
-    return new NumberFlagBuilder(
-      specWithFlag.refine(numberFlagRefine(specWithFlag)),
-    );
+    const specWithFlag = newSpec.refine(flagMatchRefine);
+    return new NumberFlagBuilder(specWithFlag.refine(numberFlagRefine));
   }
 
   transform<T>(transform: (value: InitialType<this["spec"]>) => T) {
