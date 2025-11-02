@@ -1,5 +1,6 @@
 import { test, expect, describe } from "bun:test";
 import { CommandBuilder } from "./CommandBuilder";
+import { BooleanCommandBuilder } from "./BooleanCommandBuilder";
 
 describe("CommandBuilder", () => {
   test("should create CommandBuilder with argumentMatch", () => {
@@ -122,7 +123,7 @@ describe("CommandBuilder", () => {
   test("should support boolean method", () => {
     const builder = CommandBuilder.create("foo").boolean();
 
-    expect(builder).toBeInstanceOf(CommandBuilder);
+    expect(builder).toBeInstanceOf(BooleanCommandBuilder);
   });
   test("should parse boolean command correctly", () => {
     const builder = CommandBuilder.create("foo").boolean();
