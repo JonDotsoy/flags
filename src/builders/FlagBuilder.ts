@@ -10,6 +10,8 @@ import { numberFlagRefine } from "./refiners/numberFlagRefine.js";
 import { KeyValueFlagBuilder } from "./KeyValueFlagBuilder.js";
 import { keyValueFlagRefine } from "./refiners/keyValueFlagRefine.js";
 import { keyValueAccumulate } from "./accumulates/keyValueAccumulate.js";
+import { BooleanFlagBuilder } from "./BooleanFlagBuilder.js";
+import { booleanFlagRefine } from "./refiners/booleanFlagRefine.js";
 
 export class FlagBuilder<T extends Spec<any, any>> extends Builder<T> {
   initial<T>(initial: T) {
@@ -34,6 +36,12 @@ export class FlagBuilder<T extends Spec<any, any>> extends Builder<T> {
 
   number() {
     return new NumberFlagBuilder(this.spec.refine(numberFlagRefine));
+  }
+
+  boolean() {
+    return new BooleanFlagBuilder(
+      this.spec.initial(false).refine(booleanFlagRefine),
+    );
   }
 
   keyValue() {

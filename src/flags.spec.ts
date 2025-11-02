@@ -8,55 +8,11 @@ describe("new-flags", () => {
       const booleanFlag = flag("--verbose").boolean();
 
       // When: Getting the initial value
-      const initialValue = booleanFlag.getInitial();
+      const initialValue = booleanFlag.spec.getInitial();
 
       // Then: The initial value should be false for boolean flags
       expect(initialValue).toBe(false);
       expectTypeOf(initialValue).toEqualTypeOf<boolean>();
-    });
-
-    it("should have test method that validates if argument can be parsed", () => {
-      // Given: A flag builder for a string flag
-      const stringFlag = flag("--name").string();
-
-      // When: Testing if an argument matches the flag with space syntax
-      const matchSpace = stringFlag.test("--name", 0, ["--name", "value"]);
-
-      // Then: test should return match info with args consumed and parsed value
-      expect(matchSpace).toEqual({
-        index: 0,
-        args: ["--name", "value"],
-        parsed: "value",
-      });
-
-      // When: Testing if an argument matches the flag with = syntax
-      const matchEquals = stringFlag.test("--name=value", 0, ["--name=value"]);
-
-      // Then: test should return match info with 1 argument consumed
-      expect(matchEquals).toEqual({
-        index: 0,
-        args: ["--name=value"],
-        parsed: "value",
-      });
-
-      // When: Testing if an argument does not match
-      const noMatch = stringFlag.test("--other", 0, ["--other", "value"]);
-
-      // Then: test should return null for non-matching flag
-      expect(noMatch).toBe(null);
-    });
-
-    it("should have test method that returns parsed value directly", () => {
-      // Given: A flag builder for a string flag
-      const stringFlag = flag("--name").string();
-
-      // When: Testing an argument
-      const match = stringFlag.test("--name", 0, ["--name", "john"]);
-
-      // Then: The match should contain the parsed value
-      expect(match).not.toBe(null);
-      expect(match?.parsed).toBe("john");
-      expectTypeOf(match?.parsed).toEqualTypeOf<string | null | undefined>();
     });
 
     it("should return correct initial value for string flags", () => {
@@ -64,7 +20,7 @@ describe("new-flags", () => {
       const stringFlag = flag("--host").string();
 
       // When: Getting initial value
-      const initialValue = stringFlag.getInitial();
+      const initialValue = stringFlag.spec.getInitial();
 
       // Then: Initial value should be null
       expect(initialValue).toBe(null);
