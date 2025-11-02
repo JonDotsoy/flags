@@ -44,7 +44,7 @@ describe("new-flags", () => {
       const stringsFlag = flag("--label").strings();
 
       // When: Getting initial value
-      const initialValue = stringsFlag.getInitial();
+      const initialValue = stringsFlag.spec.getInitial();
 
       // Then: Initial value should be empty array
       expect(initialValue).toEqual([]);
@@ -56,7 +56,7 @@ describe("new-flags", () => {
       const kvFlag = flag("--config").keyValue();
 
       // When: Getting initial value
-      const initialValue = kvFlag.getInitial();
+      const initialValue = kvFlag.spec.getInitial();
 
       // Then: Initial value should be empty object
       expect(initialValue).toEqual({});
@@ -68,7 +68,7 @@ describe("new-flags", () => {
       const numberFlag = flag("--port").number().default(3000);
 
       // When: Getting initial value
-      const initialValue = numberFlag.getInitial();
+      const initialValue = numberFlag.spec.getInitial();
 
       // Then: Initial value should be the default value
       expect(initialValue).toBe(3000);
@@ -80,7 +80,7 @@ describe("new-flags", () => {
       const stringsFlag = flag("--label").strings();
 
       // When: Getting initial value
-      const initialValue = stringsFlag.getInitial();
+      const initialValue = stringsFlag.spec.getInitial();
 
       // Then: Initial value should be empty array
       expect(initialValue).toEqual([]);
@@ -95,17 +95,17 @@ describe("new-flags", () => {
       const runCommand = command("run").restArgs();
 
       // When: Testing if argument matches command
-      const match = runCommand.test("run", 0, ["run", "arg1", "arg2"]);
+      const match = runCommand.parse(0, ["run", "arg1", "arg2"]);
 
       // Then: test should return match info consuming all remaining args
       expect(match).toEqual({
         index: 0,
         args: ["run", "arg1", "arg2"],
-        parsed: ["arg1", "arg2"],
+        value: ["arg1", "arg2"],
       });
 
       // When: Testing if argument does not match
-      const noMatch = runCommand.test("other", 0, ["other", "arg1"]);
+      const noMatch = runCommand.parse("other", 0, ["other", "arg1"]);
 
       // Then: test should return null for non-matching command
       expect(noMatch).toBe(null);
@@ -116,17 +116,17 @@ describe("new-flags", () => {
       const arg = argument().string();
 
       // When: Testing if argument can be parsed (not a flag or command)
-      const match = arg.test("value", 0, ["value"]);
+      const match = arg.parse(0, ["value"]);
 
       // Then: test should return match info with 1 argument consumed
       expect(match).toEqual({
         index: 0,
         args: ["value"],
-        parsed: "value",
+        value: "value",
       });
 
       // When: Testing if argument is a flag
-      const noMatch = arg.test("--flag", 0, ["--flag"]);
+      const noMatch = arg.parse(0, ["--flag"]);
 
       // Then: test should return null for flags
       expect(noMatch).toBe(null);
@@ -137,7 +137,7 @@ describe("new-flags", () => {
       const verboseFlag = flag("--verbose", "-v").boolean();
 
       // When: Testing with long flag
-      const matchLong = verboseFlag.test("--verbose", 0, ["--verbose"]);
+      const matchLong = verboseFlag.parse("--verbose", 0, ["--verbose"]);
 
       // Then: test should return match info with 1 argument consumed
       expect(matchLong).toEqual({
@@ -147,7 +147,7 @@ describe("new-flags", () => {
       });
 
       // When: Testing with short flag
-      const matchShort = verboseFlag.test("-v", 0, ["-v"]);
+      const matchShort = verboseFlag.parse("-v", 0, ["-v"]);
 
       // Then: test should return match info with 1 argument consumed
       expect(matchShort).toEqual({
@@ -162,7 +162,7 @@ describe("new-flags", () => {
       const portFlag = flag("--port").number();
 
       // When: Testing with space syntax
-      const matchSpace = portFlag.test("--port", 0, ["--port", "3000"]);
+      const matchSpace = portFlag.parse("--port", 0, ["--port", "3000"]);
 
       // Then: test should return match info with 2 arguments consumed
       expect(matchSpace).toEqual({
@@ -172,7 +172,7 @@ describe("new-flags", () => {
       });
 
       // When: Testing with = syntax
-      const matchEquals = portFlag.test("--port=3000", 0, ["--port=3000"]);
+      const matchEquals = portFlag.parse("--port=3000", 0, ["--port=3000"]);
 
       // Then: test should return match info with 1 argument consumed
       expect(matchEquals).toEqual({
@@ -182,7 +182,7 @@ describe("new-flags", () => {
       });
 
       // When: Testing flag without value
-      const matchNoValue = portFlag.test("--port", 0, ["--port"]);
+      const matchNoValue = portFlag.parse("--port", 0, ["--port"]);
 
       // Then: test should return match info with 1 argument consumed
       expect(matchNoValue).toEqual({
@@ -197,7 +197,7 @@ describe("new-flags", () => {
       const configFlag = flag("--config").keyValue();
 
       // When: Testing with name value syntax (3 args total)
-      const matchNameValue = configFlag.test("--config", 0, [
+      const matchNameValue = configFlag.parse("--config", 0, [
         "--config",
         "host",
         "localhost",
@@ -211,7 +211,7 @@ describe("new-flags", () => {
       });
 
       // When: Testing with name=value syntax (2 args total)
-      const matchNameEquals = configFlag.test("--config", 0, [
+      const matchNameEquals = configFlag.parse("--config", 0, [
         "--config",
         "host=localhost",
       ]);
@@ -224,7 +224,7 @@ describe("new-flags", () => {
       });
 
       // When: Testing with --flag=name=value syntax (1 arg total)
-      const matchAllEquals = configFlag.test("--config=host=localhost", 0, [
+      const matchAllEquals = configFlag.parse("--config=host=localhost", 0, [
         "--config=host=localhost",
       ]);
 
@@ -241,7 +241,7 @@ describe("new-flags", () => {
       const userCommand = command("user").boolean();
 
       // When: Testing if argument matches command
-      const match = userCommand.test("user", 0, ["user"]);
+      const match = userCommand.parse("user", 0, ["user"]);
 
       // Then: test should return match info with 1 argument consumed
       expect(match).toEqual({
@@ -273,7 +273,7 @@ describe("new-flags", () => {
       expectTypeOf(requiredStringFlag.getInitial()).toEqualTypeOf<
         string | null
       >();
-      const testResult = requiredStringFlag.test("--name", 0, [
+      const testResult = requiredStringFlag.parse("--name", 0, [
         "--name",
         "value",
       ]);
@@ -2307,7 +2307,7 @@ describe("Type transformations with Builder generics", () => {
     expectTypeOf(requiredFlag.getInitial()).toEqualTypeOf<string | null>();
 
     // Then: ParseResult should be string (non-null)
-    const testResult = requiredFlag.test("--name", 0, ["--name", "value"]);
+    const testResult = requiredFlag.parse("--name", 0, ["--name", "value"]);
     if (testResult) {
       expectTypeOf(testResult.parsed).toEqualTypeOf<string>();
     }
@@ -2327,7 +2327,7 @@ describe("Type transformations with Builder generics", () => {
     expectTypeOf(flagWithDefault.getInitial()).toEqualTypeOf<number>();
 
     // Then: ParseResult should be number (non-null)
-    const testResult = flagWithDefault.test("--port", 0, ["--port", "8080"]);
+    const testResult = flagWithDefault.parse("--port", 0, ["--port", "8080"]);
     if (testResult) {
       expectTypeOf(testResult.parsed).toEqualTypeOf<number | null>();
     }
@@ -2347,7 +2347,7 @@ describe("Type transformations with Builder generics", () => {
     expectTypeOf(restArgsCommand.getInitial()).toEqualTypeOf<string[] | null>();
 
     // Then: ParseResult should be string[] | null
-    const testResult = restArgsCommand.test("run", 0, ["run", "arg1", "arg2"]);
+    const testResult = restArgsCommand.parse("run", 0, ["run", "arg1", "arg2"]);
     if (testResult) {
       expectTypeOf(testResult.parsed).toEqualTypeOf<string[] | null>();
     }
@@ -2367,7 +2367,7 @@ describe("Type transformations with Builder generics", () => {
     expectTypeOf(requiredArg.getInitial()).toEqualTypeOf<string | null>();
 
     // Then: ParseResult should be string (non-null)
-    const testResult = requiredArg.test("value", 0, ["value"]);
+    const testResult = requiredArg.parse("value", 0, ["value"]);
     if (testResult) {
       expectTypeOf(testResult.parsed).toEqualTypeOf<string>();
     }
@@ -2387,7 +2387,7 @@ describe("Type transformations with Builder generics", () => {
     const flag4 = flag3.required();
     expectTypeOf(flag4.getInitial()).toEqualTypeOf<number | null>();
 
-    const testResult = flag4.test("--port", 0, ["--port", "3000"]);
+    const testResult = flag4.parse("--port", 0, ["--port", "3000"]);
     if (testResult) {
       expectTypeOf(testResult.parsed).toEqualTypeOf<number>();
     }

@@ -48,6 +48,10 @@ export class NumberFlagBuilder<T extends Spec<any, any>> extends Builder<T> {
     );
   }
 
+  default(value: number) {
+    return new NumberFlagBuilder(this.spec.initial(value));
+  }
+
   notNaN = () => new NumberFlagBuilder(this.spec.refine(notNaNRefine));
 
   gt = (greaterThan: number) => this.greaterThan(greaterThan);

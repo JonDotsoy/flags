@@ -6,6 +6,7 @@ import { argumentMatchRefine } from "./refiners/argumentMatchRefine.js";
 import { transformRefine } from "./refiners/transformRefine.js";
 import { BooleanCommandBuilder } from "./BooleanCommandBuilder.js";
 import { toBooleanRefine } from "./refiners/templateRefine.js";
+import { restArgsRefine } from "./refiners/restArgsRefine.js";
 
 export class CommandBuilder<T extends Spec<any, any>> extends Builder<T> {
   initial<T>(initial: T) {
@@ -36,6 +37,10 @@ export class CommandBuilder<T extends Spec<any, any>> extends Builder<T> {
 
   transform<T>(transform: (value: InitialType<this["spec"]>) => T) {
     return new CommandBuilder(this.spec.refine<T>(transformRefine(transform)));
+  }
+
+  restArgs() {
+    return new CommandBuilder(this.spec.refine<string[]>(restArgsRefine));
   }
 
   static create(argumentMatch: string) {

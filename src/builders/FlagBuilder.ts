@@ -12,6 +12,9 @@ import { keyValueFlagRefine } from "./refiners/keyValueFlagRefine.js";
 import { keyValueAccumulate } from "./accumulates/keyValueAccumulate.js";
 import { BooleanFlagBuilder } from "./BooleanFlagBuilder.js";
 import { booleanFlagRefine } from "./refiners/booleanFlagRefine.js";
+import { StringsFlagBuilder } from "./StringsFlagBuilder.js";
+import { stringsFlagRefine } from "./refiners/stringsFlagRefine.js";
+import { stringsAccumulate } from "./accumulates/stringsAccumulate.js";
 
 export class FlagBuilder<T extends Spec<any, any>> extends Builder<T> {
   initial<T>(initial: T) {
@@ -34,6 +37,13 @@ export class FlagBuilder<T extends Spec<any, any>> extends Builder<T> {
     return new StringFlagBuilder(
       this.spec.initial<string | null>(null).refine<string>(stringFlagRefine),
     );
+  }
+
+  strings() {
+    const specWithRefine = this.spec
+      .initial<string[]>([])
+      .refine(stringsFlagRefine);
+    return new StringsFlagBuilder(specWithRefine.accumulate(stringsAccumulate));
   }
 
   number() {
