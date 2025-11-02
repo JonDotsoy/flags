@@ -1,22 +1,40 @@
 import type { Builder } from "./builders/Builder.js";
+import type { Spec } from "./builders/Spec.js";
 import { UnexpectedArgumentError } from "./errors/UnexpectedArgumentError.js";
 
 // NewFlagsParser implementation
 
 export class FlagsParser<T extends Record<string, Builder<any>>> {
-  private _programName: string = "cli";
-  private _description?: string;
+  constructor(
+    private schema: T,
+    readonly metadata: {
+      readonly program: string;
+      readonly description?: string;
+      readonly version?: string;
+    } = {
+      program: "cli",
+    },
+  ) {}
 
-  constructor(private schema: T) {}
-
-  programName(name: string): this {
-    this._programName = name;
-    return this;
+  program(name: string) {
+    return new FlagsParser(this.schema, {
+      ...this.metadata,
+      program: name,
+    });
   }
 
-  describe(description: string): this {
-    this._description = description;
-    return this;
+  describe(description: string) {
+    return new FlagsParser(this.schema, {
+      ...this.metadata,
+      description,
+    });
+  }
+
+  version(version: string) {
+    return new FlagsParser(this.schema, {
+      ...this.metadata,
+      version,
+    });
   }
 
   // helpMessage({
@@ -185,7 +203,7 @@ export class FlagsParser<T extends Record<string, Builder<any>>> {
   //   return help.trimEnd();
   // }
   parse(args: string[]): {
-    [K in keyof T]: T[K] extends ArgumentBuilder<infer I, infer P>
+    [K in keyof T]: T[K] extends Builder<Spec<infer I, infer P>>
       ? I extends null
         ? P
         : I
