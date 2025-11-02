@@ -32,7 +32,7 @@ describe("new-flags", () => {
       const numberFlag = flag("--port").number();
 
       // When: Getting initial value
-      const initialValue = numberFlag.getInitial();
+      const initialValue = numberFlag.spec.getInitial();
 
       // Then: Initial value should be null
       expect(initialValue).toBe(null);

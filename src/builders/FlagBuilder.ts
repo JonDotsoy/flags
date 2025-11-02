@@ -31,11 +31,15 @@ export class FlagBuilder<T extends Spec<any, any>> extends Builder<T> {
   }
 
   string() {
-    return new StringFlagBuilder(this.spec.refine(stringFlagRefine));
+    return new StringFlagBuilder(
+      this.spec.initial<string | null>(null).refine<string>(stringFlagRefine),
+    );
   }
 
   number() {
-    return new NumberFlagBuilder(this.spec.refine(numberFlagRefine));
+    return new NumberFlagBuilder(
+      this.spec.initial<number | null>(null).refine(numberFlagRefine),
+    );
   }
 
   boolean() {
