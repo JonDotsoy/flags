@@ -34,7 +34,9 @@ export class StringsFlagBuilder<T extends Spec<any, any>> extends Builder<T> {
     const newSpec = Spec.create().metadata({ delimiter, matches });
     const specWithFlag = newSpec.refine(flagMatchRefine);
     const specWithStrings = specWithFlag.refine(stringsFlagRefine);
-    return new StringsFlagBuilder(specWithStrings.accumulate(stringsAccumulate));
+    return new StringsFlagBuilder(
+      specWithStrings.accumulate(stringsAccumulate),
+    );
   }
 
   transform<T>(transform: (value: InitialType<this["spec"]>) => T) {

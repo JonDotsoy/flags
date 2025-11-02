@@ -201,14 +201,7 @@ describe("StringsFlagBuilder", () => {
     );
     const result3 = builder.parse(
       4,
-      [
-        "--files",
-        "file1.txt",
-        "--files",
-        "file2.txt",
-        "--files",
-        "file3.txt",
-      ],
+      ["--files", "file1.txt", "--files", "file2.txt", "--files", "file3.txt"],
       {
         current: result2?.value,
       },
