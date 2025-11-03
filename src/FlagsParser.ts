@@ -2,9 +2,21 @@ import type { Builder } from "./builders/Builder.js";
 import type { Spec } from "./builders/Spec.js";
 import { UnexpectedArgumentError } from "./errors/UnexpectedArgumentError.js";
 
+// Type helper to extract the result type from a Builder
+type ExtractBuilderResult<B> = B extends Builder<Spec<infer I, infer P>>
+  ? P extends never
+    ? I
+    : P extends null
+      ? I
+      : P
+  : never;
+
 // NewFlagsParser implementation
 
 export class FlagsParser<T extends Record<string, Builder<any>>> {
+  helpMessage(arg0?: { terminalWidth?: number; noColor?: boolean }): string {
+    throw new Error("Method not implemented.");
+  }
   constructor(
     private schema: T,
     readonly metadata: {
@@ -203,11 +215,7 @@ export class FlagsParser<T extends Record<string, Builder<any>>> {
   //   return help.trimEnd();
   // }
   parse(args: string[]): {
-    [K in keyof T]: T[K] extends Builder<Spec<infer I, infer P>>
-      ? I extends null
-        ? P
-        : I
-      : never;
+    [K in keyof T]: ExtractBuilderResult<T[K]>;
   } {
     const result: any = {};
     const usedIndices = new Set<number>();

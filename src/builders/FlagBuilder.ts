@@ -43,20 +43,20 @@ export class FlagBuilder<T extends Spec<any, any>> extends Builder<T> {
 
   string() {
     return new StringFlagBuilder(
-      this.spec.initial<string | null>(null).refine<string>(stringFlagRefine),
+      this.spec.initial<string | null>(null).refine<string | null>(stringFlagRefine),
     );
   }
 
   strings() {
     const specWithRefine = this.spec
       .initial<string[]>([])
-      .refine(stringsFlagRefine);
+      .refine<string[]>(stringsFlagRefine);
     return new StringsFlagBuilder(specWithRefine.accumulate(stringsAccumulate));
   }
 
   number() {
     return new NumberFlagBuilder(
-      this.spec.initial<number | null>(null).refine(numberFlagRefine),
+      this.spec.initial<number | null>(null).refine<number | null>(numberFlagRefine),
     );
   }
 

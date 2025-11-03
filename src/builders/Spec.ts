@@ -3,6 +3,9 @@ import type { Refine, Accumulate, ResultParser, RefineContext } from "../flags";
 export type InitialType<T extends Spec<any, any>> =
   T extends Spec<infer U, any> ? U : never;
 
+export type ParseResultType<T extends Spec<any, any>> =
+  T extends Spec<any, infer U> ? U : never;
+
 /** Inmutable class */
 export class Spec<InitialValue, ParseResult> {
   #refiners: Refine[];
@@ -32,8 +35,9 @@ export class Spec<InitialValue, ParseResult> {
   }
 
   accumulate(accumulate: Accumulate) {
-    return new Spec(this.#initial, this.#refiners, accumulate, this.#metadata);
+    return new Spec<InitialValue, ParseResult>(this.#initial, this.#refiners, accumulate, this.#metadata);
   }
+
   refine<U>(refine: Refine) {
     return new Spec<InitialValue, U>(
       this.#initial,
@@ -44,7 +48,7 @@ export class Spec<InitialValue, ParseResult> {
   }
 
   metadata(values: Record<string, any>) {
-    return new Spec(this.#initial, this.#refiners, this.#accumulate, {
+    return new Spec<InitialValue, ParseResult>(this.#initial, this.#refiners, this.#accumulate, {
       ...this.#metadata,
       ...values,
     });
