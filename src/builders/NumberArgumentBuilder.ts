@@ -10,6 +10,8 @@ import { numberLessThanOrEqualRefine } from "./refiners/numberLessThanOrEqualRef
 import { numberLessThanRefine } from "./refiners/numberLessThanRefine.js";
 import { numberGreaterThanOrEqualRefine } from "./refiners/numberGreaterThanOrEqualRefine.js";
 import { numberGreaterThanRefine } from "./refiners/numberGreaterThanRefine.js";
+import { transformRefine } from "./refiners/transformRefine.js";
+import type { InitialType } from "./Spec.js";
 
 export class NumberArgumentBuilder<
   T extends Spec<any, any>,
@@ -36,6 +38,12 @@ export class NumberArgumentBuilder<
 
   required() {
     return this.metadata({ required: true });
+  }
+
+  transform<U>(transform: (value: InitialType<this["spec"]>) => U) {
+    return new NumberArgumentBuilder(
+      this.spec.refine<U>(transformRefine(transform)),
+    );
   }
 
   notNaN = () => new NumberArgumentBuilder(this.spec.refine(notNaNRefine));

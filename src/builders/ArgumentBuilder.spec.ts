@@ -83,4 +83,45 @@ describe("ArgumentBuilder", () => {
 
     expect(parsed).toEqual({ args: ["101"], index: 0, value: 101 });
   });
+  test("should support transform to uppercase", () => {
+    const builder = ArgumentBuilder.create().transform((value) =>
+      value.toUpperCase(),
+    );
+
+    const parsed = builder.parse(0, ["foo"]);
+
+    expect(parsed).toEqual({ args: ["foo"], index: 0, value: "FOO" });
+  });
+  test("should support transform with string method", () => {
+    const builder = ArgumentBuilder.create()
+      .string()
+      .transform((value) => value.toUpperCase());
+
+    const parsed = builder.parse(0, ["hello"]);
+
+    expect(parsed).toEqual({ args: ["hello"], index: 0, value: "HELLO" });
+  });
+  test("should support transform with number method", () => {
+    const builder = ArgumentBuilder.create()
+      .number()
+      .transform((value) => (value ?? 0) * 2);
+
+    const parsed = builder.parse(0, ["10"]);
+
+    expect(parsed).toEqual({ args: ["10"], index: 0, value: 20 });
+  });
+  test("should support transform to different type", () => {
+    const builder = ArgumentBuilder.create().transform((value) => ({
+      original: value,
+      length: value.length,
+    }));
+
+    const parsed = builder.parse(0, ["test"]);
+
+    expect(parsed).toEqual({
+      args: ["test"],
+      index: 0,
+      value: { original: "test", length: 4 },
+    });
+  });
 });
