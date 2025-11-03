@@ -1,107 +1,273 @@
-import { flags, flag, command, argument } from "./flags";
-import { ArgumentBuilder as Builder } from "./builders/ArgumentBuilder";
+import { flags, flag, command, argument, Builder } from "./flags";
 import { test as realTest, expect, describe } from "bun:test";
 
-type T =
-    | [`should parse no arguments with empty schema and return empty object`]
-    | [`should parse no arguments with `, Record<string, () => Builder<any, any>>, ` and return `, Record<string, any>]
-    | [`should parse `, string[], ` arguments with `, Record<string, () => Builder<any, any>>, ` and return `, Record<string, any>]
+const testCase = <T extends Record<string, () => Builder<any>>>({ args, schema, expected }: { args: string[], schema: T, expected: any }) => {
+    const titleTest = `should parse ${args.length > 0 ? args.join(" ") : "no arguments"} with ${Object.entries(schema).map(([key, value]) => `${key}:${String(value).replace(/^\(\) \=\>/, '')}`).join(", ")} and return ${Object.entries(expected).map(([key, value]) => `${key}=${JSON.stringify(value)}`).join(", ")}`;
 
-const test = (...template: T) => {
-    if (template[0] === `should parse no arguments with empty schema and return empty object`) {
-        realTest("should parse no arguments with empty schema and return empty object", () => {
-            expect(flags({}).parse([])).toEqual({})
-        })
-    }
-    if (template[0] === `should parse no arguments with `) {
-        const schema = template[1]
-        const schemaDesc = Object.entries(schema).map(([key, value]) => `${key}:${String(value).replace(/^\(\) \=\>/, '')}`).join(", ")
-        const expected = template[3]
-        const expectedDesc = Object.entries(expected).map(([key, value]) => `${key}=${JSON.stringify(value)}`).join(", ")
-        realTest(`should parse no arguments with ${schemaDesc} and return ${expectedDesc}`, () => {
-            expect(flags(Object.fromEntries(Object.entries(schema).map(([k, v]) => [k, v()]))).parse([])).toEqual(expected)
-        })
-    }
-    if (template[0] === `should parse `) {
-        const args = template[1]
-        const schema = template[3]
-        const schemaDesc = Object.entries(schema).map(([key, value]) => `${key}:${String(value).replace(/^\(\) \=\>/, '')}`).join(", ")
-        const expected = template[5]
-        const expectedDesc = Object.entries(expected).map(([key, value]) => `${key}=${JSON.stringify(value)}`).join(", ")
-        realTest(`should parse ${args.join(" ")} with ${schemaDesc} and return ${expectedDesc}`, () => {
-            expect(flags(Object.fromEntries(Object.entries(schema).map(([k, v]) => [k, v()]))).parse(args)).toEqual(expected)
-        })
-    }
+    realTest(titleTest, () => {
+        const formatSchema = Object.fromEntries(Object.entries(schema).map(([k, v]) => [k, v()]));
+        const parsed = flags(formatSchema).parse(args);
+        expect(parsed).toEqual(expected);
+    });
 }
 
 describe("flags parser", () => {
-    test(`should parse no arguments with empty schema and return empty object`);
-    test(`should parse no arguments with `, { verbose: () => flag("--verbose") }, ` and return `, { verbose: false });
-    test(`should parse `, ["--foo"], ` arguments with `, { foo: () => flag("--foo") }, ` and return `, { foo: true });
-    test(`should parse `, ["--name", "jhon"], ` arguments with `, { name: () => flag("--name", '-n').string() }, ` and return `, { name: 'jhon' });
-    test(`should parse `, ["--name", "=jhon"], ` arguments with `, { name: () => flag("--name", '-n').string() }, ` and return `, { name: '=jhon' });
-    test(`should parse `, ["--name=jhon"], ` arguments with `, { name: () => flag("--name", '-n').string() }, ` and return `, { name: 'jhon' });
-    test(`should parse `, ["--name=jhon=clip"], ` arguments with `, { name: () => flag("--name", '-n').string() }, ` and return `, { name: 'jhon=clip' });
-    test(`should parse `, ["-name", "jhon"], ` arguments with `, { name: () => flag("-name", '-n').string() }, ` and return `, { name: 'jhon' });
-    test(`should parse `, ["-name=jhon"], ` arguments with `, { name: () => flag("-name", '-n').string() }, ` and return `, { name: 'jhon' });
-    test(`should parse `, ["-n", "jhon"], ` arguments with `, { name: () => flag("--name", '-n').string() }, ` and return `, { name: 'jhon' });
-    test(`should parse no arguments with `, { configs: () => flag("--set").keyValue() }, ` and return `, { configs: {} })
-    test(`should parse `, ["--set", "foo", "taz"], ` arguments with `, { configs: () => flag("--set").keyValue() }, ` and return `, { configs: { foo: 'taz' } })
-    test(`should parse `, ["--set", "foo=taz"], ` arguments with `, { configs: () => flag("--set").keyValue() }, ` and return `, { configs: { foo: 'taz' } })
-    test(`should parse `, ["--set=foo=taz"], ` arguments with `, { configs: () => flag("--set").keyValue() }, ` and return `, { configs: { foo: 'taz' } })
-    test(`should parse `, ["--set", "--foo", "taz"], ` arguments with `, { configs: () => flag("--set").keyValue() }, ` and return `, { configs: { '--foo': 'taz' } })
-    test(`should parse `, ["--set=--foo=taz"], ` arguments with `, { configs: () => flag("--set").keyValue() }, ` and return `, { configs: { '--foo': 'taz' } })
-    test(`should parse no arguments with `, { color: () => flag("--color").boolean() }, ` and return `, { color: false })
-    test(`should parse no arguments with `, { color: () => flag("--color").boolean().default(true) }, ` and return `, { color: true })
-    test(`should parse `, ['--no-color'], ` arguments with `, { noColor: () => flag("--no-color").boolean() }, ` and return `, { noColor: true })
-    test(`should parse `, ['-l', "blue", '-l', 'red'], ` arguments with `, { labels: () => flag("-l").strings() }, ` and return `, { labels: ['blue', 'red'] })
-    test(`should parse `, ['-l', "-l", '-l', 'red'], ` arguments with `, { labels: () => flag("-l").strings() }, ` and return `, { labels: ['-l', 'red'] })
-    test(`should parse `, ['-l=-l', '-l', 'red'], ` arguments with `, { labels: () => flag("-l").strings() }, ` and return `, { labels: ['-l', 'red'] })
-    test(`should parse `, ['-l=-l', '-l=red'], ` arguments with `, { labels: () => flag("-l").strings() }, ` and return `, { labels: ['-l', 'red'] })
-    test(`should parse `, ['user', 'info'], ` arguments with `, { user: () => command('user'), info: () => command('info') }, ` and return `, { user: true, info: true })
-    test(`should parse `, ['user', 'info'], ` arguments with `, { user: () => command('user').restArgs(), info: () => command('info').restArgs() }, ` and return `, { user: ['info'], info: null })
-    test(`should parse `, ['user', 'info'], ` arguments with `, { user: () => command('user'), info: () => command('info').restArgs() }, ` and return `, { user: true, info: [] })
-    test(`should parse `, ['user', 'info'], ` arguments with `, { user: () => argument(), info: () => argument() }, ` and return `, { user: 'user', info: 'info' })
-    test(`should parse `, ['pr'], ` arguments with `, { command: () => argument() }, ` and return `, { command: 'pr' });
-    test(`should parse `, ['pr:foo'], ` arguments with `, { command: () => flag('pr').string({ valueDelimiter: ':' }) }, ` and return `, { command: "foo" });
-    test(`should parse `, [], ` arguments with `, { command: () => flag('pr').string({ valueDelimiter: ':' }) }, ` and return `, { command: null });
-    test(`should parse `, ['tar:foo'], ` arguments with `, { command1: () => argument().match(/^TAR-(?<part2>\w+)$/), command2: () => argument().match(/^(?<part1>\w+):(?<part2>\w+)$/) }, ` and return `, { command1: null, command2: { 'part1': 'tar', 'part2': 'foo' } });
-    test(`should parse `, ['tar:foo'], ` arguments with `, {
-        arg: () => argument().refine((arg: string, index: number, args: string[], context) => arg.startsWith("tar:") ? { index: index + 1, args: [arg], value: arg.split(":")[1] } : null)
-    }, ` and return `, { arg: "foo" });
-    test(`should parse `, ['tar'], ` arguments with `, {
-        arg: () => argument().transform((arg: string, index: number, args: string[]) => arg.toUpperCase())
-    }, ` and return `, { arg: "TAR" });
-    test(`should parse `, ['tar', 'biz', 'foo', 'faz'], ` arguments with `, {
-        arg: () => argument().refine((arg: string, index: number, args: string[], context) => {
-            if (arg !== 'tar') return null;
+    testCase({
+        args: [],
+        schema: {},
+        expected: {},
+    });
 
-            // Consume all remaining non-flag arguments after 'tar'
-            const consumedArgs: string[] = [];
-            for (let i = index + 1; i < args.length; i++) {
-                if (!args[i].startsWith("-")) {
-                    consumedArgs.push(args[i]);
-                } else {
-                    break;
+    testCase({
+        args: [],
+        schema: { verbose: () => flag("--verbose") },
+        expected: { verbose: false }
+    });
+
+    testCase({
+        args: ["--foo"],
+        schema: { foo: () => flag("--foo") },
+        expected: { foo: true }
+    });
+
+    testCase({
+        args: ["--name", "jhon"],
+        schema: { name: () => flag("--name", '-n').string() },
+        expected: { name: 'jhon' }
+    });
+
+    testCase({
+        args: ["--name", "=jhon"],
+        schema: { name: () => flag("--name", '-n').string() },
+        expected: { name: '=jhon' }
+    });
+
+    testCase({
+        args: ["--name=jhon"],
+        schema: { name: () => flag("--name", '-n').string() },
+        expected: { name: 'jhon' }
+    });
+
+    testCase({
+        args: ["--name=jhon=clip"],
+        schema: { name: () => flag("--name", '-n').string() },
+        expected: { name: 'jhon=clip' }
+    });
+
+    testCase({
+        args: ["-name", "jhon"],
+        schema: { name: () => flag("-name", '-n').string() },
+        expected: { name: 'jhon' }
+    });
+
+    testCase({
+        args: ["-name=jhon"],
+        schema: { name: () => flag("-name", '-n').string() },
+        expected: { name: 'jhon' }
+    });
+
+    testCase({
+        args: ["-n", "jhon"],
+        schema: { name: () => flag("--name", '-n').string() },
+        expected: { name: 'jhon' }
+    });
+
+    testCase({
+        args: [],
+        schema: { configs: () => flag("--set").keyValue() },
+        expected: { configs: {} }
+    });
+
+    testCase({
+        args: ["--set", "foo", "taz"],
+        schema: { configs: () => flag("--set").keyValue() },
+        expected: { configs: { foo: 'taz' } }
+    });
+
+    testCase({
+        args: ["--set", "foo=taz"],
+        schema: { configs: () => flag("--set").keyValue() },
+        expected: { configs: { foo: 'taz' } }
+    });
+
+    testCase({
+        args: ["--set=foo=taz"],
+        schema: { configs: () => flag("--set").keyValue() },
+        expected: { configs: { foo: 'taz' } }
+    });
+
+    testCase({
+        args: ["--set", "--foo", "taz"],
+        schema: { configs: () => flag("--set").keyValue() },
+        expected: { configs: { '--foo': 'taz' } }
+    });
+
+    testCase({
+        args: ["--set=--foo=taz"],
+        schema: { configs: () => flag("--set").keyValue() },
+        expected: { configs: { '--foo': 'taz' } }
+    });
+
+    testCase({
+        args: [],
+        schema: { color: () => flag("--color").boolean() },
+        expected: { color: false }
+    });
+
+    testCase({
+        args: [],
+        schema: { color: () => flag("--color").boolean().default(true) },
+        expected: { color: true }
+    });
+
+    testCase({
+        args: ['--no-color'],
+        schema: { noColor: () => flag("--no-color").boolean() },
+        expected: { noColor: true }
+    });
+
+    testCase({
+        args: ['-l', "blue", '-l', 'red'],
+        schema: { labels: () => flag("-l").strings() },
+        expected: { labels: ['blue', 'red'] }
+    });
+
+    testCase({
+        args: ['-l', "-l", '-l', 'red'],
+        schema: { labels: () => flag("-l").strings() },
+        expected: { labels: ['-l', 'red'] }
+    });
+
+    testCase({
+        args: ['-l=-l', '-l', 'red'],
+        schema: { labels: () => flag("-l").strings() },
+        expected: { labels: ['-l', 'red'] }
+    });
+
+    testCase({
+        args: ['-l=-l', '-l=red'],
+        schema: { labels: () => flag("-l").strings() },
+        expected: { labels: ['-l', 'red'] }
+    });
+
+    testCase({
+        args: ['user', 'info'],
+        schema: { user: () => command('user'), info: () => command('info') },
+        expected: { user: true, info: true }
+    });
+
+    testCase({
+        args: ['user', 'info'],
+        schema: { user: () => command('user').restArgs(), info: () => command('info').restArgs() },
+        expected: { user: ['info'], info: null }
+    });
+
+    testCase({
+        args: ['user', 'info'],
+        schema: { user: () => command('user'), info: () => command('info').restArgs() },
+        expected: { user: true, info: [] }
+    });
+
+    testCase({
+        args: ['user', 'info'],
+        schema: { user: () => argument(), info: () => argument() },
+        expected: { user: 'user', info: 'info' }
+    });
+
+    testCase({
+        args: ['pr'],
+        schema: { command: () => argument() },
+        expected: { command: 'pr' }
+    });
+
+    testCase({
+        args: ['pr:foo'],
+        schema: { command: () => flag('pr').string({ valueDelimiter: ':' }) },
+        expected: { command: "foo" }
+    });
+
+    testCase({
+        args: [],
+        schema: { command: () => flag('pr').string().delimiter(":") },
+        expected: { command: null }
+    });
+
+    testCase({
+        args: ['tar:foo'],
+        schema: { command1: () => argument().match(/^TAR-(?<part2>\w+)$/), command2: () => argument().match(/^(?<part1>\w+):(?<part2>\w+)$/) },
+        expected: { command1: null, command2: { 'part1': 'tar', 'part2': 'foo' } }
+    });
+
+    testCase({
+        args: ['tar:foo'],
+        schema: {
+            arg: () => argument().refine((arg: string, index: number, args: string[], context) => arg.startsWith("tar:") ? { index: index + 1, args: [arg], value: arg.split(":")[1] } : null)
+        },
+        expected: { arg: "foo" }
+    });
+
+    testCase({
+        args: ['tar'],
+        schema: {
+            arg: () => argument().transform((value: string) => value.toUpperCase())
+        },
+        expected: { arg: "TAR" }
+    });
+
+    testCase({
+        args: ['tar', 'biz', 'foo', 'faz'],
+        schema: {
+            arg: () => argument().refine((arg: string, index: number, args: string[], context) => {
+                if (arg !== 'tar') return null;
+
+                // Consume all remaining non-flag arguments after 'tar'
+                const consumedArgs: string[] = [];
+                for (let i = index + 1; i < args.length; i++) {
+                    if (!args[i].startsWith("-")) {
+                        consumedArgs.push(args[i]);
+                    } else {
+                        break;
+                    }
                 }
-            }
 
-            return {
-                index: index + 1 + consumedArgs.length,
-                args: [arg, ...consumedArgs],
-                value: consumedArgs
-            };
-        })
-    }, ` and return `, { arg: ['biz', 'foo', 'faz'] });
+                return {
+                    index: index + 1 + consumedArgs.length,
+                    args: [arg, ...consumedArgs],
+                    value: consumedArgs
+                };
+            })
+        },
+        expected: { arg: ['biz', 'foo', 'faz'] }
+    });
 
-    test(`should parse `, ['-l=-l', '-l=red', "foo"], ` arguments with `, { labels: () => flag("-l").strings(), arg: () => argument() }, ` and return `, { labels: ['-l', 'red'], arg: "foo" });
+    testCase({
+        args: ['-l=-l', '-l=red', "foo"],
+        schema: { labels: () => flag("-l").strings(), arg: () => argument() },
+        expected: { labels: ['-l', 'red'], arg: "foo" }
+    });
 
     // TODO: 
-    // test(`should parse `, ["foo", "tar", "biz"], ` arguments with `, { names: () => argument().strings() }, ` and return `, { names: ["foo", "tar", "biz"] });
-    // test(`should parse `, ["foo", "--verbose", "tar", "biz"], ` arguments with `, { verbose: () => flag('-V', '--verbose'), names: () => argument().strings() }, ` and return `, { verbose: true, names: ["foo", "tar", "biz"] });
-    // test(`should parse `, ["foo", "--verbose", "tar", "biz"], ` arguments with `, { names: () => argument().strings() }, ` and return `, { verbose: true, names: ["foo", "--verbose", "tar", "biz"] });
+    // testCase({
+    //     args: ["foo", "tar", "biz"],
+    //     schema: { names: () => argument().strings() },
+    //     expected: { names: ["foo", "tar", "biz"] }
+    // });
+    // testCase({
+    //     args: ["foo", "--verbose", "tar", "biz"],
+    //     schema: { verbose: () => flag('-V', '--verbose'), names: () => argument().strings() },
+    //     expected: { verbose: true, names: ["foo", "tar", "biz"] }
+    // });
+    // testCase({
+    //     args: ["foo", "--verbose", "tar", "biz"],
+    //     schema: { names: () => argument().strings() },
+    //     expected: { verbose: true, names: ["foo", "--verbose", "tar", "biz"] }
+    // });
 
     // TODO: Implement schema order priority - when argument() is defined first, it should prevent
     // flags that appear before the consumed argument from being processed
-    // test(`should parse `, ['-l=-l', '-l=red', "foo"], ` arguments with `, { arg: () => argument(), labels: () => flag("-l").strings() }, ` and return `, { labels: [], arg: "foo" });
+    // testCase({
+    //     args: ['-l=-l', '-l=red', "foo"],
+    //     schema: { arg: () => argument(), labels: () => flag("-l").strings() },
+    //     expected: { labels: [], arg: "foo" }
+    // });
 });
