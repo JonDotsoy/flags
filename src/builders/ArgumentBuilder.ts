@@ -9,6 +9,7 @@ import { NumberArgumentBuilder } from "./NumberArgumentBuilder.js";
 import { toNumberRefine } from "./refiners/toNumberRefine.js";
 import { transformRefine } from "./refiners/transformRefine.js";
 import type { InitialType } from "./Spec.js";
+import { regexMatchRefine } from "./refiners/regexMatchRefine.js";
 
 export class ArgumentBuilder<T extends Spec<any, any>> extends Builder<T> {
   initial<T>(initial: T) {
@@ -53,6 +54,10 @@ export class ArgumentBuilder<T extends Spec<any, any>> extends Builder<T> {
 
   transform<U>(transform: (value: InitialType<this["spec"]>) => U) {
     return new ArgumentBuilder(this.spec.refine<U>(transformRefine(transform)));
+  }
+
+  match(regex: RegExp) {
+    return new ArgumentBuilder(this.spec.refine(regexMatchRefine(regex)));
   }
 
   static create() {

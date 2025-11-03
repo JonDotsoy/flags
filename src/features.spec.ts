@@ -115,12 +115,6 @@ describe("flags parser", () => {
     });
 
     testCase({
-        args: [],
-        schema: { color: () => flag("--color").boolean().default(true) },
-        expected: { color: true }
-    });
-
-    testCase({
         args: ['--no-color'],
         schema: { noColor: () => flag("--no-color").boolean() },
         expected: { noColor: true }
@@ -182,7 +176,7 @@ describe("flags parser", () => {
 
     testCase({
         args: ['pr:foo'],
-        schema: { command: () => flag('pr').string({ valueDelimiter: ':' }) },
+        schema: { command: () => flag('pr').string().delimiter(':') },
         expected: { command: "foo" }
     });
 

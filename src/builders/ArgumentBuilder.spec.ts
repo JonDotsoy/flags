@@ -124,4 +124,46 @@ describe("ArgumentBuilder", () => {
       value: { original: "test", length: 4 },
     });
   });
+  test("should match regex with named groups", () => {
+    const builder = ArgumentBuilder.create().match(
+      /^(?<part1>\w+):(?<part2>\w+)$/,
+    );
+
+    const parsed = builder.parse(0, ["tar:foo"]);
+
+    expect(parsed).toEqual({
+      args: ["tar:foo"],
+      index: 0,
+      value: { part1: "tar", part2: "foo" },
+    });
+  });
+  test("should return null when regex does not match", () => {
+    const builder = ArgumentBuilder.create().match(/^TAR-(?<part2>\w+)$/);
+
+    const parsed = builder.parse(0, ["tar:foo"]);
+
+    expect(parsed).toBeNull();
+  });
+  test("should match regex without named groups", () => {
+    const builder = ArgumentBuilder.create().match(/^\w+:\w+$/);
+
+    const parsed = builder.parse(0, ["tar:foo"]);
+
+    expect(parsed).toEqual({
+      args: ["tar:foo"],
+      index: 0,
+      value: "tar:foo",
+    });
+  });
+  test("should match regex with partial groups", () => {
+    const builder = ArgumentBuilder.create().match(/^(\w+):(\w+)$/);
+
+    const parsed = builder.parse(0, ["hello:world"]);
+
+    expect(parsed).toEqual({
+      args: ["hello:world"],
+      index: 0,
+      value: "hello:world",
+    });
+  });
 });
