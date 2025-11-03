@@ -57,7 +57,9 @@ export class NumberFlagBuilder<T extends Spec<any, any>> extends Builder<T> {
   }
 
   required() {
-    return this.metadata({ required: true }) as NumberFlagBuilder<Spec<InitialType<T>, Exclude<ParseResultType<T>, undefined | null>>>;
+    return this.metadata({ required: true }) as NumberFlagBuilder<
+      Spec<InitialType<T>, Exclude<ParseResultType<T>, undefined | null>>
+    >;
   }
 
   notNaN = () => new NumberFlagBuilder(this.spec.refine(notNaNRefine));

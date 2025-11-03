@@ -3,13 +3,14 @@ import type { Spec } from "./builders/Spec.js";
 import { UnexpectedArgumentError } from "./errors/UnexpectedArgumentError.js";
 
 // Type helper to extract the result type from a Builder
-type ExtractBuilderResult<B> = B extends Builder<Spec<infer I, infer P>>
-  ? P extends never
-    ? I
-    : P extends null
+type ExtractBuilderResult<B> =
+  B extends Builder<Spec<infer I, infer P>>
+    ? P extends never
       ? I
-      : P
-  : never;
+      : P extends null
+        ? I
+        : P
+    : never;
 
 // NewFlagsParser implementation
 

@@ -210,9 +210,7 @@ describe("new-flags", () => {
       });
 
       // When: Testing with --flag=name=value syntax (1 arg total)
-      const matchAllEquals = configFlag.parse(0, [
-        "--config=host=localhost",
-      ]);
+      const matchAllEquals = configFlag.parse(0, ["--config=host=localhost"]);
 
       // Then: test should return match info with 1 argument consumed
       expect(matchAllEquals).toEqual({
@@ -259,10 +257,7 @@ describe("new-flags", () => {
       expectTypeOf(requiredStringFlag.spec.getInitial()).toEqualTypeOf<
         string | null
       >();
-      const testResult = requiredStringFlag.parse(0, [
-        "--name",
-        "value",
-      ]);
+      const testResult = requiredStringFlag.parse(0, ["--name", "value"]);
       if (testResult) {
         expectTypeOf(testResult.value).toEqualTypeOf<string>();
       }
@@ -1569,7 +1564,9 @@ describe("key-value pattern", () => {
     const result = parser.parse(["--config", "host", "localhost"]);
 
     // Then: The result type should be { config: Record<string, string> }
-    expectTypeOf(result).toEqualTypeOf<{ config: Record<string, string> | null }>();
+    expectTypeOf(result).toEqualTypeOf<{
+      config: Record<string, string> | null;
+    }>();
 
     // Then: The config should contain { host: "localhost" }
     expect(result).toEqual({ config: { host: "localhost" } });
@@ -1614,13 +1611,12 @@ describe("key-value pattern", () => {
     });
 
     // When: Parsing multiple key-value pairs with = syntax
-    const result = parser.parse([
-      "--config=port=3000",
-      "--config=db=postgres",
-    ]);
+    const result = parser.parse(["--config=port=3000", "--config=db=postgres"]);
 
     // Then: The result type should be { config: Record<string, string> | null }
-    expectTypeOf(result).toEqualTypeOf<{ config: Record<string, string> | null }>();
+    expectTypeOf(result).toEqualTypeOf<{
+      config: Record<string, string> | null;
+    }>();
 
     // Then: The config should contain all key-value pairs
     expect(result).toEqual({
@@ -1641,7 +1637,9 @@ describe("key-value pattern", () => {
     const result = parser.parse(["-c", "env=production"]);
 
     // Then: The result type should be { config: Record<string, string> | null }
-    expectTypeOf(result).toEqualTypeOf<{ config: Record<string, string> | null }>();
+    expectTypeOf(result).toEqualTypeOf<{
+      config: Record<string, string> | null;
+    }>();
 
     // Then: The config should contain { env: "production" }
     expect(result).toEqual({ config: { env: "production" } });
@@ -1657,7 +1655,9 @@ describe("key-value pattern", () => {
     const result = parser.parse([]);
 
     // Then: The result type should be { config: Record<string, string> | null }
-    expectTypeOf(result).toEqualTypeOf<{ config: Record<string, string> | null }>();
+    expectTypeOf(result).toEqualTypeOf<{
+      config: Record<string, string> | null;
+    }>();
 
     // Then: The config should be null
     expect(result).toEqual({ config: null });
@@ -1678,7 +1678,9 @@ describe("key-value pattern", () => {
     ]);
 
     // Then: The result type should be { config: Record<string, string> | null }
-    expectTypeOf(result).toEqualTypeOf<{ config: Record<string, string> | null }>();
+    expectTypeOf(result).toEqualTypeOf<{
+      config: Record<string, string> | null;
+    }>();
 
     // Then: The config should contain the last value for port
     expect(result).toEqual({ config: { port: "8080" } });
@@ -2971,7 +2973,9 @@ describe("Edge cases - valores que empiezan con --", () => {
     const result = parser.parse(["-f", "--taz", "=bliz"]);
 
     // Then: The result type should be { foo: Record<string, string> | null }
-    expectTypeOf(result).toEqualTypeOf<{ foo: Record<string, string> | null }>();
+    expectTypeOf(result).toEqualTypeOf<{
+      foo: Record<string, string> | null;
+    }>();
 
     // Then: foo should contain { "--taz": "=bliz" }
     expect(result).toEqual({ foo: { "--taz": "=bliz" } });
@@ -3083,7 +3087,9 @@ describe("Edge cases - valores que empiezan con --", () => {
     const result = parser.parse(["-c", "key"]);
 
     // Then: The result type should be { config: Record<string, string> | null }
-    expectTypeOf(result).toEqualTypeOf<{ config: Record<string, string> | null }>();
+    expectTypeOf(result).toEqualTypeOf<{
+      config: Record<string, string> | null;
+    }>();
 
     // Then: config should contain { "key": "" }
     expect(result).toEqual({ config: { key: "" } });

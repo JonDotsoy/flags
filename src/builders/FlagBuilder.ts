@@ -43,7 +43,9 @@ export class FlagBuilder<T extends Spec<any, any>> extends Builder<T> {
 
   string() {
     return new StringFlagBuilder(
-      this.spec.initial<string | null>(null).refine<string | null>(stringFlagRefine),
+      this.spec
+        .initial<string | null>(null)
+        .refine<string | null>(stringFlagRefine),
     );
   }
 
@@ -56,7 +58,9 @@ export class FlagBuilder<T extends Spec<any, any>> extends Builder<T> {
 
   number() {
     return new NumberFlagBuilder(
-      this.spec.initial<number | null>(null).refine<number | null>(numberFlagRefine),
+      this.spec
+        .initial<number | null>(null)
+        .refine<number | null>(numberFlagRefine),
     );
   }
 

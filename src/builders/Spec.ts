@@ -35,7 +35,12 @@ export class Spec<InitialValue, ParseResult> {
   }
 
   accumulate(accumulate: Accumulate) {
-    return new Spec<InitialValue, ParseResult>(this.#initial, this.#refiners, accumulate, this.#metadata);
+    return new Spec<InitialValue, ParseResult>(
+      this.#initial,
+      this.#refiners,
+      accumulate,
+      this.#metadata,
+    );
   }
 
   refine<U>(refine: Refine) {
@@ -48,10 +53,15 @@ export class Spec<InitialValue, ParseResult> {
   }
 
   metadata(values: Record<string, any>) {
-    return new Spec<InitialValue, ParseResult>(this.#initial, this.#refiners, this.#accumulate, {
-      ...this.#metadata,
-      ...values,
-    });
+    return new Spec<InitialValue, ParseResult>(
+      this.#initial,
+      this.#refiners,
+      this.#accumulate,
+      {
+        ...this.#metadata,
+        ...values,
+      },
+    );
   }
 
   getMetadata<T>(key: string): T {
