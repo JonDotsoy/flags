@@ -2,14 +2,72 @@ import { flags, flag, command, argument, Builder } from "./flags";
 import { test as test, expect, describe } from "bun:test";
 import type { FlagsParser } from "./FlagsParser";
 
-/** @deprecated */
-const testCase = <T extends Record<string, () => Builder<any>>>({ args, schema, expected }: { args: string[], schema: T, expected: any }) => {
-    const formatSchema = Object.fromEntries(Object.entries(schema).map(([k, v]) => [k, v()]));
-    const parsed = flags(formatSchema).parse(args);
-    const customFailMessage = `Failed parsing args: [${args.map(a => `"${a}"`).join(", ")}]\nSchema: ${Object.keys(schema).join(", ")}\nExpected: ${JSON.stringify(expected, null, 2)}\nReceived: ${JSON.stringify(parsed, null, 2)}`;
+const untab = (value: string | TemplateStringsArray, ...values: any[]): string => {
+    // Handle template literal usage
+    let str: string;
+    if (typeof value === 'string') {
+        str = value;
+    } else {
+        // Combine template strings with interpolated values
+        str = value.reduce((acc, part, i) => acc + part + (values[i] || ''), '');
+    }
 
-    expect(parsed, customFailMessage).toEqual(expected);
+    const lines = str.split('\n');
+
+    // Find minimum indentation (ignoring empty lines)
+    let minIndent = Infinity;
+    for (const line of lines) {
+        if (line.trim().length === 0) continue;
+        const indent = line.match(/^(\s*)/)?.[1].length || 0;
+        minIndent = Math.min(minIndent, indent);
+    }
+
+    // Remove minimum indentation from all lines
+    if (minIndent === Infinity) return str;
+
+    return lines
+        .map(line => line.length > 0 ? line.slice(minIndent) : line)
+        .join('\n');
 }
+
+describe("untab", () => {
+    test("test_untab_1", () => {
+        expect(
+            untab(`\
+                foo: tar
+                    bar: baz
+            `)
+        ).toEqual(
+            "foo: tar\n" +
+            "    bar: baz\n"
+        );
+    })
+})
+
+type ParseFlagsScenario<T extends FlagsParser<Record<string, Builder<any>>>> = {
+    "given a flags parser configured with a schema": T,
+    "when the command line flags are parsed": string[],
+    "then the expected parsed result should be returned": ReturnType<T["parse"]>,
+};
+
+type HelpMessageScenario<T extends FlagsParser<Record<string, Builder<any>>>> = {
+    "given a flags parser configured with a schema": T,
+    "when the help message is requested": true,
+    "then the expected help message should be returned": string,
+};
+
+const isParseFlagsScenario = (value: any): value is ParseFlagsScenario<any> => typeof value === 'object'
+    && value !== null
+    && "given a flags parser configured with a schema" in value
+    && "when the command line flags are parsed" in value
+    && "then the expected parsed result should be returned" in value
+
+const isHelpMessageScenario = (value: any): value is HelpMessageScenario<any> => typeof value === 'object'
+    && value !== null
+    && "given a flags parser configured with a schema" in value
+    && "when the help message is requested" in value
+    && "then the expected help message should be returned" in value
+
 
 // Gherkin
 /**
@@ -25,21 +83,25 @@ const testCase = <T extends Record<string, () => Builder<any>>>({ args, schema, 
  * - "when": The flags to parse
  * - "then": The expected result
  */
-const scenarioParseFlags = <T extends FlagsParser<Record<string, Builder<any>>>>(obj: {
-    "given a flags parser configured with a schema": T,
-    "when the command line flags are parsed": string[],
-    "then the expected parsed result should be returned": ReturnType<T["parse"]>,
-}) => {
-    const given = obj["given a flags parser configured with a schema"];
-    const when = obj["when the command line flags are parsed"];
-    const then = obj["then the expected parsed result should be returned"];
-    const parsed = given.parse(when);
-    expect(parsed).toEqual(then);
+const gherkinScenario = <T extends FlagsParser<Record<string, Builder<any>>>>(obj: ParseFlagsScenario<T> | HelpMessageScenario<T>) => {
+    if (isParseFlagsScenario(obj)) {
+        const given = obj["given a flags parser configured with a schema"];
+        const when = obj["when the command line flags are parsed"];
+        const then = obj["then the expected parsed result should be returned"];
+        const parsed = given.parse(when);
+        expect(parsed).toEqual(then);
+    }
+    if (isHelpMessageScenario(obj)) {
+        const given = obj["given a flags parser configured with a schema"];
+        const then = obj["then the expected help message should be returned"];
+        const helpMessage = given.helpMessage();
+        expect(helpMessage).toEqual(then);
+    }
 }
 
 describe("flags parser", () => {
     test("should parse empty args with empty schema", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({}),
             "when the command line flags are parsed": [],
             "then the expected parsed result should be returned": {}
@@ -47,7 +109,7 @@ describe("flags parser", () => {
     });
 
     test("should return false for boolean flag when not provided", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({
                 verbose: flag("--verbose").boolean()
             }),
@@ -59,7 +121,7 @@ describe("flags parser", () => {
     });
 
     test("should parse boolean flag --foo", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ foo: flag("--foo").boolean() }),
             "when the command line flags are parsed": ["--foo"],
             "then the expected parsed result should be returned": { foo: true }
@@ -67,7 +129,7 @@ describe("flags parser", () => {
     });
 
     test("should parse string flag with space syntax", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ name: flag("--name", '-n').string() }),
             "when the command line flags are parsed": ["--name", "jhon"],
             "then the expected parsed result should be returned": { name: 'jhon' }
@@ -75,7 +137,7 @@ describe("flags parser", () => {
     });
 
     test("should parse string flag with value starting with =", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ name: flag("--name", '-n').string() }),
             "when the command line flags are parsed": ["--name", "=jhon"],
             "then the expected parsed result should be returned": { name: '=jhon' }
@@ -83,7 +145,7 @@ describe("flags parser", () => {
     });
 
     test("should parse string flag with = syntax", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ name: flag("--name", '-n').string() }),
             "when the command line flags are parsed": ["--name=jhon"],
             "then the expected parsed result should be returned": { name: 'jhon' }
@@ -91,7 +153,7 @@ describe("flags parser", () => {
     });
 
     test("should parse string flag with multiple = in value", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ name: flag("--name", '-n').string() }),
             "when the command line flags are parsed": ["--name=jhon=clip"],
             "then the expected parsed result should be returned": { name: 'jhon=clip' }
@@ -99,7 +161,7 @@ describe("flags parser", () => {
     });
 
     test("should parse single dash flag with space syntax", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ name: flag("-name", '-n').string() }),
             "when the command line flags are parsed": ["-name", "jhon"],
             "then the expected parsed result should be returned": { name: 'jhon' }
@@ -107,7 +169,7 @@ describe("flags parser", () => {
     });
 
     test("should parse single dash flag with = syntax", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ name: flag("-name", '-n').string() }),
             "when the command line flags are parsed": ["-name=jhon"],
             "then the expected parsed result should be returned": { name: 'jhon' }
@@ -115,7 +177,7 @@ describe("flags parser", () => {
     });
 
     test("should parse short flag alias", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ name: flag("--name", '-n').string() }),
             "when the command line flags are parsed": ["-n", "jhon"],
             "then the expected parsed result should be returned": { name: 'jhon' }
@@ -123,7 +185,7 @@ describe("flags parser", () => {
     });
 
     test("rn empty object for keyValue flag when not provided", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ configs: flag("--set").keyValue() }),
             "when the command line flags are parsed": [],
             "then the expected parsed result should be returned": { configs: null }
@@ -131,7 +193,7 @@ describe("flags parser", () => {
     });
 
     test("should parse keyValue flag with space syntax", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ configs: flag("--set").keyValue() }),
             "when the command line flags are parsed": ["--set", "foo", "taz"],
             "then the expected parsed result should be returned": { configs: { foo: 'taz' } }
@@ -139,7 +201,7 @@ describe("flags parser", () => {
     });
 
     test("should parse keyValue flag with key=value syntax", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ configs: flag("--set").keyValue() }),
             "when the command line flags are parsed": ["--set", "foo=taz"],
             "then the expected parsed result should be returned": { configs: { foo: 'taz' } }
@@ -147,7 +209,7 @@ describe("flags parser", () => {
     });
 
     test("should parse keyValue flag with --flag=key=value syntax", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ configs: flag("--set").keyValue() }),
             "when the command line flags are parsed": ["--set=foo=taz"],
             "then the expected parsed result should be returned": { configs: { foo: 'taz' } }
@@ -155,7 +217,7 @@ describe("flags parser", () => {
     });
 
     test("should parse keyValue flag with flag-like key", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ configs: flag("--set").keyValue() }),
             "when the command line flags are parsed": ["--set", "--foo", "taz"],
             "then the expected parsed result should be returned": { configs: { '--foo': 'taz' } }
@@ -163,7 +225,7 @@ describe("flags parser", () => {
     });
 
     test("should parse keyValue flag with flag-like key using = syntax", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ configs: flag("--set").keyValue() }),
             "when the command line flags are parsed": ["--set=--foo=taz"],
             "then the expected parsed result should be returned": { configs: { '--foo': 'taz' } }
@@ -171,7 +233,7 @@ describe("flags parser", () => {
     });
 
     test("should return false for --color flag when not provided", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ color: flag("--color").boolean() }),
             "when the command line flags are parsed": [],
             "then the expected parsed result should be returned": { color: false }
@@ -179,7 +241,7 @@ describe("flags parser", () => {
     });
 
     test("should parse --no-color boolean flag", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ noColor: flag("--no-color").boolean() }),
             "when the command line flags are parsed": ['--no-color'],
             "then the expected parsed result should be returned": { noColor: true }
@@ -187,7 +249,7 @@ describe("flags parser", () => {
     });
 
     test("should parse multiple string flags into array", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ labels: flag("-l").strings() }),
             "when the command line flags are parsed": ['-l', "blue", '-l', 'red'],
             "then the expected parsed result should be returned": { labels: ['blue', 'red'] }
@@ -195,7 +257,7 @@ describe("flags parser", () => {
     });
 
     test("should parse strings flag with flag-like value", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ labels: flag("-l").strings() }),
             "when the command line flags are parsed": ['-l', "-l", '-l', 'red'],
             "then the expected parsed result should be returned": { labels: ['-l', 'red'] }
@@ -203,7 +265,7 @@ describe("flags parser", () => {
     });
 
     test("should parse strings flag with = syntax and flag-like value", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ labels: flag("-l").strings() }),
             "when the command line flags are parsed": ['-l=-l', '-l', 'red'],
             "then the expected parsed result should be returned": { labels: ['-l', 'red'] }
@@ -211,7 +273,7 @@ describe("flags parser", () => {
     });
 
     test("should parse multiple strings flags with = syntax", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ labels: flag("-l").strings() }),
             "when the command line flags are parsed": ['-l=-l', '-l=red'],
             "then the expected parsed result should be returned": { labels: ['-l', 'red'] }
@@ -219,7 +281,7 @@ describe("flags parser", () => {
     });
 
     test("should parse multiple boolean commands", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ user: command('user').boolean(), info: command('info').boolean() }),
             "when the command line flags are parsed": ['user', 'info'],
             "then the expected parsed result should be returned": { user: true, info: true }
@@ -227,7 +289,7 @@ describe("flags parser", () => {
     });
 
     test("should parse command with restArgs consuming remaining arguments", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ user: command('user').restArgs(), info: command('info').restArgs() }),
             "when the command line flags are parsed": ['user', 'info'],
             "then the expected parsed result should be returned": { user: ['info'], info: null }
@@ -235,7 +297,7 @@ describe("flags parser", () => {
     });
 
     test("should parse boolean command and restArgs command", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ user: command('user').boolean(), info: command('info').restArgs() }),
             "when the command line flags are parsed": ['user', 'info'],
             "then the expected parsed result should be returned": { user: true, info: [] }
@@ -243,7 +305,7 @@ describe("flags parser", () => {
     });
 
     test("should parse multiple arguments", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ user: argument(), info: argument() }),
             "when the command line flags are parsed": ['user', 'info'],
             "then the expected parsed result should be returned": { user: 'user', info: 'info' }
@@ -251,7 +313,7 @@ describe("flags parser", () => {
     });
 
     test("should parse single argument", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ command: argument() }),
             "when the command line flags are parsed": ['pr'],
             "then the expected parsed result should be returned": { command: 'pr' }
@@ -259,7 +321,7 @@ describe("flags parser", () => {
     });
 
     test("should parse flag with delimiter", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ command: flag('pr').string().delimiter(':') }),
             "when the command line flags are parsed": ['pr:foo'],
             "then the expected parsed result should be returned": { command: "foo" }
@@ -267,7 +329,7 @@ describe("flags parser", () => {
     });
 
     test("should return null for delimiter flag when not provided", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ command: flag('pr').string().delimiter(":") }),
             "when the command line flags are parsed": [],
             "then the expected parsed result should be returned": { command: null }
@@ -275,7 +337,7 @@ describe("flags parser", () => {
     });
 
     test("should parse argument with regex match and named groups", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({
                 command1: argument().match(/^TAR-(?<part2>\w+)$/),
                 command2: argument().match(/^(?<part1>\w+):(?<part2>\w+)$/)
@@ -286,7 +348,7 @@ describe("flags parser", () => {
     });
 
     test("should parse argument with custom refine function", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({
                 arg: argument().refine((arg: string, index: number, args: string[], context) =>
                     arg.startsWith("tar:") ? { index: index + 1, args: [arg], value: arg.split(":")[1] } : null
@@ -298,7 +360,7 @@ describe("flags parser", () => {
     });
 
     test("should parse argument with transform function", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({
                 arg: argument().string().transform((value) => value.toUpperCase())
             }),
@@ -308,7 +370,7 @@ describe("flags parser", () => {
     });
 
     test("should parse argument consuming all remaining non-flag arguments", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({
                 arg: argument().refine((arg: string, index: number, args: string[], context) => {
                     if (arg !== 'tar') return null;
@@ -336,7 +398,7 @@ describe("flags parser", () => {
     });
 
     test("should parse strings flags and argument together", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ labels: flag("-l").strings(), arg: argument() }),
             "when the command line flags are parsed": ['-l=-l', '-l=red', "foo"],
             "then the expected parsed result should be returned": { labels: ['-l', 'red'], arg: "foo" }
@@ -344,7 +406,7 @@ describe("flags parser", () => {
     });
 
     test("should parse mixed flags, commands, and arguments with descriptions", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({
                 verbose: flag("--verbose", "-v").boolean().describe("Enable verbose output"),
                 name: flag("--name", "-n").string().describe("Set application name"),
@@ -366,7 +428,7 @@ describe("flags parser", () => {
     });
 
     test("should parse number flag", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ port: flag("--port").number() }),
             "when the command line flags are parsed": ["--port", "3000"],
             "then the expected parsed result should be returned": { port: 3000 }
@@ -374,7 +436,7 @@ describe("flags parser", () => {
     });
 
     test("should return null for number flag when not provided", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ port: flag("--port").number() }),
             "when the command line flags are parsed": [],
             "then the expected parsed result should be returned": { port: null }
@@ -382,7 +444,7 @@ describe("flags parser", () => {
     });
 
     test("should return default value for number flag when not provided", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ port: flag("--port").number().default(3000) }),
             "when the command line flags are parsed": [],
             "then the expected parsed result should be returned": { port: 3000 }
@@ -390,7 +452,7 @@ describe("flags parser", () => {
     });
 
     test("should return default value for string flag when not provided", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ output: flag("--output").string().default("dist") }),
             "when the command line flags are parsed": [],
             "then the expected parsed result should be returned": { output: "dist" }
@@ -398,7 +460,7 @@ describe("flags parser", () => {
     });
 
     test("should return null for string flag when not provided", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ name: flag("--name").string() }),
             "when the command line flags are parsed": [],
             "then the expected parsed result should be returned": { name: null }
@@ -406,7 +468,7 @@ describe("flags parser", () => {
     });
 
     test("should return empty array for strings flag when not provided", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ labels: flag("--label").strings() }),
             "when the command line flags are parsed": [],
             "then the expected parsed result should be returned": { labels: [] }
@@ -414,7 +476,7 @@ describe("flags parser", () => {
     });
 
     test("should parse combined short boolean flags", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({
                 all: flag("-a").boolean(),
                 long: flag("-l").boolean(),
@@ -426,7 +488,7 @@ describe("flags parser", () => {
     });
 
     test("should parse combined short boolean flags in different order", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({
                 all: flag("-a").boolean(),
                 long: flag("-l").boolean(),
@@ -438,7 +500,7 @@ describe("flags parser", () => {
     });
 
     test("should parse partially combined short boolean flags", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({
                 all: flag("-a").boolean(),
                 long: flag("-l").boolean(),
@@ -450,7 +512,7 @@ describe("flags parser", () => {
     });
 
     test("should parse docker-style combined flags", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({
                 tty: flag("-t", "--tty").boolean(),
                 interactive: flag("-i", "--interactive").boolean()
@@ -461,7 +523,7 @@ describe("flags parser", () => {
     });
 
     test("should parse docker-style combined flags with three flags", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({
                 tty: flag("-t", "--tty").boolean(),
                 interactive: flag("-i", "--interactive").boolean(),
@@ -473,7 +535,7 @@ describe("flags parser", () => {
     });
 
     test("should parse multiple aliases for same flag", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({
                 help: flag("--help", "-h", "-?").boolean()
             }),
@@ -483,7 +545,7 @@ describe("flags parser", () => {
     });
 
     test("should parse flag with long and short aliases using long form", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({
                 verbose: flag("-v", "--verbose").boolean()
             }),
@@ -493,7 +555,7 @@ describe("flags parser", () => {
     });
 
     test("should parse flag with long and short aliases using short form", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({
                 verbose: flag("-v", "--verbose").boolean()
             }),
@@ -503,7 +565,7 @@ describe("flags parser", () => {
     });
 
     test("should accumulate multiple keyValue flags into single object", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({
                 config: flag("--config").keyValue()
             }),
@@ -513,7 +575,7 @@ describe("flags parser", () => {
     });
 
     test("should parse command with restArgs capturing all remaining", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({
                 serve: command("serve").restArgs()
             }),
@@ -523,7 +585,7 @@ describe("flags parser", () => {
     });
 
     test("should return null for argument when not provided", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ input: argument() }),
             "when the command line flags are parsed": [],
             "then the expected parsed result should be returned": { input: null }
@@ -531,7 +593,7 @@ describe("flags parser", () => {
     });
 
     test("should parse argument with string type explicitly", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({ file: argument().string() }),
             "when the command line flags are parsed": ["input.txt"],
             "then the expected parsed result should be returned": { file: "input.txt" }
@@ -539,7 +601,7 @@ describe("flags parser", () => {
     });
 
     test("should parse multiple commands with different types", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({
                 build: command("build").boolean(),
                 test: command("test").restArgs(),
@@ -551,7 +613,7 @@ describe("flags parser", () => {
     });
 
     test("should parse flags with descriptions without affecting parsing", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({
                 verbose: flag("--verbose").boolean().describe("Enable verbose output"),
                 port: flag("--port").number().describe("Server port")
@@ -562,7 +624,7 @@ describe("flags parser", () => {
     });
 
     test("should parse multiple arguments as strings array", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({
                 names: argument().strings(),
             }),
@@ -571,7 +633,7 @@ describe("flags parser", () => {
         });
     })
     test("should parse strings arguments with boolean flag interspersed", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({
                 verbose: flag('-V', '--verbose').boolean(),
                 names: argument().strings()
@@ -581,7 +643,7 @@ describe("flags parser", () => {
         });
     })
     test("should prioritize argument strings over flags when argument is defined first", () => {
-        scenarioParseFlags({
+        gherkinScenario({
             "given a flags parser configured with a schema": flags({
                 arg: argument().strings(),
                 labels: flag("-l").strings()
@@ -590,4 +652,29 @@ describe("flags parser", () => {
             "then the expected parsed result should be returned": { labels: [], arg: ['-l=-l', '-l=red', "foo"] }
         });
     });
+
+    test("should generate help message with program, description, flags and commands", () => {
+        gherkinScenario({
+            "given a flags parser configured with a schema": flags({
+                verbose: flag("--verbose", "-v").boolean().describe("Enable verbose output"),
+                port: flag("--port", "-p").number().default(3000).describe("Server port"),
+                build: command("build").boolean().describe("Build the project"),
+            })
+                .program("mycli")
+                .describe("My awesome CLI tool"),
+            "when the help message is requested": true,
+            "then the expected help message should be returned": untab`\
+                Usage: mycli
+
+                My awesome CLI tool
+
+                Options:
+                --verbose, -v <boolean>    Enable verbose output
+                --port, -p <number>        Server port
+
+                Commands:
+                build                      Build the project
+            `
+        })
+    })
 });

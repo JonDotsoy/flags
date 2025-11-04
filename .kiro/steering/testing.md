@@ -1,31 +1,42 @@
-## Builder
+---
+inclusion: fileMatch
+fileMatchPattern: ['src/builders/**/*.ts', '**/*.spec.ts']
+---
 
-Los builders son clases que permiten transformar argumentos y extraer valores de ello,
+## Builder Architecture
 
-## src/builders/Spec.ts
+Builders are immutable classes that transform and extract values from command-line arguments.
 
-Contiene la definicion para el builder, es clase inmutable, no se puede modificar una vez construida, lista los refiners
+### Core Patterns
 
-### Refinres
+- All builders follow the template pattern defined in `src/builders/TemplateBuilder.ts`
+- Builders are immutable - once constructed, they cannot be modified
+- Use the pipe pattern to chain refiners for argument validation
 
-Permite validar los valores de los argumentos, si no se cumple la validacion, retorna un null cuando no puede ser refinado.
+### Key Components
 
-Los builders para parsear argumentos usa los refines en un patron pipe para usar la lista de los refiners y valida los argumentos. Puede si en la cascada en algun momento retorna null deje de procesar en el siguiente refine
+#### Spec (`src/builders/Spec.ts`)
+Defines the builder specification. Contains the list of refiners to apply during parsing.
 
-## src/builders/\*Builder.ts
+#### Refiners (`src/builders/refiners/*Refine.ts`)
+- Validate argument values during parsing
+- Return `null` when validation fails
+- Applied in sequence (pipe pattern) - processing stops when any refiner returns `null`
+- Reference: `src/builders/refiners/templateRefine.ts`
 
-Estos archivos son builders y contiene metodos de utilidad para definir los builders. Los metodos son usados para mejorar para ser mas legibles para el dev.
+#### Accumulators (`src/builders/accumulates/*Accumulate.ts`)
+- Accumulate argument values across multiple inputs
+- Not used directly by builders - used for reusability when accumulating similar values
+- Reference: `src/builders/accumulates/templateAccumulate.ts`
 
-Todos los builders son copias de src/builders/TemplateBuilder.ts
+#### Builder Files (`src/builders/*Builder.ts`)
+- Provide utility methods for defining builders with readable, developer-friendly APIs
+- All builders are based on `src/builders/TemplateBuilder.ts`
 
-## src/builders/accumulates/\*Accumulate.ts
+### Testing
 
-Estos metodos son usados para acumular los valores de los argumentos, no se usa directamente por el builder se usa para reusar los builder sobre todo acumunado valores que se le parecen.
+Run tests with: `bun test --only-failures`
 
-src/builders/accumulates/templateAccumulate.ts tiene un ejemplo de como se usa
+Filter specific tests: `bun test --only-failures --test-name-pattern="<pattern>"`
 
-## src/builders/refiners/\*Refine.ts
-
-El refine son usado para el builder
-
-src/builders/refiners/templateRefine.ts tiene un ejemplo de como se usa
+Example: `bun test --only-failures --test-name-pattern="helpMessage"`

@@ -405,7 +405,7 @@ const parser = flags({
   port: flag("--port", "-p").number().default(3000).describe("Server port"),
   build: command("build").boolean().describe("Build the project"),
 })
-  .programName("mycli")
+  .program("mycli")
   .describe("My awesome CLI tool");
 
 console.log(parser.helpMessage());
