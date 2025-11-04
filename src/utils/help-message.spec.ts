@@ -26,7 +26,6 @@ const gherkinScenario = <T extends FlagsParser<Record<string, Builder<any>>>>(
     const given = obj["given a flags parser configured with a schema"];
     const then = obj["then the expected help message should be returned"];
     const helpMessage = given.helpMessage();
-    expect(helpMessage).toMatchSnapshot();
     expect(helpMessage).toEqual(then);
   }
 };
