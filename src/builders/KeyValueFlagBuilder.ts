@@ -14,20 +14,24 @@ import { keyValueAccumulate } from "./accumulates/keyValueAccumulate.js";
 
 export class KeyValueFlagBuilder<T extends Spec<any, any>> extends Builder<T> {
   initial<U>(initial: U) {
-      return new KeyValueFlagBuilder(this.spec.initial(initial) as RedefineInitialValue<T, U>);
-    }
-  
-    accumulate(accumulate: Accumulate) {
-      return new KeyValueFlagBuilder(this.spec.accumulate(accumulate) as T);
-    }
-  
-    refine<U>(refine: Refine) {
-      return new KeyValueFlagBuilder(this.spec.refine(refine) as RedefineParseResult<T, U>);
-    }
-  
-    metadata(values: Record<string, any>) {
-      return new KeyValueFlagBuilder(this.spec.metadata(values) as T);
-    }
+    return new KeyValueFlagBuilder(
+      this.spec.initial(initial) as RedefineInitialValue<T, U>,
+    );
+  }
+
+  accumulate(accumulate: Accumulate) {
+    return new KeyValueFlagBuilder(this.spec.accumulate(accumulate) as T);
+  }
+
+  refine<U>(refine: Refine) {
+    return new KeyValueFlagBuilder(
+      this.spec.refine(refine) as RedefineParseResult<T, U>,
+    );
+  }
+
+  metadata(values: Record<string, any>) {
+    return new KeyValueFlagBuilder(this.spec.metadata(values) as T);
+  }
 
   describe(description: string) {
     return this.metadata({ description });

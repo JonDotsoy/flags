@@ -11,25 +11,33 @@ import { numberLessThanRefine } from "./refiners/numberLessThanRefine.js";
 import { numberGreaterThanOrEqualRefine } from "./refiners/numberGreaterThanOrEqualRefine.js";
 import { numberGreaterThanRefine } from "./refiners/numberGreaterThanRefine.js";
 import { transformRefine } from "./refiners/transformRefine.js";
-import type { InitialType } from "./Spec.js";
+import type {
+  InitialType,
+  RedefineInitialValue,
+  RedefineParseResult,
+} from "./Spec.js";
 
 export class NumberArgumentBuilder<
   T extends Spec<any, any>,
 > extends Builder<T> {
-  initial<T>(initial: T) {
-    return new NumberArgumentBuilder(this.spec.initial(initial));
+  initial<U>(initial: U) {
+    return new NumberArgumentBuilder(
+      this.spec.initial(initial) as RedefineInitialValue<T, U>,
+    );
   }
 
   accumulate(accumulate: Accumulate) {
-    return new NumberArgumentBuilder(this.spec.accumulate(accumulate));
+    return new NumberArgumentBuilder(this.spec.accumulate(accumulate) as T);
   }
 
   refine<U>(refine: Refine) {
-    return new NumberArgumentBuilder(this.spec.refine(refine));
+    return new NumberArgumentBuilder(
+      this.spec.refine(refine) as RedefineParseResult<T, U>,
+    );
   }
 
   metadata(values: Record<string, any>) {
-    return new NumberArgumentBuilder(this.spec.metadata(values));
+    return new NumberArgumentBuilder(this.spec.metadata(values) as T);
   }
 
   describe(description: string) {

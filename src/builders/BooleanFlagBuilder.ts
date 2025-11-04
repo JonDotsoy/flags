@@ -1,5 +1,10 @@
 import { Builder } from "./Builder.js";
-import { Spec, type InitialType } from "./Spec.js";
+import {
+  Spec,
+  type InitialType,
+  type RedefineInitialValue,
+  type RedefineParseResult,
+} from "./Spec.js";
 import type { Accumulate } from "../dtos/Accumulate.js";
 import type { Refine } from "../dtos/Refine.js";
 import { transformRefine } from "./refiners/transformRefine.js";
@@ -7,20 +12,24 @@ import { flagMatchRefine } from "./refiners/flagMatchRefine.js";
 import { booleanFlagRefine } from "./refiners/booleanFlagRefine.js";
 
 export class BooleanFlagBuilder<T extends Spec<any, any>> extends Builder<T> {
-  initial<T>(initial: T) {
-    return new BooleanFlagBuilder(this.spec.initial(initial));
+  initial<U>(initial: U) {
+    return new BooleanFlagBuilder(
+      this.spec.initial(initial) as RedefineInitialValue<T, U>,
+    );
   }
 
   accumulate(accumulate: Accumulate) {
-    return new BooleanFlagBuilder(this.spec.accumulate(accumulate));
+    return new BooleanFlagBuilder(this.spec.accumulate(accumulate) as T);
   }
 
   refine<U>(refine: Refine) {
-    return new BooleanFlagBuilder(this.spec.refine(refine));
+    return new BooleanFlagBuilder(
+      this.spec.refine(refine) as RedefineParseResult<T, U>,
+    );
   }
 
   metadata(values: Record<string, any>) {
-    return new BooleanFlagBuilder(this.spec.metadata(values));
+    return new BooleanFlagBuilder(this.spec.metadata(values) as T);
   }
 
   describe(description: string) {
