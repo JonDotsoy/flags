@@ -1,5 +1,10 @@
 import { Builder } from "./Builder.js";
-import { Spec, type InitialType } from "./Spec.js";
+import {
+  Spec,
+  type InitialType,
+  type RedefineInitialValue,
+  type RedefineParseResult,
+} from "./Spec.js";
 import type { Accumulate } from "../dtos/Accumulate.js";
 import type { Refine } from "../dtos/Refine.js";
 import { argumentMatchRefine } from "./refiners/argumentMatchRefine.js";
@@ -9,20 +14,24 @@ import { toBooleanRefine } from "./refiners/templateRefine.js";
 import { restArgsRefine } from "./refiners/restArgsRefine.js";
 
 export class CommandBuilder<T extends Spec<any, any>> extends Builder<T> {
-  initial<T>(initial: T) {
-    return new CommandBuilder(this.spec.initial(initial));
+  initial<U>(initial: U) {
+    return new CommandBuilder(
+      this.spec.initial(initial) as RedefineInitialValue<T, U>,
+    );
   }
 
   accumulate(accumulate: Accumulate) {
-    return new CommandBuilder(this.spec.accumulate(accumulate));
+    return new CommandBuilder(this.spec.accumulate(accumulate) as T);
   }
 
   refine<U>(refine: Refine) {
-    return new CommandBuilder(this.spec.refine(refine));
+    return new CommandBuilder(
+      this.spec.refine(refine) as RedefineParseResult<T, U>,
+    );
   }
 
   metadata(values: Record<string, any>) {
-    return new CommandBuilder(this.spec.metadata(values));
+    return new CommandBuilder(this.spec.metadata(values) as T);
   }
 
   describe(description: string) {
@@ -38,8 +47,8 @@ export class CommandBuilder<T extends Spec<any, any>> extends Builder<T> {
   }
 
   boolean() {
-    return new BooleanCommandBuilder<Spec<any, boolean>>(
-      this.spec.refine(toBooleanRefine),
+    return new BooleanCommandBuilder<Spec<boolean, boolean>>(
+      this.spec.initial(false).refine(toBooleanRefine),
     );
   }
 
@@ -48,12 +57,12 @@ export class CommandBuilder<T extends Spec<any, any>> extends Builder<T> {
   }
 
   restArgs() {
-    return new CommandBuilder(this.spec.refine<string[]>(restArgsRefine));
+    return this.refine<string[]>(restArgsRefine);
   }
 
   static create(argumentMatch: string) {
-    return new CommandBuilder(Spec.create()).refine(
-      argumentMatchRefine(argumentMatch),
+    return new CommandBuilder<Spec<null, string>>(
+      Spec.create().refine<string>(argumentMatchRefine(argumentMatch)),
     );
   }
 }

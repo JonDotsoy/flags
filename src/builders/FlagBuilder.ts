@@ -1,5 +1,9 @@
 import { Builder } from "./Builder.js";
-import { Spec } from "./Spec.js";
+import {
+  Spec,
+  type RedefineInitialValue,
+  type RedefineParseResult,
+} from "./Spec.js";
 import type { Accumulate } from "../dtos/Accumulate.js";
 import type { Refine } from "../dtos/Refine.js";
 import { flagMatchRefine } from "./refiners/flagMatchRefine.js";
@@ -15,22 +19,28 @@ import { booleanFlagRefine } from "./refiners/booleanFlagRefine.js";
 import { StringsFlagBuilder } from "./StringsFlagBuilder.js";
 import { stringsFlagRefine } from "./refiners/stringsFlagRefine.js";
 import { stringsAccumulate } from "./accumulates/stringsAccumulate.js";
+import { restArgsRefine } from "./refiners/restArgsRefine.js";
+import { RestArgsFlagBuilder } from "./RestArgsFlagBuilder.js";
 
 export class FlagBuilder<T extends Spec<any, any>> extends Builder<T> {
-  initial<T>(initial: T) {
-    return new FlagBuilder(this.spec.initial(initial));
+  initial<U>(initial: U) {
+    return new FlagBuilder(
+      this.spec.initial(initial) as RedefineInitialValue<T, U>,
+    );
   }
 
   accumulate(accumulate: Accumulate) {
-    return new FlagBuilder(this.spec.accumulate(accumulate));
+    return new FlagBuilder(this.spec.accumulate(accumulate) as T);
   }
 
   refine<U>(refine: Refine) {
-    return new FlagBuilder(this.spec.refine(refine));
+    return new FlagBuilder(
+      this.spec.refine(refine) as RedefineParseResult<T, U>,
+    );
   }
 
   metadata(values: Record<string, any>) {
-    return new FlagBuilder(this.spec.metadata(values));
+    return new FlagBuilder(this.spec.metadata(values) as T);
   }
 
   describe(description: string) {
@@ -43,9 +53,7 @@ export class FlagBuilder<T extends Spec<any, any>> extends Builder<T> {
 
   string() {
     return new StringFlagBuilder(
-      this.spec
-        .initial<string | null>(null)
-        .refine<string | null>(stringFlagRefine),
+      this.spec.initial<string | null>(null).refine<string>(stringFlagRefine),
     );
   }
 
@@ -58,22 +66,28 @@ export class FlagBuilder<T extends Spec<any, any>> extends Builder<T> {
 
   number() {
     return new NumberFlagBuilder(
-      this.spec
-        .initial<number | null>(null)
-        .refine<number | null>(numberFlagRefine),
+      this.spec.initial<number | null>(null).refine<number>(numberFlagRefine),
     );
   }
 
   boolean() {
     return new BooleanFlagBuilder(
-      this.spec.initial(false).refine(booleanFlagRefine),
+      this.spec.initial(false).refine<boolean>(booleanFlagRefine),
     );
   }
 
   keyValue() {
-    const specWithRefine = this.spec.refine(keyValueFlagRefine);
     return new KeyValueFlagBuilder(
-      specWithRefine.accumulate(keyValueAccumulate),
+      this.spec
+        .refine<Record<string, string>>(keyValueFlagRefine)
+        .initial(null)
+        .accumulate(keyValueAccumulate),
+    );
+  }
+
+  restArgs() {
+    return new RestArgsFlagBuilder(
+      this.spec.initial<null>(null).refine<string[]>(restArgsRefine),
     );
   }
 

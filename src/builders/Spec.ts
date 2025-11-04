@@ -1,10 +1,24 @@
-import type { Refine, Accumulate, ResultParser, RefineContext } from "../flags";
+import type { Accumulate } from "../dtos/Accumulate";
+import type { Refine } from "../dtos/Refine";
+import type { RefineContext } from "../dtos/RefineContext";
+import type { ResultParser } from "../dtos/ResultParser";
+import type { Builder } from "./Builder";
 
 export type InitialType<T extends Spec<any, any>> =
   T extends Spec<infer U, any> ? U : never;
 
 export type ParseResultType<T extends Spec<any, any>> =
   T extends Spec<any, infer U> ? U : never;
+
+export type RedefineParseResult<T extends Spec<any, any>, U> = Spec<
+  InitialType<T>,
+  U
+>;
+
+export type RedefineInitialValue<T extends Spec<any, any>, U> = Spec<
+  U,
+  ParseResultType<T>
+>;
 
 /** Inmutable class */
 export class Spec<InitialValue, ParseResult> {
@@ -25,7 +39,7 @@ export class Spec<InitialValue, ParseResult> {
     this.#metadata = metadata ?? {};
   }
 
-  initial<T>(initial: T) {
+  initial<T>(initial: T): Spec<T, ParseResult> {
     return new Spec<T, ParseResult>(
       initial,
       this.#refiners,
@@ -34,7 +48,7 @@ export class Spec<InitialValue, ParseResult> {
     );
   }
 
-  accumulate(accumulate: Accumulate) {
+  accumulate(accumulate: Accumulate): Spec<InitialValue, ParseResult> {
     return new Spec<InitialValue, ParseResult>(
       this.#initial,
       this.#refiners,
@@ -43,7 +57,7 @@ export class Spec<InitialValue, ParseResult> {
     );
   }
 
-  refine<U>(refine: Refine) {
+  refine<U>(refine: Refine): Spec<InitialValue, U> {
     return new Spec<InitialValue, U>(
       this.#initial,
       [...this.#refiners, refine],
@@ -52,7 +66,7 @@ export class Spec<InitialValue, ParseResult> {
     );
   }
 
-  metadata(values: Record<string, any>) {
+  metadata(values: Record<string, any>): Spec<InitialValue, ParseResult> {
     return new Spec<InitialValue, ParseResult>(
       this.#initial,
       this.#refiners,

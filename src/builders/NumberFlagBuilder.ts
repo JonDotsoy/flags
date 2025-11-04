@@ -1,5 +1,11 @@
 import { Builder } from "./Builder.js";
-import { Spec, type InitialType, type ParseResultType } from "./Spec.js";
+import {
+  Spec,
+  type InitialType,
+  type ParseResultType,
+  type RedefineInitialValue,
+  type RedefineParseResult,
+} from "./Spec.js";
 import type { Accumulate } from "../dtos/Accumulate.js";
 import type { Refine } from "../dtos/Refine.js";
 import { transformRefine } from "./refiners/transformRefine.js";
@@ -15,20 +21,24 @@ import { numberGreaterThanOrEqualRefine } from "./refiners/numberGreaterThanOrEq
 import { numberGreaterThanRefine } from "./refiners/numberGreaterThanRefine.js";
 
 export class NumberFlagBuilder<T extends Spec<any, any>> extends Builder<T> {
-  initial<T>(initial: T) {
-    return new NumberFlagBuilder(this.spec.initial(initial));
+  initial<U>(initial: U) {
+    return new NumberFlagBuilder(
+      this.spec.initial(initial) as RedefineInitialValue<T, U>,
+    );
   }
 
   accumulate(accumulate: Accumulate) {
-    return new NumberFlagBuilder(this.spec.accumulate(accumulate));
+    return new NumberFlagBuilder(this.spec.accumulate(accumulate) as T);
   }
 
   refine<U>(refine: Refine) {
-    return new NumberFlagBuilder(this.spec.refine(refine));
+    return new NumberFlagBuilder(
+      this.spec.refine(refine) as RedefineParseResult<T, U>,
+    );
   }
 
   metadata(values: Record<string, any>) {
-    return new NumberFlagBuilder(this.spec.metadata(values));
+    return new NumberFlagBuilder(this.spec.metadata(values) as T);
   }
 
   delimiter(delimiter: string) {
@@ -48,8 +58,8 @@ export class NumberFlagBuilder<T extends Spec<any, any>> extends Builder<T> {
     );
   }
 
-  default(value: number) {
-    return new NumberFlagBuilder(this.spec.initial(value));
+  default(value: ParseResultType<T>) {
+    return this.initial(value);
   }
 
   describe(description: string) {
@@ -58,7 +68,7 @@ export class NumberFlagBuilder<T extends Spec<any, any>> extends Builder<T> {
 
   required() {
     return this.metadata({ required: true }) as NumberFlagBuilder<
-      Spec<InitialType<T>, Exclude<ParseResultType<T>, undefined | null>>
+      RedefineInitialValue<T, number>
     >;
   }
 

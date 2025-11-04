@@ -20,6 +20,31 @@ describe("KeyValueFlagBuilder", () => {
     });
   });
 
+  test("should parse key value with 3 separate args", () => {
+    const builder = FlagBuilder.create("--set").keyValue();
+    const result = builder.parse(0, ["--set", "foo", "taz"]);
+
+    expect(result).toEqual({
+      args: ["--set", "foo", "taz"],
+      index: 0,
+      value: { foo: "taz" },
+    });
+  });
+
+  test("should return null when parsing empty args array", () => {
+    const builder = FlagBuilder.create("--set").keyValue();
+    const result = builder.parse(0, []);
+
+    expect(result).toEqual(null);
+  });
+
+  test("should have empty object as initial value", () => {
+    const builder = FlagBuilder.create("--set").keyValue();
+    const initial = builder.spec.getInitial();
+
+    expect(initial).toEqual({});
+  });
+
   test("should parse key=value with = syntax (1 arg)", () => {
     const builder = FlagBuilder.create("--config").keyValue();
     const result = builder.parse(0, ["--config=host=localhost"]);

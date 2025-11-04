@@ -22,28 +22,42 @@ export const keyValueFlagRefine: Refine = (
     keyValueString = nextArg;
   }
 
-  // Parse key=value format
+  // Check if it's key=value format
   const delimiterIndex = keyValueString.indexOf("=");
-  if (delimiterIndex === -1) {
-    return null;
+
+  if (delimiterIndex !== -1) {
+    // Parse key=value format
+    const key = keyValueString.substring(0, delimiterIndex);
+    const value = keyValueString.substring(delimiterIndex + 1);
+
+    if (!key) {
+      return null;
+    }
+
+    // If we consumed next argument, include it in args
+    const consumedArgs =
+      context.value === "" && args[index + 1]
+        ? [...context.args, args[index + 1]]
+        : context.args;
+
+    return {
+      args: consumedArgs,
+      index: context.index,
+      value: { [key]: value },
+    };
   }
 
-  const key = keyValueString.substring(0, delimiterIndex);
-  const value = keyValueString.substring(delimiterIndex + 1);
+  // Try to parse as separate key and value (3 args: flag key value)
+  if (context.value === "" && args[index + 1] && args[index + 2]) {
+    const key = args[index + 1];
+    const value = args[index + 2];
 
-  if (!key) {
-    return null;
+    return {
+      args: [...context.args, args[index + 1], args[index + 2]],
+      index: context.index,
+      value: { [key]: value },
+    };
   }
 
-  // If we consumed next argument, include it in args
-  const consumedArgs =
-    context.value === "" && args[index + 1]
-      ? [...context.args, args[index + 1]]
-      : context.args;
-
-  return {
-    args: consumedArgs,
-    index: context.index,
-    value: { [key]: value },
-  };
+  return null;
 };

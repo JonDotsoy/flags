@@ -5,11 +5,9 @@ import { UnexpectedArgumentError } from "./errors/UnexpectedArgumentError.js";
 // Type helper to extract the result type from a Builder
 type ExtractBuilderResult<B> =
   B extends Builder<Spec<infer I, infer P>>
-    ? P extends never
-      ? I
-      : P extends null
-        ? I
-        : P
+    ? I extends never
+      ? P
+      : I | P
     : never;
 
 // NewFlagsParser implementation
@@ -221,6 +219,11 @@ export class FlagsParser<T extends Record<string, Builder<any>>> {
     const result: any = {};
     const usedIndices = new Set<number>();
 
+    // Initialize result with initial values from each builder's spec
+    for (const [key, builder] of Object.entries(this.schema)) {
+      result[key] = builder.spec.getInitial();
+    }
+
     // Try to parse each flag in the schema
     for (const [key, builder] of Object.entries(this.schema)) {
       let parsedValue: any = null;
@@ -230,7 +233,11 @@ export class FlagsParser<T extends Record<string, Builder<any>>> {
       for (let i = 0; i < args.length; i++) {
         if (usedIndices.has(i)) continue;
 
-        const parseResult = builder.parse(i, args, currentValue);
+        const parseResult = builder.parse(
+          i,
+          args,
+          currentValue !== undefined ? { current: currentValue } : undefined,
+        );
 
         if (parseResult !== null) {
           // Mark consumed indices as used
@@ -249,12 +256,9 @@ export class FlagsParser<T extends Record<string, Builder<any>>> {
         }
       }
 
-      // Set the result: use parsed value, or initial value, or null
+      // Set the result: use parsed value if found
       if (parsedValue !== null) {
         result[key] = parsedValue;
-      } else {
-        const initial = builder.spec.getInitial();
-        result[key] = initial;
       }
     }
 
