@@ -14,6 +14,8 @@ import type {
   RedefineParseResult,
 } from "./Spec.js";
 import { regexMatchRefine } from "./refiners/regexMatchRefine.js";
+import { RestArgsArgumentBuilder } from "./RestArgsArgumentBuilder.js";
+import { restArgsRefine } from "./refiners/restArgsRefine.js";
 
 export class ArgumentBuilder<T extends Spec<any, any>> extends Builder<T> {
   initial<U>(initial: U) {
@@ -66,6 +68,12 @@ export class ArgumentBuilder<T extends Spec<any, any>> extends Builder<T> {
 
   match(regex: RegExp) {
     return new ArgumentBuilder(this.spec.refine(regexMatchRefine(regex)));
+  }
+
+  restArgs() {
+    return new RestArgsArgumentBuilder(
+      this.spec.initial(null).refine<string[]>(restArgsRefine),
+    );
   }
 
   static create() {
