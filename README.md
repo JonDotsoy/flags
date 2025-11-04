@@ -186,6 +186,13 @@ flag("-i").boolean();
 flag("--name").string();
 // --name John → "John"
 // --name=John → "John"
+// --name=John=Doe → "John=Doe" (multiple = preserved)
+// --name =John → "=John" (leading = preserved)
+
+// Single dash also supported
+flag("-name").string();
+// -name John → "John"
+// -name=John → "John"
 ```
 
 **`.strings()`** - Array of strings (accumulates multiple values)
@@ -193,6 +200,12 @@ flag("--name").string();
 ```ts
 flag("--include").strings();
 // --include src --include lib → ["src", "lib"]
+// -l blue -l red → ["blue", "red"]
+
+// Supports = syntax and flag-like values
+flag("-l").strings();
+// -l=-l -l=red → ["-l", "red"]
+// -l -l -l red → ["-l", "red"] (flag-like values preserved)
 ```
 
 **`.number()`** - Numeric value flag
@@ -209,6 +222,16 @@ flag("--config").keyValue();
 // --config name=value → { name: "value" }
 // --config name value → { name: "value" }
 // --config name=value --config foo=bar → { name: "value", foo: "bar" }
+
+// Multiple syntaxes supported
+flag("--set").keyValue();
+// --set foo taz → { foo: "taz" }
+// --set foo=taz → { foo: "taz" }
+// --set=foo=taz → { foo: "taz" }
+
+// Flag-like keys are preserved
+// --set --foo taz → { "--foo": "taz" }
+// --set=--foo=taz → { "--foo": "taz" }
 ```
 
 #### Flag Modifiers
@@ -225,6 +248,13 @@ flag("--output").string().required();
 ```ts
 flag("--port").number().default(3000);
 // Returns 3000 if --port is not provided
+
+// Without default, optional flags return null when not provided
+flag("--name").string();
+// Returns null if --name is not provided
+
+flag("--verbose").boolean();
+// Returns false if --verbose is not provided (boolean default)
 ```
 
 **`.describe(description)`** - Adds description for help
@@ -296,6 +326,46 @@ argument().string().required();
 argument().string().required().describe("Input file path");
 ```
 
+**`.delimiter(separator)`** - Parse flag with custom delimiter
+
+```ts
+flag("pr").string().delimiter(":");
+// pr:foo → "foo"
+// pr:bar → "bar"
+// Returns null if not provided
+```
+
+**`.match(regex)`** - Match argument with regex and extract named groups
+
+```ts
+argument().match(/^(?<part1>\w+):(?<part2>\w+)$/);
+// tar:foo → { part1: "tar", part2: "foo" }
+// Returns null if pattern doesn't match
+```
+
+**`.refine(fn)`** - Custom refinement function for advanced parsing
+
+```ts
+argument().refine((arg, index, args, context) => {
+  if (!arg.startsWith("tar:")) return null;
+  return {
+    index: index + 1,
+    args: [arg],
+    value: arg.split(":")[1],
+  };
+});
+// tar:foo → "foo"
+```
+
+**`.transform(fn)`** - Transform the parsed value
+
+```ts
+argument()
+  .string()
+  .transform((value) => value.toUpperCase());
+// tar → "TAR"
+```
+
 ## Type Inference
 
 The library provides full type inference based on your schema:
@@ -335,7 +405,7 @@ const parser = flags({
   port: flag("--port", "-p").number().default(3000).describe("Server port"),
   build: command("build").boolean().describe("Build the project"),
 })
-  .programName("mycli")
+  .program("mycli")
   .describe("My awesome CLI tool");
 
 console.log(parser.helpMessage());

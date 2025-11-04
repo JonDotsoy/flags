@@ -1,72 +1,46 @@
 ---
 inclusion: fileMatch
-fileMatchPattern: ["**/*.spec.ts", "src/new-flags.ts"]
+fileMatchPattern: ["src/builders/**/*.ts", "**/*.spec.ts"]
 ---
 
-## Test-Driven Development
+## Builder Architecture
 
-This project follows TDD. When adding features:
+Builders are immutable classes that transform and extract values from command-line arguments.
 
-1. Write tests in `src/new-flags.spec.ts` BEFORE implementing in `src/new-flags.ts`
-2. Validate both TypeScript type inference and runtime behavior
+### Core Patterns
 
-## Testing Framework
+- All builders follow the template pattern defined in `src/builders/TemplateBuilder.ts`
+- Builders are immutable - once constructed, they cannot be modified
+- Use the pipe pattern to chain refiners for argument validation
 
-Use Bun's test framework:
+### Key Components
 
-```ts
-import { describe, it, expect, expectTypeOf } from "bun:test";
-```
+#### Spec (`src/builders/Spec.ts`)
 
-## Test Structure
+Defines the builder specification. Contains the list of refiners to apply during parsing.
 
-Structure tests with Gherkin-style comments (Given/When/Then):
+#### Refiners (`src/builders/refiners/*Refine.ts`)
 
-```ts
-describe("feature name", () => {
-  it("should describe expected behavior", () => {
-    // Given: Setup the parser configuration
-    const flagsParser = flags({
-      /* config */
-    });
+- Validate argument values during parsing
+- Return `null` when validation fails
+- Applied in sequence (pipe pattern) - processing stops when any refiner returns `null`
+- Reference: `src/builders/refiners/templateRefine.ts`
 
-    // When: Parse the arguments
-    const result = flagsParser.parse([
-      /* args */
-    ]);
+#### Accumulators (`src/builders/accumulates/*Accumulate.ts`)
 
-    // Then: Validate TypeScript types
-    expectTypeOf(result).toEqualTypeOf<{
-      /* expected type */
-    }>();
+- Accumulate argument values across multiple inputs
+- Not used directly by builders - used for reusability when accumulating similar values
+- Reference: `src/builders/accumulates/templateAccumulate.ts`
 
-    // Then: Validate runtime values
-    expect(result).toEqual({
-      /* expected values */
-    });
-  });
-});
-```
+#### Builder Files (`src/builders/*Builder.ts`)
 
-**Gherkin Guidelines:**
+- Provide utility methods for defining builders with readable, developer-friendly APIs
+- All builders are based on `src/builders/TemplateBuilder.ts`
 
-- **Given**: Set up initial state (parser config, test data)
-- **When**: Execute the action (parse arguments, call methods)
-- **Then**: Assert outcomes (types and values)
+### Testing
 
-## Testing Requirements
+Run tests with: `bun test --only-failures`
 
-- Test type inference with `expectTypeOf()` for TypeScript correctness
-- Test runtime behavior with `expect()` for value correctness
-- Use snapshot testing for complex outputs (help messages)
-- Cover edge cases: missing flags, defaults, errors
-- Test both long (`--flag`) and short (`-f`) syntax
-- Test both space (`--flag value`) and equals (`--flag=value`) syntax
+Filter specific tests: `bun test --only-failures --test-name-pattern="<pattern>"`
 
-## Type Checking
-
-Always verify tests pass TypeScript compilation:
-
-```bash
-bunx tsc --noEmit src/new-flags.spec.ts
-```
+Example: `bun test --only-failures --test-name-pattern="helpMessage"`

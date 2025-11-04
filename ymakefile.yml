@@ -1,0 +1,9 @@
+features:
+  phony: true
+  run: |
+    bun test src/features.spec.ts
+
+test:build:
+  phony: true
+  run: |
+    bun test src/builde.spec.ts
