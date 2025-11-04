@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.1.0](https://github.com/JonDotsoy/flags/compare/flags-v3.0.3...flags-v3.1.0) (2025-11-04)
+
+
+### Features
+
+* Complete rewrite of flags parser with refiner-based builder architecture ([#32](https://github.com/JonDotsoy/flags/issues/32)) ([35bf587](https://github.com/JonDotsoy/flags/commit/35bf587592d6976214c17c9755be1d7bf575962d))
+
 ## [3.0.3](https://github.com/JonDotsoy/flags/compare/flags-v3.0.2...flags-v3.0.3) (2025-10-28)
 
 
