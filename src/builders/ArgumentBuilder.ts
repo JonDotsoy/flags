@@ -39,6 +39,14 @@ export class ArgumentBuilder<T extends Spec<any, any>> extends Builder<T> {
     return new ArgumentBuilder(this.spec.metadata(values) as T);
   }
 
+  describe(description: string) {
+    return this.metadata({ description });
+  }
+
+  required() {
+    return this.metadata({ required: true });
+  }
+
   string() {
     return this;
   }
@@ -53,14 +61,6 @@ export class ArgumentBuilder<T extends Spec<any, any>> extends Builder<T> {
     return new NumberArgumentBuilder(
       this.spec.initial(null).refine<number>(toNumberRefine),
     );
-  }
-
-  describe(description: string) {
-    return this.metadata({ description });
-  }
-
-  required() {
-    return this.metadata({ required: true });
   }
 
   transform<U>(transform: (value: ParseResultType<T>) => U) {

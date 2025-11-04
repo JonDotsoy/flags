@@ -2,7 +2,42 @@ import { test, it, expect, describe, mock } from "bun:test";
 import { FlagsParser } from "./FlagsParser";
 import { Builder } from "./builders/Builder";
 import { type Refine } from "./dtos/Refine";
-import { Spec } from "./builders/Spec";
+import {
+  Spec,
+  type RedefineInitialValue,
+  type RedefineParseResult,
+} from "./builders/Spec";
+import type { Accumulate } from "./flags";
+
+class DummyBuilder<T extends Spec<any, any>> extends Builder<T> {
+  initial<U>(initial: U) {
+    return new DummyBuilder(
+      this.spec.initial(initial) as RedefineInitialValue<T, U>,
+    );
+  }
+
+  accumulate(accumulate: Accumulate) {
+    return new DummyBuilder(this.spec.accumulate(accumulate) as T);
+  }
+
+  refine<U>(refine: Refine) {
+    return new DummyBuilder(
+      this.spec.refine(refine) as RedefineParseResult<T, U>,
+    );
+  }
+
+  metadata(values: Record<string, any>) {
+    return new DummyBuilder(this.spec.metadata(values) as T);
+  }
+
+  describe(description: string) {
+    return this.metadata({ description });
+  }
+
+  required() {
+    return this.metadata({ required: true });
+  }
+}
 
 type Context = {
   args: string[];
@@ -207,16 +242,18 @@ describe("refine style", () => {
 
 describe("ArgumentBuilder and FlagsParser", () => {
   it("should return null when parsing empty args without refiners", () => {
-    expect(new Builder(new Spec(null, [])).parse(0, [])).toEqual(null);
+    expect(new DummyBuilder(new Spec(null, [])).parse(0, [])).toEqual(null);
   });
   it("should return null when parsing empty args with fooParser", () => {
     expect(
-      new Builder(new Spec(null, [])).refine(matchFooRefine).parse(0, []),
+      new DummyBuilder(new Spec(null, [])).refine(matchFooRefine).parse(0, []),
     ).toEqual(null);
   });
   it("should parse 'foo' argument correctly", () => {
     expect(
-      new Builder(new Spec(null, [])).refine(matchFooRefine).parse(0, ["foo"]),
+      new DummyBuilder(new Spec(null, []))
+        .refine(matchFooRefine)
+        .parse(0, ["foo"]),
     ).toEqual({
       args: ["foo"],
       index: 0,
@@ -225,7 +262,7 @@ describe("ArgumentBuilder and FlagsParser", () => {
   });
   it("should chain refiners and transform 'foo' to uppercase", () => {
     expect(
-      new Builder(new Spec(null, []))
+      new DummyBuilder(new Spec(null, []))
         .refine(matchFooRefine)
         .refine(uppercaseValueRefine)
         .parse(0, ["foo"]),
@@ -233,14 +270,14 @@ describe("ArgumentBuilder and FlagsParser", () => {
   });
   it("should parse flag with value", () => {
     expect(
-      new Builder(new Spec(null, []))
+      new DummyBuilder(new Spec(null, []))
         .refine(nextArgumentRefine)
         .parse(0, ["--foo", "biz"]),
     ).toEqual({ args: ["--foo", "biz"], index: 0, value: "biz" });
   });
   it("should parse flag and transform value to uppercase", () => {
     expect(
-      new Builder(new Spec(null, []))
+      new DummyBuilder(new Spec(null, []))
         .refine(nextArgumentRefine)
         .refine(uppercaseValueRefine)
         .parse(0, ["--foo", "biz"]),
@@ -248,7 +285,7 @@ describe("ArgumentBuilder and FlagsParser", () => {
   });
   it("should parse flag and ignore extra arguments", () => {
     expect(
-      new Builder(new Spec(null, []))
+      new DummyBuilder(new Spec(null, []))
         .refine(nextArgumentRefine)
         .refine(uppercaseValueRefine)
         .parse(0, ["--foo", "biz", "taz"]),
@@ -256,7 +293,7 @@ describe("ArgumentBuilder and FlagsParser", () => {
   });
   it("should return null when starting at wrong index", () => {
     expect(
-      new Builder(new Spec(null, []))
+      new DummyBuilder(new Spec(null, []))
         .refine(nextArgumentRefine)
         .refine(uppercaseValueRefine)
         .parse(1, ["bar", "--foo", "biz", "taz"]),
@@ -268,7 +305,7 @@ describe("ArgumentBuilder and FlagsParser", () => {
   });
   it("should parse first two arguments when starting at index 0", () => {
     expect(
-      new Builder(new Spec(null, []))
+      new DummyBuilder(new Spec(null, []))
         .refine(nextArgumentRefine)
         .refine(uppercaseValueRefine)
         .parse(0, ["bar", "--foo", "biz", "taz"]),
@@ -280,18 +317,18 @@ describe("ArgumentBuilder and FlagsParser", () => {
   });
   it("should parse flag when starting at correct index", () => {
     expect(
-      new Builder(new Spec(null, []))
+      new DummyBuilder(new Spec(null, []))
         .refine(nextArgumentRefine)
         .refine(uppercaseValueRefine)
         .parse(1, ["bar", "--foo", "biz", "taz"]),
     ).toEqual({ args: ["--foo", "biz"], index: 1, value: "BIZ" });
   });
   it("should return null when parsing without refiners", () => {
-    expect(new Builder(new Spec(null, [])).parse(0, ["foo"])).toBeNull();
+    expect(new DummyBuilder(new Spec(null, [])).parse(0, ["foo"])).toBeNull();
   });
   it("should parse argument with simple refiner", () => {
     expect(
-      new Builder(new Spec(null, []))
+      new DummyBuilder(new Spec(null, []))
         .refine((arg, index) => ({ value: arg, index, args: [] }))
         .parse(0, ["foo"]),
     ).toEqual({
@@ -302,21 +339,21 @@ describe("ArgumentBuilder and FlagsParser", () => {
   });
   it("should parse single flag with FlagsParser", () => {
     const flagsParser = new FlagsParser({
-      foo: new Builder(new Spec(null, [])).refine(nextArgumentRefine),
+      foo: new DummyBuilder(new Spec(null, [])).refine(nextArgumentRefine),
     });
 
     expect(flagsParser.parse(["--foo", "biz"])).toEqual({ foo: "biz" });
   });
   it("should return null for missing optional flag", () => {
     const flagsParser = new FlagsParser({
-      foo: new Builder(new Spec(null, [])).refine(nextArgumentRefine),
+      foo: new DummyBuilder(new Spec(null, [])).refine(nextArgumentRefine),
     });
 
     expect(flagsParser.parse([])).toEqual({ foo: null });
   });
   it("should throw error for unrecognized arguments", () => {
     const flagsParser = new FlagsParser({
-      foo: new Builder(new Spec(null, [])).refine(nextArgumentRefine),
+      foo: new DummyBuilder(new Spec(null, [])).refine(nextArgumentRefine),
     });
 
     expect(() => {
@@ -325,7 +362,7 @@ describe("ArgumentBuilder and FlagsParser", () => {
   });
   it("should use initial value when flag is not provided", () => {
     const flagsParser = new FlagsParser({
-      foo: new Builder(new Spec(null, []))
+      foo: new DummyBuilder(new Spec(null, []))
         .initial(1)
         .refine(nextArgumentRefine),
     });
@@ -334,16 +371,16 @@ describe("ArgumentBuilder and FlagsParser", () => {
   });
   it("should handle multiple flags with null values", () => {
     const flagsParser = new FlagsParser({
-      foo: new Builder(new Spec(null, [])).refine(flagParser2("foo")),
-      tar: new Builder(new Spec(null, [])).refine(flagParser2("tar")),
+      foo: new DummyBuilder(new Spec(null, [])).refine(flagParser2("foo")),
+      tar: new DummyBuilder(new Spec(null, [])).refine(flagParser2("tar")),
     });
 
     expect(flagsParser.parse([])).toEqual({ foo: null, tar: null });
   });
   it("should parse multiple flags with their values", () => {
     const flagsParser = new FlagsParser({
-      foo: new Builder(new Spec(null, [])).refine(flagParser2("foo")),
-      tar: new Builder(new Spec(null, [])).refine(flagParser2("tar")),
+      foo: new DummyBuilder(new Spec(null, [])).refine(flagParser2("foo")),
+      tar: new DummyBuilder(new Spec(null, [])).refine(flagParser2("tar")),
     });
 
     expect(flagsParser.parse(["--foo", "biz", "--tar", "bar"])).toEqual({
@@ -354,7 +391,7 @@ describe("ArgumentBuilder and FlagsParser", () => {
 
   describe("accumulate", () => {
     it("should return parsed value without accumulate function", () => {
-      const result = new Builder(new Spec(null, []))
+      const result = new DummyBuilder(new Spec(null, []))
         .refine(argumentRefine)
         .parse(0, ["foo"]);
 
@@ -364,7 +401,7 @@ describe("ArgumentBuilder and FlagsParser", () => {
     it("should accumulate value into array using initial value when no prevValue provided", () => {
       const arrayArgumentsAccumulatorMock = mock(arrayArgumentsAccumulator);
 
-      const result = new Builder(
+      const result = new DummyBuilder(
         new Spec(null, [], arrayArgumentsAccumulatorMock),
       )
         .refine(argumentRefine)
@@ -375,7 +412,9 @@ describe("ArgumentBuilder and FlagsParser", () => {
     });
 
     it("should accumulate value into array using provided prevValue", () => {
-      const result = new Builder(new Spec(null, [], arrayArgumentsAccumulator))
+      const result = new DummyBuilder(
+        new Spec(null, [], arrayArgumentsAccumulator),
+      )
         .refine(argumentRefine)
         .parse(1, ["foo", "taz"], { current: ["foo"] });
 
@@ -393,7 +432,7 @@ describe("ArgumentBuilder and FlagsParser", () => {
       const index = 0;
       const arg = args[index];
 
-      const builder = new Builder(new Spec(null, []))
+      const builder = new DummyBuilder(new Spec(null, []))
         .refine(nextArgumentRefine)
         .refine(uppercaseValueRefine)
         .refine(addBracketsRefine)
