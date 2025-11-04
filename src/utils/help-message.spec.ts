@@ -275,9 +275,9 @@ describe("test", () => {
                                    server should run. With this parameter, the user
                                    can define whether the server will be accessible
                                    only locally or available to other devices on the
-                                   network. For example, using \x1b\`--ip 127.0.0.1\`\x1b[0m
-                                   restricts access to the local machine, while \x1b\`--ip\x1b[0m
-                                   \x1b0.0.0.0\`\x1b[0m enables the server to accept external
+                                   network. For example, using \x1b[31m\`--ip 127.0.0.1\`\x1b[0m
+                                   restricts access to the local machine, while \x1b[31m\`--ip
+                                   0.0.0.0\`\x1b[0m enables the server to accept external
                                    connections. This flag provides flexibility for
                                    development, testing, or production environments,
                                    allowing you to adjust the server's accessibility

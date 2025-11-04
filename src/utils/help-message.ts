@@ -6,6 +6,11 @@ export type HelpMessageOptions = {
   noColor?: boolean;
 };
 
+// Remove ANSI escape codes to calculate visible length
+const stripAnsi = (text: string): string => {
+  return text.replace(/\x1b\[[0-9;]*m/g, "");
+};
+
 const wrapText = (text: string, maxWidth: number): string[] => {
   if (maxWidth === Infinity) {
     return [text];
@@ -20,8 +25,10 @@ const wrapText = (text: string, maxWidth: number): string[] => {
       currentLine = word;
     } else {
       const testLine = `${currentLine} ${word}`;
+      // Use visible length (without ANSI codes) for width calculation
+      const visibleLength = stripAnsi(testLine).length;
 
-      if (testLine.length <= maxWidth) {
+      if (visibleLength <= maxWidth) {
         currentLine = testLine;
       } else {
         lines.push(currentLine);
