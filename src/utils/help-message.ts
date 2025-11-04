@@ -172,7 +172,28 @@ export const helpMessage = (
       const indent = hasShortFlag ? "  " : "      ";
       const totalFlagLength = indent.length + flagPart.length;
       const padding = " ".repeat(Math.max(1, 27 - totalFlagLength));
-      lines.push(`${indent}${flagPart}${padding}${descStr}`);
+
+      // Wrap description if it's too long
+      if (descStr) {
+        const descIndent = indent.length + flagPart.length + padding.length;
+        const availableWidth = terminalWidth - descIndent;
+        const descLines = wrapText(descStr, availableWidth);
+
+        if (descLines.length > 0) {
+          // First line goes on the same line as the flag
+          lines.push(`${indent}${flagPart}${padding}${descLines[0]}`);
+
+          // Subsequent lines are indented to align with the first line of description
+          const descIndentStr = " ".repeat(descIndent);
+          for (let i = 1; i < descLines.length; i++) {
+            lines.push(`${descIndentStr}${descLines[i]}`);
+          }
+        } else {
+          lines.push(`${indent}${flagPart}${padding}`);
+        }
+      } else {
+        lines.push(`${indent}${flagPart}${padding}`);
+      }
     }
     lines.push("");
   }

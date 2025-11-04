@@ -72,6 +72,85 @@ describe("test", () => {
       `,
     });
   });
+  test("test3", () => {
+    gherkinScenario({
+      "given a flags parser configured with a schema": flags({
+        verbose: flag("--verbose", "-v")
+          .boolean()
+          .describe("Enable verbose output"),
+        port: flag("--port", "-p")
+          .number()
+          .default(3000)
+          .describe("Server port"),
+        ip: flag("--ip")
+          .string()
+          .describe(
+            "allows you to specify the IP address on which the " +
+              "server should run. With this parameter, the user can " +
+              "define whether the server will be accessible only " +
+              "locally or available to other devices on the " +
+              "network. For example, using `--ip 127.0.0.1` " +
+              "restricts access to the local machine, while " +
+              "`--ip 0.0.0.0` enables the server to accept external " +
+              "connections. This flag provides flexibility for " +
+              "development, testing, or production environments, " +
+              "allowing you to adjust the server's accessibility " +
+              "and security based on your needs.",
+          ),
+        build: command("build").boolean().describe("Build the project"),
+      })
+        .program("mycli")
+        .describe(
+          "This software is designed to automatically launch and manage a server with " +
+            "minimal user intervention. It provides a streamlined setup process that " +
+            "configures all required components and dependencies, ensuring that the server is " +
+            "ready to operate within minutes. Once running, the software monitors server " +
+            "performance, handles incoming requests, and maintains stable connectivity. It " +
+            "includes built-in tools for logging, error handling, and security to safeguard " +
+            "data and support reliable operation. Ideal for development and production " +
+            "environments, this solution simplifies server deployment, reduces manual " +
+            "configuration tasks, and helps users focus on building applications rather than " +
+            "managing infrastructure.",
+        ),
+      "when the help message is requested with arguments": [
+        {
+          terminalWidth: 80,
+        },
+      ],
+      "then the expected help message should be returned": untab`\
+        Usage: mycli
+
+        This software is designed to automatically launch and manage a server with
+        minimal user intervention. It provides a streamlined setup process that
+        configures all required components and dependencies, ensuring that the server
+        is ready to operate within minutes. Once running, the software monitors
+        server performance, handles incoming requests, and maintains stable
+        connectivity. It includes built-in tools for logging, error handling, and
+        security to safeguard data and support reliable operation. Ideal for
+        development and production environments, this solution simplifies server
+        deployment, reduces manual configuration tasks, and helps users focus on
+        building applications rather than managing infrastructure.
+
+        Options:
+          -v, --verbose.           Enable verbose output
+          -p, --port <number>      Server port
+              --ip                 allows you to specify the IP address on which the
+                                   server should run. With this parameter, the user
+                                   can define whether the server will be accessible
+                                   only locally or available to other devices on the
+                                   network. For example, using \`--ip 127.0.0.1\`
+                                   restricts access to the local machine, while \`--ip
+                                   0.0.0.0\` enables the server to accept external
+                                   connections. This flag provides flexibility for
+                                   development, testing, or production environments,
+                                   allowing you to adjust the server's accessibility
+                                   and security based on your needs.
+
+        Commands:
+          build                    Build the project
+      `,
+    });
+  });
   test("test2", () => {
     gherkinScenario({
       "given a flags parser configured with a schema": flags({
@@ -110,14 +189,14 @@ describe("test", () => {
 
         This software is designed to automatically launch and manage a server with
         minimal user intervention. It provides a streamlined setup process that
-        configures all required components and dependencies, ensuring that the server is
-        ready to operate within minutes. Once running, the software monitors server
-        performance, handles incoming requests, and maintains stable connectivity. It
-        includes built-in tools for logging, error handling, and security to safeguard
-        data and support reliable operation. Ideal for development and production
-        environments, this solution simplifies server deployment, reduces manual
-        configuration tasks, and helps users focus on building applications rather than
-        managing infrastructure.
+        configures all required components and dependencies, ensuring that the server
+        is ready to operate within minutes. Once running, the software monitors
+        server performance, handles incoming requests, and maintains stable
+        connectivity. It includes built-in tools for logging, error handling, and
+        security to safeguard data and support reliable operation. Ideal for
+        development and production environments, this solution simplifies server
+        deployment, reduces manual configuration tasks, and helps users focus on
+        building applications rather than managing infrastructure.
 
         Options:
           -v, --verbose.           Enable verbose output
