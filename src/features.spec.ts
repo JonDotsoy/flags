@@ -122,7 +122,7 @@ describe("flags parser", () => {
         });
     });
 
-    test("should return empty object for keyValue flag when not provided", () => {
+    test("rn empty object for keyValue flag when not provided", () => {
         scenarioParseFlags({
             "given a flags parser configured with a schema": flags({ configs: flag("--set").keyValue() }),
             "when the command line flags are parsed": [],
@@ -363,7 +363,203 @@ describe("flags parser", () => {
                 input: "input.txt"
             }
         });
-    })
+    });
+
+    test("should parse number flag", () => {
+        scenarioParseFlags({
+            "given a flags parser configured with a schema": flags({ port: flag("--port").number() }),
+            "when the command line flags are parsed": ["--port", "3000"],
+            "then the expected parsed result should be returned": { port: 3000 }
+        });
+    });
+
+    test("should return null for number flag when not provided", () => {
+        scenarioParseFlags({
+            "given a flags parser configured with a schema": flags({ port: flag("--port").number() }),
+            "when the command line flags are parsed": [],
+            "then the expected parsed result should be returned": { port: null }
+        });
+    });
+
+    test("should return default value for number flag when not provided", () => {
+        scenarioParseFlags({
+            "given a flags parser configured with a schema": flags({ port: flag("--port").number().default(3000) }),
+            "when the command line flags are parsed": [],
+            "then the expected parsed result should be returned": { port: 3000 }
+        });
+    });
+
+    test("should return default value for string flag when not provided", () => {
+        scenarioParseFlags({
+            "given a flags parser configured with a schema": flags({ output: flag("--output").string().default("dist") }),
+            "when the command line flags are parsed": [],
+            "then the expected parsed result should be returned": { output: "dist" }
+        });
+    });
+
+    test("should return null for string flag when not provided", () => {
+        scenarioParseFlags({
+            "given a flags parser configured with a schema": flags({ name: flag("--name").string() }),
+            "when the command line flags are parsed": [],
+            "then the expected parsed result should be returned": { name: null }
+        });
+    });
+
+    test("should return empty array for strings flag when not provided", () => {
+        scenarioParseFlags({
+            "given a flags parser configured with a schema": flags({ labels: flag("--label").strings() }),
+            "when the command line flags are parsed": [],
+            "then the expected parsed result should be returned": { labels: [] }
+        });
+    });
+
+    test("should parse combined short boolean flags", () => {
+        scenarioParseFlags({
+            "given a flags parser configured with a schema": flags({
+                all: flag("-a").boolean(),
+                long: flag("-l").boolean(),
+                human: flag("-h").boolean()
+            }),
+            "when the command line flags are parsed": ["-alh"],
+            "then the expected parsed result should be returned": { all: true, long: true, human: true }
+        });
+    });
+
+    test("should parse combined short boolean flags in different order", () => {
+        scenarioParseFlags({
+            "given a flags parser configured with a schema": flags({
+                all: flag("-a").boolean(),
+                long: flag("-l").boolean(),
+                human: flag("-h").boolean()
+            }),
+            "when the command line flags are parsed": ["-lah"],
+            "then the expected parsed result should be returned": { all: true, long: true, human: true }
+        });
+    });
+
+    test("should parse partially combined short boolean flags", () => {
+        scenarioParseFlags({
+            "given a flags parser configured with a schema": flags({
+                all: flag("-a").boolean(),
+                long: flag("-l").boolean(),
+                human: flag("-h").boolean()
+            }),
+            "when the command line flags are parsed": ["-al", "-h"],
+            "then the expected parsed result should be returned": { all: true, long: true, human: true }
+        });
+    });
+
+    test("should parse docker-style combined flags", () => {
+        scenarioParseFlags({
+            "given a flags parser configured with a schema": flags({
+                tty: flag("-t", "--tty").boolean(),
+                interactive: flag("-i", "--interactive").boolean()
+            }),
+            "when the command line flags are parsed": ["-ti"],
+            "then the expected parsed result should be returned": { tty: true, interactive: true }
+        });
+    });
+
+    test("should parse docker-style combined flags with three flags", () => {
+        scenarioParseFlags({
+            "given a flags parser configured with a schema": flags({
+                tty: flag("-t", "--tty").boolean(),
+                interactive: flag("-i", "--interactive").boolean(),
+                detach: flag("-d", "--detach").boolean()
+            }),
+            "when the command line flags are parsed": ["-tid"],
+            "then the expected parsed result should be returned": { tty: true, interactive: true, detach: true }
+        });
+    });
+
+    test("should parse multiple aliases for same flag", () => {
+        scenarioParseFlags({
+            "given a flags parser configured with a schema": flags({
+                help: flag("--help", "-h", "-?").boolean()
+            }),
+            "when the command line flags are parsed": ["-?"],
+            "then the expected parsed result should be returned": { help: true }
+        });
+    });
+
+    test("should parse flag with long and short aliases using long form", () => {
+        scenarioParseFlags({
+            "given a flags parser configured with a schema": flags({
+                verbose: flag("-v", "--verbose").boolean()
+            }),
+            "when the command line flags are parsed": ["--verbose"],
+            "then the expected parsed result should be returned": { verbose: true }
+        });
+    });
+
+    test("should parse flag with long and short aliases using short form", () => {
+        scenarioParseFlags({
+            "given a flags parser configured with a schema": flags({
+                verbose: flag("-v", "--verbose").boolean()
+            }),
+            "when the command line flags are parsed": ["-v"],
+            "then the expected parsed result should be returned": { verbose: true }
+        });
+    });
+
+    test("should accumulate multiple keyValue flags into single object", () => {
+        scenarioParseFlags({
+            "given a flags parser configured with a schema": flags({
+                config: flag("--config").keyValue()
+            }),
+            "when the command line flags are parsed": ["--config", "db=postgres", "--config", "port=5432"],
+            "then the expected parsed result should be returned": { config: { db: "postgres", port: "5432" } }
+        });
+    });
+
+    test("should parse command with restArgs capturing all remaining", () => {
+        scenarioParseFlags({
+            "given a flags parser configured with a schema": flags({
+                serve: command("serve").restArgs()
+            }),
+            "when the command line flags are parsed": ["serve", "--watch", "--port", "3000"],
+            "then the expected parsed result should be returned": { serve: ["--watch", "--port", "3000"] }
+        });
+    });
+
+    test("should return null for argument when not provided", () => {
+        scenarioParseFlags({
+            "given a flags parser configured with a schema": flags({ input: argument() }),
+            "when the command line flags are parsed": [],
+            "then the expected parsed result should be returned": { input: null }
+        });
+    });
+
+    test("should parse argument with string type explicitly", () => {
+        scenarioParseFlags({
+            "given a flags parser configured with a schema": flags({ file: argument().string() }),
+            "when the command line flags are parsed": ["input.txt"],
+            "then the expected parsed result should be returned": { file: "input.txt" }
+        });
+    });
+
+    test("should parse multiple commands with different types", () => {
+        scenarioParseFlags({
+            "given a flags parser configured with a schema": flags({
+                build: command("build").boolean(),
+                test: command("test").restArgs(),
+                serve: command("serve").restArgs()
+            }),
+            "when the command line flags are parsed": ["build"],
+            "then the expected parsed result should be returned": { build: true, test: null, serve: null }
+        });
+    });
+
+    test("should parse flags with descriptions without affecting parsing", () => {
+        scenarioParseFlags({
+            "given a flags parser configured with a schema": flags({
+                verbose: flag("--verbose").boolean().describe("Enable verbose output"),
+                port: flag("--port").number().describe("Server port")
+            }),
+            "when the command line flags are parsed": ["--verbose", "--port", "8080"],
+            "then the expected parsed result should be returned": { verbose: true, port: 8080 }
+        });
+    });
 
     // TODO: 
     // testCase({
