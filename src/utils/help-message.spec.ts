@@ -8,7 +8,9 @@ import type { Builder } from "../builders/Builder";
 type HelpMessageScenario<T extends FlagsParser<Record<string, Builder<any>>>> =
   {
     "given a flags parser configured with a schema": T;
-    "when the help message is requested": true;
+    "when the help message is requested with arguments": Parameters<
+      T["helpMessage"]
+    >;
     "then the expected help message should be returned": string;
   };
 
@@ -16,7 +18,7 @@ const isHelpMessageScenario = (value: any): value is HelpMessageScenario<any> =>
   typeof value === "object" &&
   value !== null &&
   "given a flags parser configured with a schema" in value &&
-  "when the help message is requested" in value &&
+  "when the help message is requested with arguments" in value &&
   "then the expected help message should be returned" in value;
 
 const gherkinScenario = <T extends FlagsParser<Record<string, Builder<any>>>>(
@@ -48,7 +50,7 @@ describe("test", () => {
       })
         .program("mycli")
         .describe("My awesome CLI tool"),
-      "when the help message is requested": true,
+      "when the help message is requested with arguments": [],
       "then the expected help message should be returned": untab`\
         Usage: mycli
 
