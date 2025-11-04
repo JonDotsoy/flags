@@ -1,6 +1,7 @@
 import type { Builder } from "./builders/Builder.js";
 import type { Spec } from "./builders/Spec.js";
 import { UnexpectedArgumentError } from "./errors/UnexpectedArgumentError.js";
+import { helpMessage, type HelpMessageOptions } from "./utils/help-message.js";
 
 // Type helper to extract the result type from a Builder
 type ExtractBuilderResult<B> =
@@ -53,117 +54,8 @@ export class FlagsParser<T extends Record<string, Builder<any>>> {
     });
   }
 
-  helpMessage(options?: { terminalWidth?: number; noColor?: boolean }): string {
-    const terminalWidth =
-      options?.terminalWidth ?? process.stdout.columns ?? 80;
-    const noColor = options?.noColor ?? false;
-
-    const lines: string[] = [];
-
-    // Usage line
-    lines.push(`Usage: ${this.metadata.program}`);
-    lines.push("");
-
-    // Description
-    if (this.metadata.description) {
-      lines.push(this.metadata.description);
-      lines.push("");
-    }
-
-    // Collect flags and commands
-    const flags: Array<{
-      names: string[];
-      type: string;
-      description?: string;
-    }> = [];
-    const commands: Array<{ name: string; description?: string }> = [];
-
-    for (const [key, builder] of Object.entries(this.schema)) {
-      const spec = builder.spec;
-      const description = spec.hasMetadata("description")
-        ? (spec.getMetadata("description") as string)
-        : undefined;
-
-      // Check if it's a command by checking the builder type
-      const builderName = builder.constructor.name;
-      const isCommand = builderName.includes("Command");
-
-      if (isCommand) {
-        // For commands, we need to extract the command name from the refiners
-        // Commands use argumentMatchRefine which checks for exact string match
-        const refiners = spec.getRefiners();
-        let commandName = key;
-
-        // Try to extract command name from the refiner
-        if (refiners.length > 0) {
-          // The argumentMatchRefine stores the match string in its closure
-          // We'll use the key as fallback
-          commandName = key;
-        }
-
-        commands.push({
-          name: commandName,
-          description,
-        });
-      } else {
-        // It's a flag
-        const matches = spec.hasMetadata("matches")
-          ? (spec.getMetadata("matches") as string[])
-          : [];
-
-        if (matches.length > 0) {
-          const initial = spec.getInitial();
-          let type = "boolean";
-
-          // Determine type based on initial value
-          if (initial === null) {
-            type = "number"; // Could be number or string, default to number
-          } else if (typeof initial === "number") {
-            type = "number";
-          } else if (typeof initial === "string") {
-            type = "string";
-          } else if (typeof initial === "boolean") {
-            type = "boolean";
-          } else if (Array.isArray(initial)) {
-            type = "array";
-          }
-
-          flags.push({
-            names: matches,
-            type,
-            description,
-          });
-        }
-      }
-    }
-
-    // Print Options section
-    if (flags.length > 0) {
-      lines.push("Options:");
-      for (const flag of flags) {
-        const namesStr = flag.names.join(", ");
-        const typeStr = `<${flag.type}>`;
-        const descStr = flag.description || "";
-        const flagPart = `${namesStr} ${typeStr}`;
-        const padding = " ".repeat(Math.max(1, 27 - flagPart.length));
-        lines.push(`${flagPart}${padding}${descStr}`);
-      }
-      lines.push("");
-    }
-
-    // Print Commands section
-    if (commands.length > 0) {
-      lines.push("Commands:");
-      for (const cmd of commands) {
-        const nameStr = cmd.name;
-        const descStr = cmd.description || "";
-        const padding = " ".repeat(Math.max(1, 27 - nameStr.length));
-        lines.push(`${nameStr}${padding}${descStr}`);
-      }
-    }
-
-    return lines.join("\n") + "\n";
-  }
+  helpMessage = (options?: HelpMessageOptions) =>
+    helpMessage(this, this.schema, options);
 
   parse(args: string[]): {
     [K in keyof T]: ExtractBuilderResult<T[K]>;

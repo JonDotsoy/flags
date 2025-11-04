@@ -1,6 +1,6 @@
 ---
 inclusion: fileMatch
-fileMatchPattern: ['src/builders/**/*.ts', '**/*.spec.ts']
+fileMatchPattern: ["src/builders/**/*.ts", "**/*.spec.ts"]
 ---
 
 ## Builder Architecture
@@ -16,20 +16,24 @@ Builders are immutable classes that transform and extract values from command-li
 ### Key Components
 
 #### Spec (`src/builders/Spec.ts`)
+
 Defines the builder specification. Contains the list of refiners to apply during parsing.
 
 #### Refiners (`src/builders/refiners/*Refine.ts`)
+
 - Validate argument values during parsing
 - Return `null` when validation fails
 - Applied in sequence (pipe pattern) - processing stops when any refiner returns `null`
 - Reference: `src/builders/refiners/templateRefine.ts`
 
 #### Accumulators (`src/builders/accumulates/*Accumulate.ts`)
+
 - Accumulate argument values across multiple inputs
 - Not used directly by builders - used for reusability when accumulating similar values
 - Reference: `src/builders/accumulates/templateAccumulate.ts`
 
 #### Builder Files (`src/builders/*Builder.ts`)
+
 - Provide utility methods for defining builders with readable, developer-friendly APIs
 - All builders are based on `src/builders/TemplateBuilder.ts`
 
