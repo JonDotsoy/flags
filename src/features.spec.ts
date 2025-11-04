@@ -658,6 +658,7 @@ describe("flags parser", () => {
             "given a flags parser configured with a schema": flags({
                 verbose: flag("--verbose", "-v").boolean().describe("Enable verbose output"),
                 port: flag("--port", "-p").number().default(3000).describe("Server port"),
+                ip: flag("--ip").string().describe("IPv4 address (e.g., 172.30.100.104)"),
                 build: command("build").boolean().describe("Build the project"),
             })
                 .program("mycli")
@@ -669,11 +670,12 @@ describe("flags parser", () => {
                 My awesome CLI tool
 
                 Options:
-                --verbose, -v <boolean>    Enable verbose output
-                --port, -p <number>        Server port
+                  -v, --verbose.           Enable verbose output
+                  -p, --port <number>      Server port
+                      --ip                 IPv4 address (e.g., 172.30.100.104)
 
                 Commands:
-                build                      Build the project
+                  build                    Build the project
             `
         })
     })
