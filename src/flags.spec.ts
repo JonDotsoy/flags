@@ -1674,7 +1674,7 @@ describe("key-value pattern", () => {
     }>();
 
     // Then: The config should be null
-    expect(result).toEqual({ config: {} });
+    expect(result).toEqual({ config: null });
   });
 
   it("should override duplicate keys with last value", () => {

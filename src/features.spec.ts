@@ -94,7 +94,7 @@ describe("flags parser", () => {
         testCase({
             args: [],
             schema: { configs: () => flag("--set").keyValue() },
-            expected: { configs: {} }
+            expected: { configs: null }
         });
     });
 
@@ -189,7 +189,7 @@ describe("flags parser", () => {
     test("should parse multiple boolean commands", () => {
         testCase({
             args: ['user', 'info'],
-            schema: { user: () => command('user'), info: () => command('info') },
+            schema: { user: () => command('user').boolean(), info: () => command('info').boolean() },
             expected: { user: true, info: true }
         });
     });
@@ -205,7 +205,7 @@ describe("flags parser", () => {
     test("should parse boolean command and restArgs command", () => {
         testCase({
             args: ['user', 'info'],
-            schema: { user: () => command('user'), info: () => command('info').restArgs() },
+            schema: { user: () => command('user').boolean(), info: () => command('info').restArgs() },
             expected: { user: true, info: [] }
         });
     });
@@ -264,7 +264,7 @@ describe("flags parser", () => {
         testCase({
             args: ['tar'],
             schema: {
-                arg: () => argument().transform((value: string) => value.toUpperCase())
+                arg: () => argument().string().transform((value) => value.toUpperCase())
             },
             expected: { arg: "TAR" }
         });

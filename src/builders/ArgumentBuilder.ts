@@ -10,6 +10,7 @@ import { toNumberRefine } from "./refiners/toNumberRefine.js";
 import { transformRefine } from "./refiners/transformRefine.js";
 import type {
   InitialType,
+  ParseResultType,
   RedefineInitialValue,
   RedefineParseResult,
 } from "./Spec.js";
@@ -62,7 +63,7 @@ export class ArgumentBuilder<T extends Spec<any, any>> extends Builder<T> {
     return this.metadata({ required: true });
   }
 
-  transform<U>(transform: (value: InitialType<this["spec"]>) => U) {
+  transform<U>(transform: (value: ParseResultType<T>) => U) {
     return new ArgumentBuilder(this.spec.refine<U>(transformRefine(transform)));
   }
 

@@ -42,7 +42,7 @@ describe("KeyValueFlagBuilder", () => {
     const builder = FlagBuilder.create("--set").keyValue();
     const initial = builder.spec.getInitial();
 
-    expect(initial).toEqual({});
+    expect(initial).toEqual(null);
   });
 
   test("should parse key=value with = syntax (1 arg)", () => {
