@@ -6,6 +6,37 @@ export type HelpMessageOptions = {
   noColor?: boolean;
 };
 
+const wrapText = (text: string, maxWidth: number): string[] => {
+  if (maxWidth === Infinity) {
+    return [text];
+  }
+
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let currentLine = "";
+
+  for (const word of words) {
+    if (!currentLine) {
+      currentLine = word;
+    } else {
+      const testLine = `${currentLine} ${word}`;
+
+      if (testLine.length <= maxWidth) {
+        currentLine = testLine;
+      } else {
+        lines.push(currentLine);
+        currentLine = word;
+      }
+    }
+  }
+
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+
+  return lines;
+};
+
 export const helpMessage = (
   flagsParser: FlagsParser<any>,
   schema: Record<string, Builder<any>>,
@@ -22,7 +53,11 @@ export const helpMessage = (
 
   // Description
   if (flagsParser.metadata.description) {
-    lines.push(flagsParser.metadata.description);
+    const wrappedLines = wrapText(
+      flagsParser.metadata.description,
+      terminalWidth,
+    );
+    lines.push(...wrappedLines);
     lines.push("");
   }
 
