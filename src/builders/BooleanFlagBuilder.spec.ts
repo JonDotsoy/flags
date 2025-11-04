@@ -172,4 +172,113 @@ describe("BooleanFlagBuilder", () => {
     const resultFalse = builder.parse(0, ["--verbose=FALSE"]);
     expect(resultFalse?.value).toBe(false);
   });
+
+  describe("combined short flags", () => {
+    test("should parse single-letter flag normally", () => {
+      const builder = FlagBuilder.create("-a").boolean();
+      const result = builder.parse(0, ["-a"]);
+
+      expect(result).toEqual({
+        args: ["-a"],
+        index: 0,
+        value: true,
+      });
+    });
+
+    test("should not expand multi-letter short flags", () => {
+      const builder = FlagBuilder.create("-abc").boolean();
+      const result = builder.parse(0, ["-abc"]);
+
+      expect(result).toEqual({
+        args: ["-abc"],
+        index: 0,
+        value: true,
+      });
+    });
+
+    test("should not expand flags with equals syntax", () => {
+      const builder = FlagBuilder.create("-a").boolean();
+      const result = builder.parse(0, ["-a=value"]);
+
+      // Should try to parse as boolean value and fail
+      expect(result).toBeNull();
+    });
+
+    test("should parse single-letter flag with long alias", () => {
+      const builder = FlagBuilder.create("-a", "--all").boolean();
+
+      const resultShort = builder.parse(0, ["-a"]);
+      expect(resultShort).toEqual({
+        args: ["-a"],
+        index: 0,
+        value: true,
+      });
+
+      const resultLong = builder.parse(0, ["--all"]);
+      expect(resultLong).toEqual({
+        args: ["--all"],
+        index: 0,
+        value: true,
+      });
+    });
+
+    test("should parse docker-style short flags", () => {
+      const builderT = FlagBuilder.create("-t", "--tty").boolean();
+      const builderI = FlagBuilder.create("-i", "--interactive").boolean();
+
+      const resultT = builderT.parse(0, ["-t"]);
+      expect(resultT?.value).toBe(true);
+
+      const resultI = builderI.parse(0, ["-i"]);
+      expect(resultI?.value).toBe(true);
+    });
+
+    test("should parse unix-style short flags", () => {
+      const builderA = FlagBuilder.create("-a", "--all").boolean();
+      const builderL = FlagBuilder.create("-l", "--long").boolean();
+      const builderH = FlagBuilder.create("-h", "--human-readable").boolean();
+
+      const resultA = builderA.parse(0, ["-a"]);
+      expect(resultA?.value).toBe(true);
+
+      const resultL = builderL.parse(0, ["-l"]);
+      expect(resultL?.value).toBe(true);
+
+      const resultH = builderH.parse(0, ["-h"]);
+      expect(resultH?.value).toBe(true);
+    });
+
+    test("should handle single-letter flags in different positions", () => {
+      const builder = FlagBuilder.create("-v").boolean();
+
+      const result1 = builder.parse(0, ["-v", "other"]);
+      expect(result1?.value).toBe(true);
+
+      const result2 = builder.parse(1, ["other", "-v"]);
+      expect(result2?.value).toBe(true);
+
+      const result3 = builder.parse(1, ["other", "-v", "more"]);
+      expect(result3?.value).toBe(true);
+    });
+
+    test("should not match when flag is not present", () => {
+      const builder = FlagBuilder.create("-a").boolean();
+      const result = builder.parse(0, ["-b"]);
+
+      expect(result).toBeNull();
+    });
+
+    test("should handle multiple single-letter aliases", () => {
+      const builder = FlagBuilder.create("-h", "-?", "--help").boolean();
+
+      const resultH = builder.parse(0, ["-h"]);
+      expect(resultH?.value).toBe(true);
+
+      const resultQ = builder.parse(0, ["-?"]);
+      expect(resultQ?.value).toBe(true);
+
+      const resultHelp = builder.parse(0, ["--help"]);
+      expect(resultHelp?.value).toBe(true);
+    });
+  });
 });

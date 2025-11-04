@@ -22,6 +22,7 @@ export class FlagsParser<T extends Record<string, Builder<any>>> {
       readonly program: string;
       readonly description?: string;
       readonly version?: string;
+      readonly combineShortFlags?: boolean;
     } = {
       program: "cli",
     },
@@ -48,174 +49,21 @@ export class FlagsParser<T extends Record<string, Builder<any>>> {
     });
   }
 
-  // helpMessage({
-  //   terminalWidth = 80,
-  //   noColor = false,
-  // }: { terminalWidth?: number; noColor?: boolean } = {}): string {
-  //   const stripAnsi = (str: string) => {
-  //     return str.replace(/\x1b\[[0-9;]*m/g, "");
-  //   };
-  //   const wrapText = (
-  //     text: string,
-  //     width: number,
-  //     indent: number = 0,
-  //   ): string => {
-  //     const indentStr = " ".repeat(indent);
-  //     const words = text.split(/\s+/);
-  //     const lines: string[] = [];
-  //     let currentLine = indentStr;
-  //     for (const word of words) {
-  //       const cleanWord = stripAnsi(word);
-  //       const cleanLine = stripAnsi(currentLine);
-  //       if (cleanLine.length + cleanWord.length + 1 <= width) {
-  //         currentLine += (currentLine === indentStr ? "" : " ") + word;
-  //       } else {
-  //         if (currentLine !== indentStr) {
-  //           lines.push(currentLine);
-  //         }
-  //         currentLine = indentStr + word;
-  //       }
-  //     }
-  //     if (currentLine !== indentStr) {
-  //       lines.push(currentLine);
-  //     }
-  //     return lines.join("\n");
-  //   };
-  //   let help = `Usage: ${this._programName}\n\n`;
-  //   if (this._description) {
-  //     const desc = noColor ? stripAnsi(this._description) : this._description;
-  //     help += wrapText(desc, terminalWidth) + "\n\n";
-  //   }
-  //   // Separate flags and commands
-  //   const flags: Array<[string, any]> = [];
-  //   const commands: Array<[string, any]> = [];
-  //   for (const [key, builder] of Object.entries(this.schema)) {
-  //     const config = builder.toConfig();
-  //     if (config.kind === "command") {
-  //       commands.push([key, config]);
-  //     } else if (builder instanceof FlagBuilder) {
-  //       flags.push([key, config]);
-  //     }
-  //   }
-  //   // Generate flags section
-  //   if (flags.length > 0) {
-  //     help += "Options:\n";
-  //     for (const [key, config] of flags) {
-  //       const names = config.names?.join(", ") || "";
-  //       const typeStr =
-  //         config.type === "string"
-  //           ? " <string>"
-  //           : config.type === "number"
-  //             ? " <number>"
-  //             : config.type === "strings"
-  //               ? " <strings>"
-  //               : "";
-  //       const requiredStr = config.metadata?.isRequired ? " (required)" : "";
-  //       const desc = config.metadata?.description || "";
-  //       const flagLine = `  ${names}${typeStr}`;
-  //       const descIndent = 28;
-  //       // Build the full description with required marker
-  //       const fullDesc =
-  //         requiredStr + (desc ? (requiredStr ? " " : "") + desc : "");
-  //       if (fullDesc) {
-  //         const cleanFlagLine = stripAnsi(flagLine);
-  //         const cleanDesc = noColor ? stripAnsi(fullDesc) : fullDesc;
-  //         if (cleanFlagLine.length < descIndent) {
-  //           const padding = " ".repeat(descIndent - cleanFlagLine.length);
-  //           // Wrap description text
-  //           const descWords = cleanDesc.split(/\s+/);
-  //           const descLines: string[] = [];
-  //           let currentLine = "";
-  //           for (const word of descWords) {
-  //             const testLine = currentLine ? currentLine + " " + word : word;
-  //             if (stripAnsi(testLine).length <= terminalWidth - descIndent) {
-  //               currentLine = testLine;
-  //             } else {
-  //               if (currentLine) {
-  //                 descLines.push(currentLine);
-  //               }
-  //               currentLine = word;
-  //             }
-  //           }
-  //           if (currentLine) {
-  //             descLines.push(currentLine);
-  //           }
-  //           help += flagLine + padding + descLines[0] + "\n";
-  //           for (let i = 1; i < descLines.length; i++) {
-  //             help += " ".repeat(descIndent) + descLines[i] + "\n";
-  //           }
-  //         } else {
-  //           help += flagLine + "\n";
-  //           // Wrap description on new lines
-  //           const descWords = cleanDesc.split(/\s+/);
-  //           const descLines: string[] = [];
-  //           let currentLine = "";
-  //           for (const word of descWords) {
-  //             const testLine = currentLine ? currentLine + " " + word : word;
-  //             if (stripAnsi(testLine).length <= terminalWidth - descIndent) {
-  //               currentLine = testLine;
-  //             } else {
-  //               if (currentLine) {
-  //                 descLines.push(currentLine);
-  //               }
-  //               currentLine = word;
-  //             }
-  //           }
-  //           if (currentLine) {
-  //             descLines.push(currentLine);
-  //           }
-  //           for (const line of descLines) {
-  //             help += " ".repeat(descIndent) + line + "\n";
-  //           }
-  //         }
-  //       } else {
-  //         help += flagLine + "\n";
-  //       }
-  //     }
-  //     help += "\n";
-  //   }
-  //   // Generate commands section
-  //   if (commands.length > 0) {
-  //     help += "Commands:\n";
-  //     for (const [key, config] of commands) {
-  //       const name = config.name || key;
-  //       const desc = config.metadata?.description || "";
-  //       const cmdLine = `  ${name}`;
-  //       const descIndent = 28;
-  //       if (desc) {
-  //         const cleanCmdLine = stripAnsi(cmdLine);
-  //         if (cleanCmdLine.length < descIndent) {
-  //           const padding = " ".repeat(descIndent - cleanCmdLine.length);
-  //           const wrappedDesc = wrapText(
-  //             noColor ? stripAnsi(desc) : desc,
-  //             terminalWidth - descIndent,
-  //             descIndent,
-  //           );
-  //           const descLines = wrappedDesc.split("\n");
-  //           help += cmdLine + padding + descLines[0].trim() + "\n";
-  //           for (let i = 1; i < descLines.length; i++) {
-  //             help += descLines[i] + "\n";
-  //           }
-  //         } else {
-  //           help += cmdLine + "\n";
-  //           help +=
-  //             wrapText(
-  //               noColor ? stripAnsi(desc) : desc,
-  //               terminalWidth - descIndent,
-  //               descIndent,
-  //             ) + "\n";
-  //         }
-  //       } else {
-  //         help += cmdLine + "\n";
-  //       }
-  //     }
-  //     help += "\n";
-  //   }
-  //   return help.trimEnd();
-  // }
+  combineShortFlags() {
+    return new FlagsParser(this.schema, {
+      ...this.metadata,
+      combineShortFlags: true,
+    });
+  }
+
   parse(args: string[]): {
     [K in keyof T]: ExtractBuilderResult<T[K]>;
   } {
+    // Expand combined short flags if option is enabled
+    const expandedArgs = this.metadata.combineShortFlags
+      ? this.expandCombinedShortFlags(args)
+      : args;
+
     const result: any = {};
     const usedIndices = new Set<number>();
 
@@ -229,13 +77,13 @@ export class FlagsParser<T extends Record<string, Builder<any>>> {
       let parsedValue: any = null;
       let currentValue: any = undefined;
 
-      // Try to parse at each index in args
-      for (let i = 0; i < args.length; i++) {
+      // Try to parse at each index in expandedArgs
+      for (let i = 0; i < expandedArgs.length; i++) {
         if (usedIndices.has(i)) continue;
 
         const parseResult = builder.parse(
           i,
-          args,
+          expandedArgs,
           currentValue !== undefined ? { current: currentValue } : undefined,
         );
 
@@ -263,12 +111,64 @@ export class FlagsParser<T extends Record<string, Builder<any>>> {
     }
 
     // Check for unrecognized arguments
-    for (let i = 0; i < args.length; i++) {
+    for (let i = 0; i < expandedArgs.length; i++) {
       if (!usedIndices.has(i)) {
-        throw new UnexpectedArgumentError(args[i]);
+        throw new UnexpectedArgumentError(expandedArgs[i]);
       }
     }
 
     return result;
+  }
+
+  private expandCombinedShortFlags(args: string[]): string[] {
+    const expanded: string[] = [];
+
+    // Collect all short flag aliases from the schema
+    const shortFlags = new Set<string>();
+    for (const builder of Object.values(this.schema)) {
+      if (builder.spec.hasMetadata("matches")) {
+        const matches = builder.spec.getMetadata("matches") as string[];
+        for (const match of matches) {
+          // Short flags are single dash followed by single character
+          if (
+            match.startsWith("-") &&
+            !match.startsWith("--") &&
+            match.length === 2
+          ) {
+            shortFlags.add(match[1]); // Store just the character
+          }
+        }
+      }
+    }
+
+    for (const arg of args) {
+      // Check if this looks like combined short flags: starts with single dash,
+      // not followed by another dash, and has multiple characters
+      if (
+        arg.startsWith("-") &&
+        !arg.startsWith("--") &&
+        arg.length > 2 &&
+        !arg.includes("=")
+      ) {
+        // Check if all characters after the dash are valid short flags
+        const chars = arg.slice(1);
+        const allAreShortFlags = chars
+          .split("")
+          .every((c) => shortFlags.has(c));
+
+        if (allAreShortFlags) {
+          // Expand into individual flags
+          for (const char of chars) {
+            expanded.push(`-${char}`);
+          }
+          continue;
+        }
+      }
+
+      // Not a combined short flag, keep as is
+      expanded.push(arg);
+    }
+
+    return expanded;
   }
 }

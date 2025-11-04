@@ -419,7 +419,7 @@ describe("flags parser", () => {
                 all: flag("-a").boolean(),
                 long: flag("-l").boolean(),
                 human: flag("-h").boolean()
-            }),
+            }).combineShortFlags(),
             "when the command line flags are parsed": ["-alh"],
             "then the expected parsed result should be returned": { all: true, long: true, human: true }
         });
@@ -431,7 +431,7 @@ describe("flags parser", () => {
                 all: flag("-a").boolean(),
                 long: flag("-l").boolean(),
                 human: flag("-h").boolean()
-            }),
+            }).combineShortFlags(),
             "when the command line flags are parsed": ["-lah"],
             "then the expected parsed result should be returned": { all: true, long: true, human: true }
         });
@@ -443,7 +443,7 @@ describe("flags parser", () => {
                 all: flag("-a").boolean(),
                 long: flag("-l").boolean(),
                 human: flag("-h").boolean()
-            }),
+            }).combineShortFlags(),
             "when the command line flags are parsed": ["-al", "-h"],
             "then the expected parsed result should be returned": { all: true, long: true, human: true }
         });
@@ -454,7 +454,7 @@ describe("flags parser", () => {
             "given a flags parser configured with a schema": flags({
                 tty: flag("-t", "--tty").boolean(),
                 interactive: flag("-i", "--interactive").boolean()
-            }),
+            }).combineShortFlags(),
             "when the command line flags are parsed": ["-ti"],
             "then the expected parsed result should be returned": { tty: true, interactive: true }
         });
@@ -466,7 +466,7 @@ describe("flags parser", () => {
                 tty: flag("-t", "--tty").boolean(),
                 interactive: flag("-i", "--interactive").boolean(),
                 detach: flag("-d", "--detach").boolean()
-            }),
+            }).combineShortFlags(),
             "when the command line flags are parsed": ["-tid"],
             "then the expected parsed result should be returned": { tty: true, interactive: true, detach: true }
         });
@@ -561,28 +561,33 @@ describe("flags parser", () => {
         });
     });
 
-    // TODO: 
-    // testCase({
-    //     args: ["foo", "tar", "biz"],
-    //     schema: { names: () => argument().strings() },
-    //     expected: { names: ["foo", "tar", "biz"] }
-    // });
-    // testCase({
-    //     args: ["foo", "--verbose", "tar", "biz"],
-    //     schema: { verbose: () => flag('-V', '--verbose'), names: () => argument().strings() },
-    //     expected: { verbose: true, names: ["foo", "tar", "biz"] }
-    // });
-    // testCase({
-    //     args: ["foo", "--verbose", "tar", "biz"],
-    //     schema: { names: () => argument().strings() },
-    //     expected: { verbose: true, names: ["foo", "--verbose", "tar", "biz"] }
-    // });
-
-    // TODO: Implement schema order priority - when argument() is defined first, it should prevent
-    // flags that appear before the consumed argument from being processed
-    // testCase({
-    //     args: ['-l=-l', '-l=red', "foo"],
-    //     schema: { arg: () => argument(), labels: () => flag("-l").strings() },
-    //     expected: { labels: [], arg: "foo" }
-    // });
+    test("should parse multiple arguments as strings array", () => {
+        scenarioParseFlags({
+            "given a flags parser configured with a schema": flags({
+                names: argument().strings(),
+            }),
+            "when the command line flags are parsed": ["foo", "tar", "biz"],
+            "then the expected parsed result should be returned": { names: ["foo", "tar", "biz"] }
+        });
+    })
+    test("should parse strings arguments with boolean flag interspersed", () => {
+        scenarioParseFlags({
+            "given a flags parser configured with a schema": flags({
+                verbose: flag('-V', '--verbose').boolean(),
+                names: argument().strings()
+            }),
+            "when the command line flags are parsed": ["foo", "--verbose", "tar", "biz"],
+            "then the expected parsed result should be returned": { verbose: true, names: ["foo", "tar", "biz"] }
+        });
+    })
+    test("should prioritize argument strings over flags when argument is defined first", () => {
+        scenarioParseFlags({
+            "given a flags parser configured with a schema": flags({
+                arg: argument().strings(),
+                labels: flag("-l").strings()
+            }),
+            "when the command line flags are parsed": ['-l=-l', '-l=red', "foo"],
+            "then the expected parsed result should be returned": { labels: [], arg: ['-l=-l', '-l=red', "foo"] }
+        });
+    });
 });
