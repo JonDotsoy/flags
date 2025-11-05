@@ -7,7 +7,7 @@ build@types:
 build@esm:
 	rm -rf ./lib/esm/
 	npx tsc --project ./tsconfig.esm.json --outDir ./lib/esm/
-	echo '{ "type": "commonjs" }' > ./lib/esm/package.json
+	echo '{ "type": "module" }' > ./lib/esm/package.json
 
 build@cjs:
 	rm -rf ./lib/cjs/

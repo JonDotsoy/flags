@@ -9,5 +9,5 @@
     "inlineSourceMap": true,
     "emitDeclarationOnly": true
   },
-  "exclude": ["**/*.spec.ts", "samples/"]
+  "exclude": ["samples/", "**/*.spec.ts"]
 }
