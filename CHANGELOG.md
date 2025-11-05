@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.1.2](https://github.com/JonDotsoy/flags/compare/flags-v3.1.1...flags-v3.1.2) (2025-11-05)
+
+
+### Bug Fixes
+
+* exclude test files from npm package build output ([#38](https://github.com/JonDotsoy/flags/issues/38)) ([b88b1bd](https://github.com/JonDotsoy/flags/commit/b88b1bd271676ced33e40f8eedeefba4b7ab165f))
+
 ## [3.1.1](https://github.com/JonDotsoy/flags/compare/flags-v3.1.0...flags-v3.1.1) (2025-11-05)
 
 
