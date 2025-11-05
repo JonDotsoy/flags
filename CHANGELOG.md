@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.1.1](https://github.com/JonDotsoy/flags/compare/flags-v3.1.0...flags-v3.1.1) (2025-11-05)
+
+
+### Bug Fixes
+
+* **module:** migrate project to ES module imports and update import paths ([b4e78d6](https://github.com/JonDotsoy/flags/commit/b4e78d6d677547322c4b4a4c0162af270f93cd3b))
+
 ## [3.1.0](https://github.com/JonDotsoy/flags/compare/flags-v3.0.3...flags-v3.1.0) (2025-11-04)
 
 
