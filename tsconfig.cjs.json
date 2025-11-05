@@ -7,5 +7,5 @@
     "inlineSourceMap": true,
     "verbatimModuleSyntax": false
   },
-  "exclude": ["samples/"]
+  "exclude": ["samples/", "**/*.spec.ts"]
 }
