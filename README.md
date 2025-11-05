@@ -38,7 +38,7 @@ const parser = flags({
   serve: command("serve").restArgs().describe("Start the server"),
   input: argument().string().required().describe("Input file"),
 })
-  .programName("mycli")
+  .program("mycli")
   .describe("My awesome CLI tool");
 
 // Parse command line arguments
@@ -85,12 +85,12 @@ const parser = flags({
 
 ### Parser Methods
 
-#### `.programName(name: string)`
+#### `.program(name: string)`
 
 Sets the program name for help messages.
 
 ```ts
-parser.programName("mycli");
+parser.program("mycli");
 ```
 
 #### `.describe(description: string)`
@@ -99,6 +99,20 @@ Sets the program description for help messages.
 
 ```ts
 parser.describe("A powerful CLI tool");
+```
+
+#### `.combineShortFlags()`
+
+Enables automatic expansion of combined short boolean flags (e.g., `-abc` → `-a -b -c`).
+
+```ts
+const parser = flags({
+  all: flag("-a").boolean(),
+  long: flag("-l").boolean(),
+  human: flag("-h").boolean(),
+}).combineShortFlags();
+
+parser.parse(["-alh"]); // { all: true, long: true, human: true }
 ```
 
 #### `.parse(args: string[])`
@@ -309,6 +323,31 @@ argument(); // Matches the next positional argument
 
 ```ts
 argument().string();
+// Returns null if not provided
+```
+
+**`.strings()`** - Array of strings (captures all remaining positional arguments)
+
+```ts
+argument().strings();
+// foo tar biz → ["foo", "tar", "biz"]
+
+// Works with interspersed flags
+flags({
+  verbose: flag("-V", "--verbose").boolean(),
+  names: argument().strings(),
+});
+// foo --verbose tar biz → { verbose: true, names: ["foo", "tar", "biz"] }
+```
+
+**Note:** When `argument().strings()` is defined first in the schema, it takes priority and captures all arguments, including flag-like values:
+
+```ts
+flags({
+  arg: argument().strings(),
+  labels: flag("-l").strings(),
+});
+// -l=-l -l=red foo → { labels: [], arg: ['-l=-l', '-l=red', "foo"] }
 ```
 
 #### Argument Modifiers
@@ -403,6 +442,7 @@ The parser automatically generates help messages based on your schema:
 const parser = flags({
   verbose: flag("--verbose", "-v").boolean().describe("Enable verbose output"),
   port: flag("--port", "-p").number().default(3000).describe("Server port"),
+  ip: flag("--ip").string().describe("IPv4 address (e.g., 172.30.100.104)"),
   build: command("build").boolean().describe("Build the project"),
 })
   .program("mycli")
@@ -419,11 +459,12 @@ Usage: mycli
 My awesome CLI tool
 
 Options:
-  --verbose, -v <boolean>    Enable verbose output
-  --port, -p <number>        Server port
+  -v, --verbose.           Enable verbose output
+  -p, --port <number>      Server port
+      --ip                 IPv4 address (e.g., 172.30.100.104)
 
 Commands:
-  build                      Build the project
+  build                    Build the project
 ```
 
 ## Error Handling
@@ -490,7 +531,7 @@ try {
 
 ## Combined Short Flags
 
-Single-letter boolean flags can be combined for convenience, similar to common Unix tools:
+Single-letter boolean flags can be combined for convenience, similar to common Unix tools. You must call `.combineShortFlags()` on the parser to enable this feature:
 
 ```ts
 import { flags, flag } from "@jondotsoy/flags";
@@ -501,7 +542,7 @@ const parser = flags({
   human: flag("-h", "--human-readable")
     .boolean()
     .describe("Human readable sizes"),
-});
+}).combineShortFlags();
 
 // All of these are equivalent:
 parser.parse(["-a", "-l", "-h"]); // Separate flags
@@ -521,7 +562,7 @@ const dockerParser = flags({
     .boolean()
     .describe("Keep STDIN open"),
   detach: flag("-d", "--detach").boolean().describe("Run in background"),
-});
+}).combineShortFlags();
 
 // Docker-style combined flags
 dockerParser.parse(["-ti"]); // { tty: true, interactive: true, detach: false }
@@ -530,17 +571,18 @@ dockerParser.parse(["-tid"]); // { tty: true, interactive: true, detach: true }
 
 ### Rules for Combined Flags
 
-1. **Only single-letter flags**: `-abc` works, but `-test` does not expand
-2. **Only boolean flags**: All flags in the combination must be boolean type
-3. **No equals syntax**: `-a=value` is not expanded (treated as single flag)
-4. **All must exist**: If any letter is not a defined flag, the combination is not expanded
+1. **Must enable feature**: Call `.combineShortFlags()` on the parser
+2. **Only single-letter flags**: `-abc` works, but `-test` does not expand
+3. **Only boolean flags**: All flags in the combination must be boolean type
+4. **No equals syntax**: `-a=value` is not expanded (treated as single flag)
+5. **All must exist**: If any letter is not a defined flag, the combination is not expanded
 
 ```ts
 const parser = flags({
   all: flag("-a").boolean(),
   brief: flag("-b").boolean(),
   count: flag("-c").number(), // Not boolean!
-});
+}).combineShortFlags();
 
 parser.parse(["-ab"]); // ✅ Works: { all: true, brief: true, count: null }
 parser.parse(["-abc"]); // ❌ Throws: -c requires a value, cannot be combined
@@ -566,7 +608,7 @@ const parser = flags({
     .describe("Server port number"),
   help: flag("--help", "-h").boolean().describe("Show help message"),
 })
-  .programName("mycli")
+  .program("mycli")
   .describe("A simple CLI tool");
 
 try {
@@ -600,7 +642,7 @@ const parser = flags({
   test: command("test").restArgs().describe("Run tests"),
   serve: command("serve").restArgs().describe("Start dev server"),
 })
-  .programName("mycli")
+  .program("mycli")
   .describe("Multi-command CLI tool");
 
 const options = parser.parse(process.argv.slice(2));
@@ -640,7 +682,7 @@ const parser = flags({
   dryRun: flag("--dry-run").boolean().describe("Dry run mode"),
   file: argument().string().describe("Input file (positional)"),
 })
-  .programName("fileprocessor")
+  .program("fileprocessor")
   .describe("Process files with various options");
 
 const options = parser.parse(process.argv.slice(2));
@@ -664,7 +706,7 @@ const parser = flags({
     .describe("Configuration key-value pairs"),
   feature: flag("--feature").strings().describe("Enable features"),
 })
-  .programName("myapp")
+  .program("myapp")
   .describe("Application with configuration");
 
 const options = parser.parse(process.argv.slice(2));
@@ -716,7 +758,7 @@ Use `.describe()` for automatic help generation:
 const parser = flags({
   verbose: flag("--verbose", "-v").boolean().describe("Enable verbose output"),
 })
-  .programName("mycli")
+  .program("mycli")
   .describe("My CLI tool description");
 ```
 
@@ -830,14 +872,14 @@ flag("--include").strings();
 
 **Q: Can I combine short flags like `-abc`?**
 
-A: Yes! Single-letter boolean flags are automatically expanded:
+A: Yes! Call `.combineShortFlags()` on the parser to enable automatic expansion of single-letter boolean flags:
 
 ```ts
 const parser = flags({
   all: flag("-a").boolean(),
   brief: flag("-b").boolean(),
   color: flag("-c").boolean(),
-});
+}).combineShortFlags();
 
 parser.parse(["-abc"]); // { all: true, brief: true, color: true }
 ```
