@@ -1,9 +1,9 @@
 import { describe, test, expect } from "bun:test";
-import { flags, FlagsParser } from "../aliases/flags";
-import { flag } from "../aliases/flag";
-import { command } from "../aliases/command";
-import { untab } from "./untab.spec";
-import type { Builder } from "../builders/Builder";
+import { flags, FlagsParser } from "../aliases/flags.js";
+import { flag } from "../aliases/flag.js";
+import { command } from "../aliases/command.js";
+import { untab } from "./untab.spec.js";
+import type { Builder } from "../builders/Builder.js";
 
 type HelpMessageScenario<T extends FlagsParser<Record<string, Builder<any>>>> =
   {

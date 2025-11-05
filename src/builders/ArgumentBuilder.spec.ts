@@ -1,7 +1,7 @@
 import { test, describe, expect } from "bun:test";
-import { ArgumentBuilder } from "./ArgumentBuilder";
-import { Builder } from "./Builder";
-import { StringsArgumentBuilder } from "./StringsArgumentBuilder";
+import { ArgumentBuilder } from "./ArgumentBuilder.js";
+import { Builder } from "./Builder.js";
+import { StringsArgumentBuilder } from "./StringsArgumentBuilder.js";
 
 describe("ArgumentBuilder", () => {
   test("should create an instance of Builder", () => {

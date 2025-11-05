@@ -1,8 +1,8 @@
-import type { Accumulate } from "../dtos/Accumulate";
-import type { Refine } from "../dtos/Refine";
-import type { RefineContext } from "../dtos/RefineContext";
-import type { ResultParser } from "../dtos/ResultParser";
-import type { Builder } from "./Builder";
+import type { Accumulate } from "../dtos/Accumulate.js";
+import type { Refine } from "../dtos/Refine.js";
+import type { RefineContext } from "../dtos/RefineContext.js";
+import type { ResultParser } from "../dtos/ResultParser.js";
+import type { Builder } from "./Builder.js";
 
 export type InitialType<T extends Spec<any, any>> =
   T extends Spec<infer U, any> ? U : never;

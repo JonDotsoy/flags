@@ -1,6 +1,6 @@
 import { test, expect, describe } from "bun:test";
-import { CommandBuilder } from "./CommandBuilder";
-import { BooleanCommandBuilder } from "./BooleanCommandBuilder";
+import { CommandBuilder } from "./CommandBuilder.js";
+import { BooleanCommandBuilder } from "./BooleanCommandBuilder.js";
 
 describe("CommandBuilder", () => {
   test("should create CommandBuilder with argumentMatch", () => {

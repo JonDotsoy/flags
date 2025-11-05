@@ -1,4 +1,4 @@
-import type { Refine } from "../../dtos/Refine";
+import type { Refine } from "../../dtos/Refine.js";
 
 export const templateRefine: Refine = (arg, index, args, context) => ({
   args: args.slice(index, index + 1),

@@ -1,7 +1,41 @@
 import { test, expect, describe } from "bun:test";
-import { numberFlagRefine } from "./numberFlagRefine";
-import { Spec } from "../Spec";
-import { Builder } from "../Builder";
+import { numberFlagRefine } from "./numberFlagRefine.js";
+import {
+  Spec,
+  type RedefineInitialValue,
+  type RedefineParseResult,
+} from "../Spec.js";
+import { Builder as B } from "../Builder.js";
+import type { Refine } from "../../dtos/Refine.js";
+import type { Accumulate } from "../../dtos/Accumulate.js";
+
+class Builder<T extends Spec<any, any>> extends B<T> {
+  initial<U>(initial: U) {
+    return new Builder(
+      this.spec.initial(initial) as RedefineInitialValue<T, U>,
+    );
+  }
+
+  accumulate(accumulate: Accumulate) {
+    return new Builder(this.spec.accumulate(accumulate) as T);
+  }
+
+  refine<U>(refine: Refine) {
+    return new Builder(this.spec.refine(refine) as RedefineParseResult<T, U>);
+  }
+
+  metadata(values: Record<string, any>) {
+    return new Builder(this.spec.metadata(values) as T);
+  }
+
+  describe(description: string) {
+    return this.metadata({ description });
+  }
+
+  required() {
+    return this.metadata({ required: true });
+  }
+}
 
 describe("numberFlagRefine", () => {
   test("should return null if no context", () => {

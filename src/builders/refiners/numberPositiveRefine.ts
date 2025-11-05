@@ -1,3 +1,3 @@
-import { numberGreaterThanOrEqualRefine } from "./numberGreaterThanOrEqualRefine";
+import { numberGreaterThanOrEqualRefine } from "./numberGreaterThanOrEqualRefine.js";
 
 export const numberPositiveRefine = numberGreaterThanOrEqualRefine(0);

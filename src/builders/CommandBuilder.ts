@@ -2,6 +2,7 @@ import { Builder } from "./Builder.js";
 import {
   Spec,
   type InitialType,
+  type ParseResultType,
   type RedefineInitialValue,
   type RedefineParseResult,
 } from "./Spec.js";
@@ -52,7 +53,7 @@ export class CommandBuilder<T extends Spec<any, any>> extends Builder<T> {
     );
   }
 
-  transform<T>(transform: (value: InitialType<this["spec"]>) => T) {
+  transform<T>(transform: (value: ParseResultType<this["spec"]>) => T) {
     return new CommandBuilder(this.spec.refine<T>(transformRefine(transform)));
   }
 

@@ -1,4 +1,4 @@
-import type { Accumulate } from "../../flags";
+import type { Accumulate } from "../../flags.js";
 
 export const listAccumulate: Accumulate = (prev, current) => {
   return [

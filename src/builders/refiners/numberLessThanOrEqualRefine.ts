@@ -1,4 +1,4 @@
-import type { Refine } from "../../flags";
+import type { Refine } from "../../flags.js";
 
 export const numberLessThanOrEqualRefine =
   (lessThan: number): Refine =>

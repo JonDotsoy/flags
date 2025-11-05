@@ -1,4 +1,4 @@
-import type { RefineContext } from "../flags";
+import type { RefineContext } from "../../dtos/RefineContext.js";
 
 export const notNaNRefine = (
   value: string,

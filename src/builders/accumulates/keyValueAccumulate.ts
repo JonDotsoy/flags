@@ -1,4 +1,4 @@
-import type { Accumulate } from "../../flags";
+import type { Accumulate } from "../../flags.js";
 
 export const keyValueAccumulate: Accumulate = (prev, current) => {
   const prevObj = typeof prev === "object" && prev !== null ? prev : {};

@@ -1,5 +1,5 @@
 import { test, expect, describe } from "bun:test";
-import { FlagBuilder } from "./FlagBuilder";
+import { FlagBuilder } from "./FlagBuilder.js";
 
 describe("FlagBuilder", () => {
   test("should create FlagBuilder with single alias", () => {

@@ -1,6 +1,6 @@
 import { test, expect, describe } from "bun:test";
-import { BooleanFlagBuilder } from "./BooleanFlagBuilder";
-import { FlagBuilder } from "./FlagBuilder";
+import { BooleanFlagBuilder } from "./BooleanFlagBuilder.js";
+import { FlagBuilder } from "./FlagBuilder.js";
 
 describe("BooleanFlagBuilder", () => {
   test("should create BooleanFlagBuilder from FlagBuilder", () => {

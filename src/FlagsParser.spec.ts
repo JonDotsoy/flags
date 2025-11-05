@@ -1,9 +1,9 @@
 import { describe, it, expect } from "bun:test";
-import { FlagsParser } from "./FlagsParser";
-import { FlagBuilder } from "./builders/FlagBuilder";
-import { CommandBuilder } from "./builders/CommandBuilder";
-import { ArgumentBuilder } from "./builders/ArgumentBuilder";
-import { UnexpectedArgumentError } from "./errors/UnexpectedArgumentError";
+import { FlagsParser } from "./FlagsParser.js";
+import { FlagBuilder } from "./builders/FlagBuilder.js";
+import { CommandBuilder } from "./builders/CommandBuilder.js";
+import { ArgumentBuilder } from "./builders/ArgumentBuilder.js";
+import { UnexpectedArgumentError } from "./errors/UnexpectedArgumentError.js";
 
 describe("FlagsParser", () => {
   describe("constructor", () => {

@@ -1,5 +1,5 @@
-import type { Builder } from "../builders/Builder";
-import type { FlagsParser } from "../FlagsParser";
+import type { Builder } from "../builders/Builder.js";
+import type { FlagsParser } from "../FlagsParser.js";
 
 export type HelpMessageOptions = {
   terminalWidth?: number;

@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { flags, flag } from "../src/flags";
+import { flags, flag } from "../src/flags.js";
 
 // Build tool example with multiple string flags
 const parser = flags({

@@ -1,6 +1,6 @@
 import { test, describe, expect } from "bun:test";
-import { ArgumentBuilder } from "./ArgumentBuilder";
-import { NumberArgumentBuilder } from "./NumberArgumentBuilder";
+import { ArgumentBuilder } from "./ArgumentBuilder.js";
+import { NumberArgumentBuilder } from "./NumberArgumentBuilder.js";
 
 describe("NumberArgumentBuilder", () => {
   test("should create NumberArgumentBuilder instance", () => {

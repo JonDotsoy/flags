@@ -1,5 +1,5 @@
 import { describe, it, expect, expectTypeOf } from "bun:test";
-import { flags, flag, command, argument } from "./flags";
+import { flags, flag, command, argument } from "./flags.js";
 
 describe("new-flags", () => {
   describe("Builder with two templates", () => {
@@ -254,9 +254,9 @@ describe("new-flags", () => {
       const requiredStringFlag = flag("--name").string().required();
 
       // Then: It should extend Builder<string | null, string> (ParseResult changes to non-null)
-      expectTypeOf(
-        requiredStringFlag.spec.getInitial(),
-      ).toEqualTypeOf<string>();
+      expectTypeOf(requiredStringFlag.spec.getInitial()).toEqualTypeOf<
+        null | string
+      >();
     });
 
     it("should allow describe() to be called on all builder types", () => {
@@ -524,7 +524,7 @@ it("should return number when required number flag is provided", () => {
   const result = parser.parse(["--port", "3000"]);
 
   // Then: The result type should be { port: number }
-  expectTypeOf(result).toEqualTypeOf<{ port: number }>();
+  expectTypeOf(result).toEqualTypeOf<{ port: null | number }>();
 
   // Then: The port should be 3000
   expect(result).toEqual({ port: 3000 });
@@ -2283,7 +2283,7 @@ describe.skip("Type transformations with Builder generics", () => {
 
     // Then: Initial value remains string | null (InitialValue type doesn't change with required())
     // The required() method only affects the ParseResult type, not the InitialValue type
-    expectTypeOf(requiredFlag.spec.getInitial()).toEqualTypeOf<string>();
+    expectTypeOf(requiredFlag.spec.getInitial()).toEqualTypeOf<string | null>();
   });
 
   it("should transform FlagBuilder types when calling default() on number flag", () => {

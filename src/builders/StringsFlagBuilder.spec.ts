@@ -1,6 +1,6 @@
 import { test, expect, describe } from "bun:test";
-import { StringsFlagBuilder } from "./StringsFlagBuilder";
-import { FlagBuilder } from "./FlagBuilder";
+import { StringsFlagBuilder } from "./StringsFlagBuilder.js";
+import { FlagBuilder } from "./FlagBuilder.js";
 
 describe("StringsFlagBuilder", () => {
   test("should create StringsFlagBuilder from FlagBuilder", () => {

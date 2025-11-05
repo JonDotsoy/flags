@@ -1,7 +1,7 @@
-import { flags, flag, command, argument, Builder } from "./flags";
+import { flags, flag, command, argument, Builder } from "./flags.js";
 import { test as test, expect, describe } from "bun:test";
-import type { FlagsParser } from "./FlagsParser";
-import { untab } from "./utils/untab.spec.ts";
+import type { FlagsParser } from "./FlagsParser.js";
+import { untab } from "./utils/untab.spec.js";
 
 
 type ParseFlagsScenario<T extends FlagsParser<Record<string, Builder<any>>>> = {

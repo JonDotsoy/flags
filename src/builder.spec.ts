@@ -1,13 +1,13 @@
 import { test, it, expect, describe, mock } from "bun:test";
-import { FlagsParser } from "./FlagsParser";
-import { Builder } from "./builders/Builder";
-import { type Refine } from "./dtos/Refine";
+import { FlagsParser } from "./FlagsParser.js";
+import { Builder } from "./builders/Builder.js";
+import { type Refine } from "./dtos/Refine.js";
 import {
   Spec,
   type RedefineInitialValue,
   type RedefineParseResult,
-} from "./builders/Spec";
-import type { Accumulate } from "./flags";
+} from "./builders/Spec.js";
+import type { Accumulate } from "./flags.js";
 
 class DummyBuilder<T extends Spec<any, any>> extends Builder<T> {
   initial<U>(initial: U) {
@@ -166,7 +166,13 @@ describe("refine style", () => {
     const index = 0;
     const arg = args[index];
 
-    const refined = secondArgAsValueRefine(arg, index, args, null);
+    const refined = secondArgAsValueRefine(
+      arg,
+      index,
+      args,
+      null,
+      new DummyBuilder(Spec.create()),
+    );
 
     expect(refined).toEqual({
       args: ["foo", "bar"],
@@ -179,8 +185,20 @@ describe("refine style", () => {
     const index = 0;
     const arg = args[index];
 
-    const refined1 = secondArgAsValueRefine(arg, index, args, null);
-    const refined2 = uppercaseRefine(arg, index, args, refined1);
+    const refined1 = secondArgAsValueRefine(
+      arg,
+      index,
+      args,
+      null,
+      new DummyBuilder(Spec.create()),
+    );
+    const refined2 = uppercaseRefine(
+      arg,
+      index,
+      args,
+      refined1,
+      new DummyBuilder(Spec.create()),
+    );
 
     expect(refined2).toEqual({
       args: ["foo", "bar"],
@@ -193,7 +211,13 @@ describe("refine style", () => {
     const index = 1;
     const arg = args[index];
 
-    const refined = secondArgAsValueRefine(arg, index, args, null);
+    const refined = secondArgAsValueRefine(
+      arg,
+      index,
+      args,
+      null,
+      new DummyBuilder(Spec.create()),
+    );
 
     expect(refined).toEqual({
       args: ["foo", "bar"],
@@ -206,8 +230,20 @@ describe("refine style", () => {
     const index = 1;
     const arg = args[index];
 
-    const refined1 = secondArgAsValueRefine(arg, index, args, null);
-    const refined2 = uppercaseRefine(arg, index, args, refined1);
+    const refined1 = secondArgAsValueRefine(
+      arg,
+      index,
+      args,
+      null,
+      new DummyBuilder(Spec.create()),
+    );
+    const refined2 = uppercaseRefine(
+      arg,
+      index,
+      args,
+      refined1,
+      new DummyBuilder(Spec.create()),
+    );
 
     expect(refined2).toEqual({
       args: ["foo", "bar"],
@@ -220,8 +256,20 @@ describe("refine style", () => {
     const index = 4;
     const arg = args[index];
 
-    const refined1 = secondArgAsValueRefine(arg, index, args, null);
-    const refined2 = uppercaseRefine(arg, index, args, refined1);
+    const refined1 = secondArgAsValueRefine(
+      arg,
+      index,
+      args,
+      null,
+      new DummyBuilder(Spec.create()),
+    );
+    const refined2 = uppercaseRefine(
+      arg,
+      index,
+      args,
+      refined1,
+      new DummyBuilder(Spec.create()),
+    );
 
     expect(refined2).toBeNull();
   });
@@ -230,7 +278,13 @@ describe("refine style", () => {
     const index = 1;
     const arg = args[index];
 
-    const refined = nextArgumentRefine(arg, index, args, null);
+    const refined = nextArgumentRefine(
+      arg,
+      index,
+      args,
+      null,
+      new DummyBuilder(Spec.create()),
+    );
 
     expect(refined).toEqual({
       args: ["foo", "bar"],
