@@ -2,7 +2,9 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "noEmit": false,
-    "allowImportingTsExtensions": false
+    "allowImportingTsExtensions": false,
+    "rootDir": "./src"
   },
-  "exclude": ["./lib/", "*.spec.ts", "./samples/"]
+  "include": ["src/**/*"],
+  "exclude": ["./lib/", "**/*.spec.ts", "./samples/"]
 }

@@ -6,5 +6,6 @@
     "moduleResolution": "Node",
     "inlineSourceMap": true,
     "verbatimModuleSyntax": false
-  }
+  },
+  "exclude": ["**/*.spec.ts", "samples/"]
 }
