@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.1.3](https://github.com/JonDotsoy/flags/compare/flags-v3.1.2...flags-v3.1.3) (2025-11-05)
+
+
+### Bug Fixes
+
+* **readme:** Update documentation for flag parsing and CLI usage ([bd13c27](https://github.com/JonDotsoy/flags/commit/bd13c27056bfb3e6bb83ce50b8eee8fe7b09b0d2))
+
 ## [3.1.2](https://github.com/JonDotsoy/flags/compare/flags-v3.1.1...flags-v3.1.2) (2025-11-05)
 
 
