@@ -2,6 +2,8 @@
 
 A powerful and type-safe JavaScript/TypeScript command-line arguments parser with a fluent builder API.
 
+[Code Wiki](https://codewiki.google/github.com/JonDotsoy/flags)
+
 ## Features
 
 - 🔥 **Type-safe**: Full TypeScript support with type inference
