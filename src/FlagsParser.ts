@@ -121,6 +121,15 @@ export class FlagsParser<T extends Record<string, Builder<any>>> {
     return result;
   }
 
+  safeParse(args: string[]): [ok: boolean, error: unknown, output: { [K in keyof T]: ExtractBuilderResult<T[K]> } | undefined] {
+    try {
+      const output = this.parse(args);
+      return [true, undefined, output];
+    } catch (error) {
+      return [false, error, undefined];
+    }
+  }
+
   private expandCombinedShortFlags(args: string[]): string[] {
     const expanded: string[] = [];
 

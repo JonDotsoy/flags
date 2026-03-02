@@ -131,6 +131,28 @@ const options = parser.parse(process.argv.slice(2));
 - `RequiredFlagMissingError` - When a required flag is missing
 - `RequiredArgumentMissingError` - When a required argument is missing
 
+#### `.safeParse(args: string[])`
+
+Like `.parse()`, but never throws. Returns a labeled tuple `[ok, error, output]`.
+
+```ts
+const [ok, error, output] = parser.safeParse(process.argv.slice(2));
+
+if (ok) {
+  console.log(output); // typed result, same as .parse()
+} else {
+  console.error(error); // UnexpectedArgumentError, RequiredFlagMissingError, etc.
+  console.log(parser.helpMessage());
+  process.exit(1);
+}
+```
+
+| Element  | Type                       | Description                                    |
+| -------- | -------------------------- | ---------------------------------------------- |
+| `ok`     | `boolean`                  | `true` if parsing succeeded, `false` otherwise |
+| `error`  | `unknown \| undefined`     | The thrown error when `ok` is `false`          |
+| `output` | `ParseResult \| undefined` | The parsed result when `ok` is `true`          |
+
 #### `.helpMessage()`
 
 Generates and returns a formatted help message.
@@ -766,7 +788,21 @@ const parser = flags({
 
 ### 4. Handle Errors Gracefully
 
-Always wrap parsing in try-catch blocks:
+Use `.safeParse()` to avoid try-catch boilerplate:
+
+```ts
+const [ok, error, options] = parser.safeParse(args);
+
+if (!ok) {
+  console.error(`Error: ${(error as Error).message}`);
+  console.log(parser.helpMessage());
+  process.exit(1);
+}
+
+// Use options
+```
+
+Or use `.parse()` with a try-catch block:
 
 ```ts
 try {
