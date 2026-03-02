@@ -26,6 +26,16 @@ yarn add @jondotsoy/flags
 bun add @jondotsoy/flags
 ```
 
+## AI Assistant Skill
+
+A skill is available for AI coding assistants to better understand this library. Install it with:
+
+```bash
+npx skills add jondotsoy/flags
+```
+
+See [SKILL.md](./skills/flags-builder/SKILL.md) for details.
+
 ## Quick Start
 
 ```ts
