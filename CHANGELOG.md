@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.2.0](https://github.com/JonDotsoy/flags/compare/flags-v3.1.3...flags-v3.2.0) (2026-03-02)
+
+
+### Features
+
+* add error formatting in FlagsParser for improved error messages ([7c7fbe5](https://github.com/JonDotsoy/flags/commit/7c7fbe511408644929a0cf131474835443e9a14c))
+* add safeParse method for error handling in flag parsing ([3f0ac49](https://github.com/JonDotsoy/flags/commit/3f0ac49587510347ba1d63e7be06425c53df9101))
+* add SKILL.md for flags-builder CLI tool documentation ([3e2b5aa](https://github.com/JonDotsoy/flags/commit/3e2b5aaa902b251e146ad0a58c493181230f310e))
+* enhance safeParse return type for improved error handling ([97dfb10](https://github.com/JonDotsoy/flags/commit/97dfb10eb8f73d0df80db55035d5b85904184e84))
+
 ## [3.1.3](https://github.com/JonDotsoy/flags/compare/flags-v3.1.2...flags-v3.1.3) (2025-11-05)
 
 
