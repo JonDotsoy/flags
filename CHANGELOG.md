@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.2.1](https://github.com/JonDotsoy/flags/compare/flags-v3.2.0...flags-v3.2.1) (2026-03-02)
+
+
+### Miscellaneous Chores
+
+* release 3.2.1 ([207887a](https://github.com/JonDotsoy/flags/commit/207887aa55d2ca75b9d764bdf1031c1f639664c8))
+
 ## [3.2.0](https://github.com/JonDotsoy/flags/compare/flags-v3.1.3...flags-v3.2.0) (2026-03-02)
 
 
