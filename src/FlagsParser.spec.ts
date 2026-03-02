@@ -1,4 +1,4 @@
-import { describe, it, expect, expectTypeOf } from "bun:test";
+import { describe, it, expect, expectTypeOf, spyOn, afterEach } from "bun:test";
 import { FlagsParser } from "./FlagsParser.js";
 import { FlagBuilder } from "./builders/FlagBuilder.js";
 import { CommandBuilder } from "./builders/CommandBuilder.js";
@@ -293,6 +293,24 @@ describe("FlagsParser", () => {
         expectTypeOf(ok).toEqualTypeOf<false>();
         expectTypeOf(output).toEqualTypeOf<undefined>();
       }
+    });
+
+    it("should call console.error with formatted error message when !ok", () => {
+      const parser = new FlagsParser({
+        port: FlagBuilder.create("--port").number(),
+      }).program("mycli");
+
+      const spy = spyOn(console, "error").mockImplementation(() => {});
+      afterEach(() => spy.mockRestore());
+
+      const [ok, error] = parser.safeParse(["--unknown"]);
+
+      if (!ok) console.error(parser.formatError(error));
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledWith(
+        "Unexpected argument: --unknown\n\nRun 'mycli --help' for more information\n",
+      );
     });
   });
 
