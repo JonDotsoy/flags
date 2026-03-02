@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect, expectTypeOf } from "bun:test";
 import { FlagsParser } from "./FlagsParser.js";
 import { FlagBuilder } from "./builders/FlagBuilder.js";
 import { CommandBuilder } from "./builders/CommandBuilder.js";
@@ -225,6 +225,74 @@ describe("FlagsParser", () => {
       expect(result).not.toBe(parser);
       expect(result.metadata.version).toBe("1.0.0");
       expect(parser.metadata.version).toBeUndefined();
+    });
+  });
+
+  describe("safeParse", () => {
+    it("should return [true, undefined, output] on success", () => {
+      const parser = new FlagsParser({
+        port: FlagBuilder.create("--port").number(),
+      });
+      const [ok, error, output] = parser.safeParse(["--port", "3000"]);
+      expect(ok).toBe(true);
+      expect(error).toBeUndefined();
+      expect(output).toEqual({ port: 3000 });
+    });
+
+    it("should return [false, error, undefined] on failure", () => {
+      const parser = new FlagsParser({});
+      const [ok, error, output] = parser.safeParse(["--unknown"]);
+      expect(ok).toBe(false);
+      expect(error).toBeInstanceOf(UnexpectedArgumentError);
+      expect(output).toBeUndefined();
+    });
+
+    it("should return output with same type as parse()", () => {
+      const parser = new FlagsParser({
+        name: FlagBuilder.create("--name").string(),
+        verbose: FlagBuilder.create("--verbose").boolean(),
+      });
+      const [ok, , output] = parser.safeParse(["--name", "app", "--verbose"]);
+      expect(ok).toBe(true);
+      expect(output).toEqual({ name: "app", verbose: true });
+    });
+
+    it("should capture error for multiple unknown arguments", () => {
+      const parser = new FlagsParser({});
+      const [ok, error, output] = parser.safeParse(["--foo", "--bar"]);
+      expect(ok).toBe(false);
+      expect(error).toBeInstanceOf(UnexpectedArgumentError);
+      expect(output).toBeUndefined();
+    });
+
+    it("should handle empty args successfully", () => {
+      const parser = new FlagsParser({});
+      const [ok, error, output] = parser.safeParse([]);
+      expect(ok).toBe(true);
+      expect(error).toBeUndefined();
+      expect(output).toEqual({});
+    });
+
+    it("should narrow ok and output types correctly in conditional branches", () => {
+      const parser = new FlagsParser({
+        port: FlagBuilder.create("--port").number(),
+      });
+      const [ok, , output] = parser.safeParse(["--port", "3000"]);
+
+      // pre-narrowing types
+      {
+        expectTypeOf(ok).toEqualTypeOf<true | false>();
+        expectTypeOf(output).toEqualTypeOf<{ port: number | null } | undefined>();
+      }
+
+      // destructure inside each narrowed branch so TypeScript tracks all elements
+      if (ok) {
+        expectTypeOf(ok).toEqualTypeOf<true>();
+        expectTypeOf(output).toEqualTypeOf<{ port: number | null }>();
+      } else {
+        expectTypeOf(ok).toEqualTypeOf<false>();
+        expectTypeOf(output).toEqualTypeOf<undefined>();
+      }
     });
   });
 

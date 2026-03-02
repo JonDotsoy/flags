@@ -121,7 +121,9 @@ export class FlagsParser<T extends Record<string, Builder<any>>> {
     return result;
   }
 
-  safeParse(args: string[]): [ok: boolean, error: unknown, output: { [K in keyof T]: ExtractBuilderResult<T[K]> } | undefined] {
+  safeParse(args: string[]):
+    | [ok: true, error: undefined, output: { [K in keyof T]: ExtractBuilderResult<T[K]> }]
+    | [ok: false, error: unknown, output: undefined] {
     try {
       const output = this.parse(args);
       return [true, undefined, output];
