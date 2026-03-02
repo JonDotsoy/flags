@@ -121,6 +121,11 @@ export class FlagsParser<T extends Record<string, Builder<any>>> {
     return result;
   }
 
+  formatError(error: unknown): string {
+    const message = error instanceof Error ? error.message : String(error);
+    return `${message}\n\nRun '${this.metadata.program} --help' for more information\n`;
+  }
+
   safeParse(args: string[]):
     | [ok: true, error: undefined, output: { [K in keyof T]: ExtractBuilderResult<T[K]> }]
     | [ok: false, error: unknown, output: undefined] {
