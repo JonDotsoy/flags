@@ -2,6 +2,17 @@ on:
   push:
     branches:
       - "develop"
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump for the next release"
+        type: choice
+        required: true
+        default: patch
+        options:
+          - patch
+          - minor
+          - major
 
 name: Release
 
@@ -17,6 +28,29 @@ jobs:
       tag_name: ${{ steps.release-please.outputs.tag_name }}
       version: ${{ steps.release-please.outputs.version }}
     steps:
+      - name: Checkout (manual run)
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        uses: actions/checkout@v4
+      - name: Commit Release-As footer
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/develop" ]; then
+            echo "::error::Manual releases must be run from the develop branch"
+            exit 1
+          fi
+          CURRENT=$(node -p "require('./.release-please-manifest.json')['.']")
+          NEXT=$(node -e '
+            const [major, minor, patch] = process.argv[1].split(".").map(Number);
+            const next = { major: [major + 1, 0, 0], minor: [major, minor + 1, 0], patch: [major, minor, patch + 1] }[process.argv[2]];
+            console.log(next.join("."));
+          ' "$CURRENT" "$BUMP")
+          echo "Bumping $CURRENT -> $NEXT ($BUMP)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "chore: release $NEXT" -m "Release-As: $NEXT"
+          git push origin HEAD:develop
       - uses: googleapis/release-please-action@v4
         id: release-please
         with:
