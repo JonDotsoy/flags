@@ -14,6 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       release_created: ${{ steps.release-please.outputs.release_created }}
+      tag_name: ${{ steps.release-please.outputs.tag_name }}
+      version: ${{ steps.release-please.outputs.version }}
     steps:
       - uses: googleapis/release-please-action@v4
         id: release-please
@@ -25,6 +27,7 @@ jobs:
     needs: release-please
     if: ${{ needs.release-please.outputs.release_created }}
     permissions:
+      contents: write
       id-token: write
     steps:
       - uses: actions/checkout@v4
@@ -37,3 +40,16 @@ jobs:
       - run: npm publish --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Add npm URL to GitHub release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ needs.release-please.outputs.tag_name }}
+          VERSION: ${{ needs.release-please.outputs.version }}
+        run: |
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
+          NPM_URL="https://www.npmjs.com/package/${PACKAGE_NAME}/v/${VERSION}"
+          gh release view "$TAG_NAME" --json body -q .body > release-notes.md
+          if ! grep -qF "$NPM_URL" release-notes.md; then
+            printf '\n### 📦 npm\n\n[%s@%s](%s)\n' "$PACKAGE_NAME" "$VERSION" "$NPM_URL" >> release-notes.md
+            gh release edit "$TAG_NAME" --notes-file release-notes.md
+          fi
