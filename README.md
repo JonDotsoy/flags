@@ -453,6 +453,29 @@ argument().match(/^(?<part1>\w+):(?<part2>\w+)$/);
 // Returns null if pattern doesn't match
 ```
 
+**`.startsWith(prefix)`** - Match only an argument that starts with a prefix
+
+```ts
+flags({
+  version: argument().startsWith("+").required(),
+  file: argument(),
+});
+// main.js +18 → { version: "+18", file: "main.js" }
+// main.js     → throws RequiredArgumentMissingError
+```
+
+Combined with `.strings()`, it collects every argument with that prefix:
+
+```ts
+flags({
+  tags: argument().strings().startsWith("+"),
+  files: argument().strings(),
+});
+// a.js +web b.js +api → { tags: ["+web", "+api"], files: ["a.js", "b.js"] }
+```
+
+The values keep the prefix; on a single argument, chain `.transform((v) => v.slice(1))` to strip it. Declare prefixed arguments before plain `argument()` entries, since arguments are matched in schema order.
+
 **`.refine(fn)`** - Custom refinement function for advanced parsing
 
 ```ts

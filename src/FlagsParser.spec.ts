@@ -479,6 +479,59 @@ describe("FlagsParser", () => {
       });
     });
 
+    it("should pick the argument starting with a prefix regardless of position", () => {
+      const parser = new FlagsParser({
+        version: ArgumentBuilder.create().startsWith("+"),
+        file: ArgumentBuilder.create(),
+      });
+      expect(parser.parse(["main.js", "+18"])).toEqual({
+        version: "+18",
+        file: "main.js",
+      });
+      expect(parser.parse(["main.js"])).toEqual({
+        version: null,
+        file: "main.js",
+      });
+    });
+
+    it("should require an argument starting with a prefix", () => {
+      const parser = new FlagsParser({
+        version: ArgumentBuilder.create().startsWith("+").required(),
+        file: ArgumentBuilder.create(),
+      });
+      expect(() => parser.parse(["main.js"])).toThrow(
+        new RequiredArgumentMissingError("version"),
+      );
+    });
+
+    it("should collect every argument starting with a prefix into strings", () => {
+      const parser = new FlagsParser({
+        verbose: FlagBuilder.create("-v").boolean(),
+        tags: ArgumentBuilder.create().strings().startsWith("+"),
+        files: ArgumentBuilder.create().strings(),
+      });
+      expect(parser.parse(["a.js", "+web", "-v", "b.js", "+api"])).toEqual({
+        verbose: true,
+        tags: ["+web", "+api"],
+        files: ["a.js", "b.js"],
+      });
+      expect(parser.parse(["a.js"])).toEqual({
+        verbose: false,
+        tags: null,
+        files: ["a.js"],
+      });
+    });
+
+    it("should require at least one strings argument starting with a prefix", () => {
+      const parser = new FlagsParser({
+        tags: ArgumentBuilder.create().strings().startsWith("+").required(),
+        files: ArgumentBuilder.create().strings(),
+      });
+      expect(() => parser.parse(["a.js"])).toThrow(
+        new RequiredArgumentMissingError("tags"),
+      );
+    });
+
     it("should list positional arguments in the help message", () => {
       const parser = new FlagsParser({
         verbose: FlagBuilder.create("-v", "--verbose")
