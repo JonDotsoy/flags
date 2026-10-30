@@ -1336,7 +1336,7 @@ describe("arguments", () => {
     expect(parsed.userId).toBe(null);
   });
 
-  it.skip("should throw error when too many arguments provided", () => {
+  it("should throw error when too many arguments provided", () => {
     // Given: A parser with two positional arguments
     const flagsParser = flags({
       verb: argument().string(),

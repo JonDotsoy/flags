@@ -166,4 +166,27 @@ describe("ArgumentBuilder", () => {
       value: "hello:world",
     });
   });
+  test("should match argument starting with prefix", () => {
+    const builder = ArgumentBuilder.create().startsWith("+");
+
+    const parsed = builder.parse(0, ["+18"]);
+
+    expect(parsed).toEqual({ args: ["+18"], index: 0, value: "+18" });
+  });
+  test("should return null when argument does not start with prefix", () => {
+    const builder = ArgumentBuilder.create().startsWith("+");
+
+    const parsed = builder.parse(0, ["18"]);
+
+    expect(parsed).toBeNull();
+  });
+  test("should support transform after startsWith", () => {
+    const builder = ArgumentBuilder.create()
+      .startsWith("+")
+      .transform((value) => value.slice(1));
+
+    const parsed = builder.parse(0, ["+18"]);
+
+    expect(parsed).toEqual({ args: ["+18"], index: 0, value: "18" });
+  });
 });

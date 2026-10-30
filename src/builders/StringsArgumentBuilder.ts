@@ -6,6 +6,7 @@ import {
 import type { Accumulate } from "../dtos/Accumulate.js";
 import type { Refine } from "../dtos/Refine.js";
 import { Builder } from "./Builder.js";
+import { startsWithRefine } from "./refiners/startsWithRefine.js";
 
 export class StringsArgumentBuilder<
   T extends Spec<any, any>,
@@ -36,5 +37,11 @@ export class StringsArgumentBuilder<
 
   required() {
     return this.metadata({ required: true });
+  }
+
+  startsWith(prefix: string) {
+    return new StringsArgumentBuilder(
+      this.spec.refine(startsWithRefine(prefix)) as T,
+    );
   }
 }

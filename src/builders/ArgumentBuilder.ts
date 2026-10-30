@@ -15,6 +15,7 @@ import type {
   RedefineParseResult,
 } from "./Spec.js";
 import { regexMatchRefine } from "./refiners/regexMatchRefine.js";
+import { startsWithRefine } from "./refiners/startsWithRefine.js";
 import { RestArgsArgumentBuilder } from "./RestArgsArgumentBuilder.js";
 import { restArgsRefine } from "./refiners/restArgsRefine.js";
 
@@ -71,6 +72,10 @@ export class ArgumentBuilder<T extends Spec<any, any>> extends Builder<T> {
     return new ArgumentBuilder(this.spec.refine(regexMatchRefine(regex)));
   }
 
+  startsWith(prefix: string) {
+    return new ArgumentBuilder(this.spec.refine(startsWithRefine(prefix)));
+  }
+
   restArgs() {
     return new RestArgsArgumentBuilder(
       this.spec.initial(null).refine<string[]>(restArgsRefine),
@@ -79,13 +84,15 @@ export class ArgumentBuilder<T extends Spec<any, any>> extends Builder<T> {
 
   static create() {
     return new ArgumentBuilder<Spec<null, string>>(
-      Spec.create().refine<string>((arg, index, args) => {
-        return {
-          args: args.slice(0, index + 1),
-          index: index,
-          value: arg,
-        };
-      }),
+      Spec.create()
+        .metadata({ positional: true })
+        .refine<string>((arg, index, args) => {
+          return {
+            args: args.slice(index, index + 1),
+            index: index,
+            value: arg,
+          };
+        }),
     );
   }
 }
