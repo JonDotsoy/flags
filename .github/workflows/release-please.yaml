@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       bump:
-        description: "Version bump for the next release"
+        description: "Version bump for the release (publishes to npm directly, skipping release-please)"
         type: choice
         required: true
         default: patch
@@ -23,18 +23,28 @@ permissions:
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' }}
     outputs:
       release_created: ${{ steps.release-please.outputs.release_created }}
       tag_name: ${{ steps.release-please.outputs.tag_name }}
-      version: ${{ steps.release-please.outputs.version }}
     steps:
-      - name: Checkout (manual run)
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        uses: actions/checkout@v4
-      - name: Commit Release-As footer
-        if: ${{ github.event_name == 'workflow_dispatch' }}
+      - uses: googleapis/release-please-action@v4
+        id: release-please
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  manual-release:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    outputs:
+      tag_name: ${{ steps.bump.outputs.tag_name }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bump version, tag and create GitHub release
+        id: bump
         env:
           BUMP: ${{ inputs.bump }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ "$GITHUB_REF" != "refs/heads/develop" ]; then
             echo "::error::Manual releases must be run from the develop branch"
@@ -46,25 +56,41 @@ jobs:
             const next = { major: [major + 1, 0, 0], minor: [major, minor + 1, 0], patch: [major, minor, patch + 1] }[process.argv[2]];
             console.log(next.join("."));
           ' "$CURRENT" "$BUMP")
-          echo "Bumping $CURRENT -> $NEXT ($BUMP)"
+          TAG_NAME="flags-v${NEXT}"
+          echo "Releasing $CURRENT -> $NEXT ($BUMP)"
+
+          # Keep package.json and the release-please manifest in sync so
+          # release-please continues from this version on the next push.
+          npm version "$NEXT" --no-git-tag-version
+          node -e '
+            const fs = require("fs");
+            const manifest = JSON.parse(fs.readFileSync(".release-please-manifest.json", "utf8"));
+            manifest["."] = process.argv[1];
+            fs.writeFileSync(".release-please-manifest.json", JSON.stringify(manifest, null, 2) + "\n");
+          ' "$NEXT"
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit --allow-empty -m "chore: release $NEXT" -m "Release-As: $NEXT"
-          git push origin HEAD:develop
-      - uses: googleapis/release-please-action@v4
-        id: release-please
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          git commit -am "chore(develop): release flags $NEXT"
+          git tag "$TAG_NAME"
+          git push origin HEAD:develop "$TAG_NAME"
+
+          gh release create "$TAG_NAME" --title "flags: v${NEXT}" --generate-notes --notes-start-tag "flags-v${CURRENT}"
+          echo "tag_name=${TAG_NAME}" >> "$GITHUB_OUTPUT"
 
   publish:
     runs-on: ubuntu-latest
-    needs: release-please
-    if: ${{ needs.release-please.outputs.release_created }}
+    needs: [release-please, manual-release]
+    if: ${{ !cancelled() && (needs.release-please.outputs.release_created == 'true' || needs.manual-release.result == 'success') }}
     permissions:
       contents: write
       id-token: write
+    env:
+      TAG_NAME: ${{ needs.release-please.outputs.tag_name || needs.manual-release.outputs.tag_name }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG_NAME }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -77,10 +103,9 @@ jobs:
       - name: Add npm URL to GitHub release notes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG_NAME: ${{ needs.release-please.outputs.tag_name }}
-          VERSION: ${{ needs.release-please.outputs.version }}
         run: |
           PACKAGE_NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
           NPM_URL="https://www.npmjs.com/package/${PACKAGE_NAME}/v/${VERSION}"
           gh release view "$TAG_NAME" --json body -q .body > release-notes.md
           if ! grep -qF "$NPM_URL" release-notes.md; then
