@@ -97,9 +97,9 @@ jobs:
           registry-url: "https://registry.npmjs.org"
       - uses: oven-sh/setup-bun@v1
       - run: bun i
+      # Trusted publishing (OIDC) needs npm >= 11.5.1; no NPM_TOKEN required.
+      - run: npm install -g npm@latest
       - run: npm publish --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Add npm URL to GitHub release notes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
