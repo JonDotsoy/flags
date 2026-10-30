@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.3.0](https://github.com/JonDotsoy/flags/compare/flags-v3.2.1...flags-v3.3.0) (2026-10-30)
+
+
+### Features
+
+* improve positional argument support ([#43](https://github.com/JonDotsoy/flags/issues/43)) ([068bb8b](https://github.com/JonDotsoy/flags/commit/068bb8b37fcd4e0be8568b1c95288bc7672f8bbb))
+
 ## [3.2.1](https://github.com/JonDotsoy/flags/compare/flags-v3.2.0...flags-v3.2.1) (2026-03-02)
 
 
