@@ -4,6 +4,7 @@ import { FlagBuilder } from "./builders/FlagBuilder.js";
 import { CommandBuilder } from "./builders/CommandBuilder.js";
 import { ArgumentBuilder } from "./builders/ArgumentBuilder.js";
 import { UnexpectedArgumentError } from "./errors/UnexpectedArgumentError.js";
+import { RequiredArgumentMissingError } from "./errors/RequiredArgumentMissingError.js";
 
 describe("FlagsParser", () => {
   describe("constructor", () => {
@@ -282,7 +283,9 @@ describe("FlagsParser", () => {
       // pre-narrowing types
       {
         expectTypeOf(ok).toEqualTypeOf<true | false>();
-        expectTypeOf(output).toEqualTypeOf<{ port: number | null } | undefined>();
+        expectTypeOf(output).toEqualTypeOf<
+          { port: number | null } | undefined
+        >();
       }
 
       // destructure inside each narrowed branch so TypeScript tracks all elements
@@ -370,6 +373,134 @@ describe("FlagsParser", () => {
       expect(parser4.metadata.program).toBe("app1");
       expect(parser4.metadata.description).toBe("Description 1");
       expect(parser4.metadata.version).toBe("1.0.0");
+    });
+  });
+
+  describe("positional arguments", () => {
+    it("should assign positional arguments in schema order", () => {
+      const parser = new FlagsParser({
+        src: ArgumentBuilder.create(),
+        dest: ArgumentBuilder.create(),
+      });
+      expect(parser.parse(["a.txt", "b.txt"])).toEqual({
+        src: "a.txt",
+        dest: "b.txt",
+      });
+    });
+
+    it("should consume only one value per positional argument after a flag", () => {
+      const parser = new FlagsParser({
+        verbose: FlagBuilder.create("-v").boolean(),
+        src: ArgumentBuilder.create(),
+        dest: ArgumentBuilder.create(),
+      });
+      expect(parser.parse(["-v", "a.txt", "b.txt"])).toEqual({
+        verbose: true,
+        src: "a.txt",
+        dest: "b.txt",
+      });
+    });
+
+    it("should throw UnexpectedArgumentError for extra positional values", () => {
+      const parser = new FlagsParser({
+        verbose: FlagBuilder.create("-v").boolean(),
+        src: ArgumentBuilder.create(),
+      });
+      expect(() => parser.parse(["-v", "a.txt", "b.txt"])).toThrow(
+        new UnexpectedArgumentError("b.txt"),
+      );
+    });
+
+    it("should throw RequiredArgumentMissingError when a required argument is missing", () => {
+      const parser = new FlagsParser({
+        verbose: FlagBuilder.create("-v").boolean(),
+        src: ArgumentBuilder.create().required(),
+      });
+      expect(() => parser.parse(["-v"])).toThrow(
+        new RequiredArgumentMissingError("src"),
+      );
+    });
+
+    it("should throw RequiredArgumentMissingError for a required strings argument", () => {
+      const parser = new FlagsParser({
+        files: ArgumentBuilder.create().strings().required(),
+      });
+      expect(() => parser.parse([])).toThrow(RequiredArgumentMissingError);
+      expect(parser.parse(["a", "b"])).toEqual({ files: ["a", "b"] });
+    });
+
+    it("should not throw when an optional argument is missing", () => {
+      const parser = new FlagsParser({
+        src: ArgumentBuilder.create().required(),
+        dest: ArgumentBuilder.create(),
+      });
+      expect(parser.parse(["a.txt"])).toEqual({ src: "a.txt", dest: null });
+    });
+
+    it("should treat values after -- as positional arguments", () => {
+      const parser = new FlagsParser({
+        verbose: FlagBuilder.create("-v").boolean(),
+        name: FlagBuilder.create("--name").string(),
+        src: ArgumentBuilder.create(),
+        dest: ArgumentBuilder.create(),
+      });
+      expect(parser.parse(["--name", "x", "--", "-v", "--name"])).toEqual({
+        verbose: false,
+        name: "x",
+        src: "-v",
+        dest: "--name",
+      });
+    });
+
+    it("should collect values after -- into a strings argument", () => {
+      const parser = new FlagsParser({
+        verbose: FlagBuilder.create("-v").boolean(),
+        files: ArgumentBuilder.create().strings(),
+      });
+      expect(parser.parse(["a", "-v", "--", "-b", "c"])).toEqual({
+        verbose: true,
+        files: ["a", "-b", "c"],
+      });
+    });
+
+    it("should ignore a bare -- separator", () => {
+      const parser = new FlagsParser({
+        src: ArgumentBuilder.create(),
+      });
+      expect(parser.parse(["--"])).toEqual({ src: null });
+    });
+
+    it("should keep -- in command restArgs", () => {
+      const parser = new FlagsParser({
+        serve: CommandBuilder.create("serve").restArgs(),
+      });
+      expect(parser.parse(["serve", "--", "--watch"])).toEqual({
+        serve: ["--", "--watch"],
+      });
+    });
+
+    it("should list positional arguments in the help message", () => {
+      const parser = new FlagsParser({
+        verbose: FlagBuilder.create("-v", "--verbose")
+          .boolean()
+          .describe("Verbose output"),
+        src: ArgumentBuilder.create().required().describe("Source file"),
+        dest: ArgumentBuilder.create(),
+      }).program("cp");
+      expect(parser.helpMessage({ terminalWidth: 80 })).toEqual(
+        [
+          "Usage: cp <src> [dest]",
+          "",
+          "Arguments:",
+          "  <src>                    Source file",
+          "  [dest]",
+          "",
+          "Options:",
+          "  -v, --verbose.           Verbose output",
+          "",
+          "",
+        ].join("\n"),
+      );
     });
   });
 });

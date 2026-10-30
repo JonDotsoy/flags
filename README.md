@@ -374,6 +374,42 @@ flags({
 // foo --verbose tar biz → { verbose: true, names: ["foo", "tar", "biz"] }
 ```
 
+Each positional argument consumes exactly one value, in schema order. Extra values throw `UnexpectedArgumentError`:
+
+```ts
+flags({
+  verbose: flag("-v").boolean(),
+  src: argument().required(),
+  dest: argument(),
+});
+// -v a.txt b.txt   → { verbose: true, src: "a.txt", dest: "b.txt" }
+// a.txt            → { verbose: false, src: "a.txt", dest: null }
+// (no args)        → throws RequiredArgumentMissingError
+// a.txt b.txt c.txt → throws UnexpectedArgumentError
+```
+
+**`--` separator** - Everything after `--` is treated as positional, even values that look like flags:
+
+```ts
+flags({
+  verbose: flag("-v").boolean(),
+  files: argument().strings(),
+});
+// a -v -- -b c → { verbose: true, files: ["a", "-b", "c"] }
+```
+
+Commands with `.restArgs()` still receive `--` and everything after it unchanged.
+
+Positional arguments are listed in the help message, with `<name>` for required and `[name]` for optional ones:
+
+```
+Usage: cp <src> [dest]
+
+Arguments:
+  <src>                    Source file
+  [dest]
+```
+
 **Note:** When `argument().strings()` is defined first in the schema, it takes priority and captures all arguments, including flag-like values:
 
 ```ts
@@ -391,6 +427,7 @@ flags({
 ```ts
 argument().string().required();
 // Throws RequiredArgumentMissingError if not provided
+// error.argumentName contains the schema key (e.g. "input")
 ```
 
 **`.describe(description)`** - Adds description for help
@@ -557,7 +594,7 @@ try {
   const options = parser.parse(args);
 } catch (error) {
   if (error instanceof RequiredArgumentMissingError) {
-    console.error("Required argument missing");
+    console.error(`Required argument missing: ${error.argumentName}`);
     process.exit(1);
   }
 }

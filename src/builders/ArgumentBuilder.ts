@@ -79,13 +79,15 @@ export class ArgumentBuilder<T extends Spec<any, any>> extends Builder<T> {
 
   static create() {
     return new ArgumentBuilder<Spec<null, string>>(
-      Spec.create().refine<string>((arg, index, args) => {
-        return {
-          args: args.slice(0, index + 1),
-          index: index,
-          value: arg,
-        };
-      }),
+      Spec.create()
+        .metadata({ positional: true })
+        .refine<string>((arg, index, args) => {
+          return {
+            args: args.slice(index, index + 1),
+            index: index,
+            value: arg,
+          };
+        }),
     );
   }
 }

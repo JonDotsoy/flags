@@ -54,8 +54,31 @@ export const helpMessage = (
 
   const lines: string[] = [];
 
+  // Positional arguments, in schema order
+  const positionals: Array<{
+    label: string;
+    description?: string;
+  }> = [];
+
+  for (const [key, builder] of Object.entries(schema)) {
+    const spec = builder.spec;
+    if (spec.getMetadata("positional") !== true) continue;
+    const required = spec.getMetadata("required") === true;
+    positionals.push({
+      label: required ? `<${key}>` : `[${key}]`,
+      description: spec.hasMetadata("description")
+        ? (spec.getMetadata("description") as string)
+        : undefined,
+    });
+  }
+
   // Usage line
-  lines.push(`Usage: ${flagsParser.metadata.program}`);
+  lines.push(
+    [
+      `Usage: ${flagsParser.metadata.program}`,
+      ...positionals.map((positional) => positional.label),
+    ].join(" "),
+  );
   lines.push("");
 
   // Description
@@ -79,6 +102,7 @@ export const helpMessage = (
 
   for (const [key, builder] of Object.entries(schema)) {
     const spec = builder.spec;
+    if (spec.getMetadata("positional") === true) continue;
     const description = spec.hasMetadata("description")
       ? (spec.getMetadata("description") as string)
       : undefined;
@@ -138,6 +162,17 @@ export const helpMessage = (
         });
       }
     }
+  }
+
+  // Print Arguments section
+  if (positionals.length > 0) {
+    lines.push("Arguments:");
+    for (const positional of positionals) {
+      const descStr = positional.description || "";
+      const padding = " ".repeat(Math.max(1, 25 - positional.label.length));
+      lines.push(`  ${positional.label}${padding}${descStr}`.trimEnd());
+    }
+    lines.push("");
   }
 
   // Print Options section

@@ -1,5 +1,6 @@
 import type { Builder } from "./builders/Builder.js";
 import type { Spec } from "./builders/Spec.js";
+import { RequiredArgumentMissingError } from "./errors/RequiredArgumentMissingError.js";
 import { UnexpectedArgumentError } from "./errors/UnexpectedArgumentError.js";
 import { helpMessage, type HelpMessageOptions } from "./utils/help-message.js";
 
@@ -68,6 +69,12 @@ export class FlagsParser<T extends Record<string, Builder<any>>> {
     const result: any = {};
     const usedIndices = new Set<number>();
 
+    // Everything after the first "--" is positional: flags and commands
+    // cannot start a match there, and the separator itself is never a value
+    const separatorIndex = expandedArgs.indexOf("--");
+    const positionalOnlyFrom =
+      separatorIndex === -1 ? expandedArgs.length : separatorIndex;
+
     // Initialize result with initial values from each builder's spec
     for (const [key, builder] of Object.entries(this.schema)) {
       result[key] = builder.spec.getInitial();
@@ -77,10 +84,13 @@ export class FlagsParser<T extends Record<string, Builder<any>>> {
     for (const [key, builder] of Object.entries(this.schema)) {
       let parsedValue: any = null;
       let currentValue: any = undefined;
+      const isPositional = builder.spec.getMetadata("positional") === true;
 
       // Try to parse at each index in expandedArgs
       for (let i = 0; i < expandedArgs.length; i++) {
         if (usedIndices.has(i)) continue;
+        if (i === separatorIndex) continue;
+        if (!isPositional && i >= positionalOnlyFrom) break;
 
         const parseResult = builder.parse(
           i,
@@ -108,11 +118,17 @@ export class FlagsParser<T extends Record<string, Builder<any>>> {
       // Set the result: use parsed value if found
       if (parsedValue !== null) {
         result[key] = parsedValue;
+      } else if (
+        isPositional &&
+        builder.spec.getMetadata("required") === true
+      ) {
+        throw new RequiredArgumentMissingError(key);
       }
     }
 
     // Check for unrecognized arguments
     for (let i = 0; i < expandedArgs.length; i++) {
+      if (i === separatorIndex) continue;
       if (!usedIndices.has(i)) {
         throw new UnexpectedArgumentError(expandedArgs[i]);
       }
@@ -126,8 +142,14 @@ export class FlagsParser<T extends Record<string, Builder<any>>> {
     return `${message}\n\nRun '${this.metadata.program} --help' for more information\n`;
   }
 
-  safeParse(args: string[]):
-    | [ok: true, error: undefined, output: { [K in keyof T]: ExtractBuilderResult<T[K]> }]
+  safeParse(
+    args: string[],
+  ):
+    | [
+        ok: true,
+        error: undefined,
+        output: { [K in keyof T]: ExtractBuilderResult<T[K]> },
+      ]
     | [ok: false, error: unknown, output: undefined] {
     try {
       const output = this.parse(args);
