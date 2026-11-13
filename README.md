@@ -305,6 +305,37 @@ flag("--verbose").boolean();
 // Returns false if --verbose is not provided (boolean default)
 ```
 
+**`.validate(validateFn, customMessage?)`** - Validates the parsed value
+
+Available on every builder (`flag`, `command`, `argument` and their typed variants). When `validateFn` returns `false` the parse fails with a `ValidationError`.
+
+```ts
+// Automatic message: "Invalid value for --port, -p: 70000"
+flag("--port", "-p")
+  .number()
+  .validate((n) => n >= 3_000 && n < 60_000);
+
+// Custom message
+flag("--port", "-p")
+  .number()
+  .validate((n) => n >= 3_000 && n < 60_000, "The port is not a valid value");
+
+// Custom error: the returned error is thrown as is
+flag("--port", "-p")
+  .number()
+  .validate(
+    (n) => n >= 3_000 && n < 60_000,
+    (n) => new MyError(`The port ${n} is not a valid value`),
+  );
+
+argument().validate((file) => file.endsWith(".json"), "Expected a JSON file");
+command("run")
+  .restArgs()
+  .validate((args) => args.length > 0, "run needs a script");
+```
+
+The validation only runs when the flag, command or argument is present, so defaults are not validated. For flags that accumulate (like `.strings()`), it runs once per occurrence.
+
 **`.describe(description)`** - Adds description for help
 
 ```ts
@@ -620,6 +651,21 @@ try {
     console.error(`Required argument missing: ${error.argumentName}`);
     process.exit(1);
   }
+}
+```
+
+### `ValidationError`
+
+Thrown when a `.validate()` function returns `false` (unless a custom error is returned by `customMessage`).
+
+```ts
+import { ValidationError } from "@jondotsoy/flags";
+
+const [ok, error] = parser.safeParse(["--port", "80"]);
+if (!ok && error instanceof ValidationError) {
+  console.error(error.message); // "Invalid value for --port, -p: 80"
+  console.error(error.target); // "--port, -p"
+  console.error(error.value); // 80
 }
 ```
 

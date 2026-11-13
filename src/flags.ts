@@ -9,6 +9,11 @@ export { FlagsParseError } from "./errors/FlagsParseError.js";
 export { RequiredArgumentMissingError } from "./errors/RequiredArgumentMissingError.js";
 export { RequiredFlagMissingError } from "./errors/RequiredFlagMissingError.js";
 export { UnexpectedArgumentError } from "./errors/UnexpectedArgumentError.js";
+export { ValidationError } from "./errors/ValidationError.js";
+export type {
+  ValidateFn,
+  ValidateMessage,
+} from "./builders/refiners/validateRefine.js";
 
 export { argument } from "./aliases/argument.js";
 export { command } from "./aliases/command.js";
