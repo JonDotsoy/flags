@@ -54,7 +54,7 @@ export class ArgumentBuilder<T extends Spec<any, any>> extends Builder<T> {
 
   strings() {
     return new StringsArgumentBuilder(
-      this.spec.refine(toListRefine).accumulate(listAccumulate),
+      this.spec.refine<string[]>(toListRefine).accumulate(listAccumulate),
     );
   }
 

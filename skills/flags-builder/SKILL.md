@@ -139,7 +139,10 @@ flag("--output").string().required();           // throw if missing
 flag("--tag").strings();                        // accumulate: --tag a --tag b → ["a", "b"]
 flag("--count").number().positive();            // must be > 0
 flag("--port").number().describe("HTTP port"); // help text
+flag("--port").number().validate((n) => n >= 3_000 && n < 60_000, "Invalid port"); // custom validation
 ```
+
+`.validate(validateFn, customMessage?)` works on every builder (`flag`, `command`, `argument`). If `validateFn` returns `false`, parsing fails with a `ValidationError` (auto-generated message when `customMessage` is omitted). `customMessage` can also be a function returning an `Error` to throw it as is: `.validate(fn, (value) => new MyError("..."))`.
 
 ## Subcommands — Multi-Parser Pattern
 
